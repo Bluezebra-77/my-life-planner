@@ -357,6 +357,40 @@ function chooseForMe() { chooseFrom("normal"); }
 function chooseLowEnergy() { chooseFrom("low"); }
 function chooseQuickWin() { chooseFrom("quick"); }
 
+function decideDailyTask() {
+  const candidates = [
+    ...data.todos.filter(item => !item.completed && !item.dueDate).map(item => ({
+      label: item.name, detail: item.details || "Undated to-do", type: "todo", id: item.id
+    })),
+    ...data.projects.flatMap(project => {
+      if (project.completed) return [];
+      const nextStep = (project.steps || []).find(step => !step.completed);
+      if (nextStep && !nextStep.dueDate) return [{
+        label: nextStep.name, detail: `Project: ${project.name}`, type: "step", id: nextStep.id, parentId: project.id
+      }];
+      if (!(project.steps || []).length && !project.dueDate) return [{
+        label: `Review project: ${project.name}`, detail: project.details || "Add the next practical step", type: "project", id: project.id
+      }];
+      return [];
+    })
+  ];
+  const result = document.getElementById("dailyDecisionResult");
+  if (!candidates.length) {
+    result.classList.remove("hidden");
+    result.innerHTML = "No active undated projects or to-dos are available.";
+    return;
+  }
+  const item = candidates[Math.floor(Math.random() * candidates.length)];
+  const action = item.type === "step"
+    ? `openReminderItem({itemType:'step',id:'${item.id}',parentId:'${item.parentId}'})`
+    : item.type === "todo"
+      ? `editTodo('${item.id}')`
+      : `editProject('${item.id}')`;
+  result.classList.remove("hidden");
+  result.innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span><button type="button" class="small-button" onclick="${action}">Open</button>`;
+}
+
+
 function showCategory(categoryKey) {
   const area = document.getElementById("categoryArea");
   area.innerHTML = `<h3>${categoryNames[categoryKey]}</h3>`;
@@ -752,11 +786,12 @@ function renderCleaning() {
 
 function activeProjectDashboardItems() {
   return data.projects.flatMap(project => {
+    if (project.completed) return [];
     const steps = Array.isArray(project.steps) ? project.steps : [];
     const nextStep = steps.find(step => !step.completed);
-    if (nextStep) return [{ ...nextStep, source: `Project: ${project.name}`, itemType: "step", parentId: project.id }];
-    if (!project.completed) return [{ ...project, source: "Project", itemType: "project" }];
-    return [];
+    return nextStep
+      ? [{ ...nextStep, source: `Project: ${project.name}`, itemType: "step", parentId: project.id }]
+      : [];
   });
 }
 
@@ -941,28 +976,28 @@ function renderTodos() {
   const area = document.getElementById("todoArea");
   area.innerHTML = "";
   if (!data.todos.length) {
-    area.innerHTML = `<div class="empty-state">No to-do items yet. Use Add to-do.</div>`;
+    area.innerHTML = `<div class="empty-state">No to-do items yet. Use the + at the top of this section.</div>`;
     return;
   }
 
   data.todos.sort(sortByDueDate).forEach(todo => {
-    const card = document.createElement("div");
-    card.className = `list-card ${todo.completed ? "completed-card" : ""}`;
-    const badge = getBadge(todo);
-    card.innerHTML = `
-      <div class="card-top">
-        <div>
-          <div class="card-title">${escapeHtml(todo.name)}</div>
-          <div class="card-details">${escapeHtml(todo.details || "")}</div>
+    const row = document.createElement("div");
+    row.className = `compact-manage-row ${todo.completed ? "completed-row" : ""}`;
+    const timing = getTimingText(todo);
+    row.innerHTML = `
+      <button type="button" class="compact-row-main" onclick="editTodo('${todo.id}')">
+        <span class="compact-row-title">${escapeHtml(todo.name)}</span>
+        <span class="compact-row-meta">${escapeHtml(timing)}</span>
+      </button>
+      <details class="item-menu">
+        <summary aria-label="Options for ${escapeHtml(todo.name)}">⋯</summary>
+        <div class="item-menu-popover">
+          <button type="button" onclick="editTodo('${todo.id}'); this.closest('details').removeAttribute('open')">Edit</button>
+          <button type="button" onclick="toggleTodo('${todo.id}')">${todo.completed ? "Mark active" : "Complete"}</button>
+          <button type="button" class="danger-text" onclick="deleteTodo('${todo.id}')">Delete</button>
         </div>
-        <span class="badge ${badge.cls}">${badge.text}</span>
-      </div>
-      <div class="card-actions">
-        <button type="button" onclick="editTodo('${todo.id}')">Edit</button>
-        <button type="button" onclick="toggleTodo('${todo.id}')">${todo.completed ? "Mark active" : "Complete"}</button>
-        <button type="button" class="danger-button" onclick="deleteTodo('${todo.id}')">Delete</button>
-      </div>`;
-    area.appendChild(card);
+      </details>`;
+    area.appendChild(row);
   });
 }
 
@@ -1060,7 +1095,9 @@ function deleteAnnual(id) { data.annualDates=data.annualDates.filter(x=>x.id!==i
 function toggleStep(projectId,stepId) {
   const project=data.projects.find(x=>x.id===projectId);
   const step=project?.steps.find(x=>x.id===stepId);
-  if(step) step.completed=!step.completed;
+  if (!project || !step) return;
+  step.completed = !step.completed;
+  project.completed = project.steps.length > 0 && project.steps.every(item => item.completed);
   saveData(); renderAll();
 }
 
@@ -1254,11 +1291,11 @@ addForm.addEventListener("submit",event=>{
       const oldSteps = old?.steps || [];
       const steps = enteredSteps.map((stepName,index) => {
         const existing = oldSteps[index];
-        return existing ? {...existing,name:stepName} : {id:uid(),name:stepName,details:"",timingType:"date",dueDate:common.dueDate,leadDays:common.leadDays,completed:false};
+        return existing ? {...existing,name:stepName,order:index} : {id:uid(),name:stepName,details:"",timingType:common.timingType,dueDate:common.dueDate,leadDays:common.leadDays,completed:false,order:index};
       });
       data.projects[data.projects.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,steps};
     } else {
-      const steps = enteredSteps.map(stepName => ({id:uid(),name:stepName,details:"",timingType:"date",dueDate:common.dueDate,leadDays:common.leadDays,completed:false}));
+      const steps = enteredSteps.map((stepName,index) => ({id:uid(),name:stepName,details:"",timingType:common.timingType,dueDate:common.dueDate,leadDays:common.leadDays,completed:false,order:index}));
       data.projects.push({...common,steps});
     }
   }
@@ -1269,7 +1306,7 @@ addForm.addEventListener("submit",event=>{
       if(id) {
         const old=project.steps.find(x=>x.id===id);
         project.steps[project.steps.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false};
-      } else project.steps.push(common);
+      } else { project.steps.push({...common,order:project.steps.length}); project.completed=false; }
     }
   }
 
