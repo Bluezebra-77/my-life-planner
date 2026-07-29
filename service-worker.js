@@ -1,15 +1,6 @@
-const CACHE = "my-life-planner-v9-20260729";
-const FILES = ["./","./index.html?v=9","./style.css","./app.js","./manifest.json","./icon-192.png","./icon-512.png"];
-self.addEventListener("install", event => { event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES)).then(() => self.skipWaiting())); });
-self.addEventListener("activate", event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())); });
-self.addEventListener("message", event => { if (event.data?.type === "SKIP_WAITING") self.skipWaiting(); });
-self.addEventListener("fetch", event => {
-  if (event.request.method !== "GET") return;
-  const req = event.request;
-  const isPage = req.mode === "navigate" || req.destination === "document";
-  if (isPage) {
-    event.respondWith(fetch(req, { cache:"no-store" }).then(response => { const copy=response.clone(); caches.open(CACHE).then(c=>c.put("./index.html?v=9",copy)); return response; }).catch(() => caches.match("./index.html?v=9")));
-    return;
-  }
-  event.respondWith(fetch(req, { cache:"no-cache" }).then(response => { if(response.ok){ const copy=response.clone(); caches.open(CACHE).then(c=>c.put(req,copy)); } return response; }).catch(() => caches.match(req)));
-});
+const CACHE = "my-life-planner-v91-20260729";
+const FILES = ["./","./index.html?v=9.2","./style.css?v=9.2","./app.js?v=9.2","./manifest.json?v=9.2","./icon-192.png","./icon-512.png"];
+self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
+self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+self.addEventListener("message",e=>{if(e.data?.type==="SKIP_WAITING")self.skipWaiting()});
+self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const r=e.request;if(r.mode==="navigate"||r.destination==="document"){e.respondWith(fetch(r,{cache:"no-store"}).then(x=>{const y=x.clone();caches.open(CACHE).then(c=>c.put("./index.html?v=9.2",y));return x}).catch(()=>caches.match("./index.html?v=9.2")));return;}e.respondWith(fetch(r,{cache:"no-cache"}).then(x=>{if(x.ok){const y=x.clone();caches.open(CACHE).then(c=>c.put(r,y))}return x}).catch(()=>caches.match(r)))});

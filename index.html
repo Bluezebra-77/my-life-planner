@@ -14,14 +14,16 @@
 </head>
 <body>
   <main class="app-shell">
+
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9</span></h1>
+        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.2</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
         <button type="button" class="small-button" onclick="openAddDialog()">+ Add</button>
+        <button type="button" class="small-button" onclick="openSettingsDialog()">Menu</button>
         <button id="installButton" type="button" class="small-button hidden" onclick="installPlanner()">Install app</button>
         <button id="updateButton" type="button" class="small-button hidden" onclick="applyAppUpdate()">Update available</button>
       </div>
@@ -31,7 +33,12 @@
       </div>
     </header>
 
-    <section class="panel due-panel">
+    <section id="viewHeading" class="view-heading" aria-live="polite">
+      <p class="eyebrow" id="viewEyebrow">Home</p>
+      <h2 id="viewTitle">Today at a glance</h2>
+    </section>
+
+    <section class="panel due-panel app-view-section" data-view="home">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Today</p>
@@ -39,10 +46,10 @@
         </div>
         <button id="todayToggle" class="small-button" type="button" onclick="togglePanel('todayRemindersArea','todayToggle')">Hide</button>
       </div>
-      <div id="todayRemindersArea" class="stack-list"></div>
+      <div id="todayRemindersArea" class="compact-list"></div>
     </section>
 
-    <section class="panel due-panel">
+    <section class="panel due-panel app-view-section" data-view="home">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Time-sensitive</p>
@@ -50,20 +57,20 @@
         </div>
         <button id="weekToggle" class="small-button" type="button" onclick="togglePanel('weeklyArea','weekToggle')">Hide</button>
       </div>
-      <div id="weeklyArea" class="stack-list"></div>
+      <div id="weeklyArea" class="compact-list"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="home">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Cleaning today</p>
-          <h2>Cleaning jobs due now</h2>
+          <p class="eyebrow">Action list</p>
+          <h2>Tasks to do today</h2>
         </div>
       </div>
-      <div id="cleaningTodayArea" class="stack-list"></div>
+      <div id="cleaningTodayArea" class="compact-list"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="home">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Main area</p>
@@ -77,7 +84,7 @@
       <div id="dailyChecklist" class="checklist"></div>
     </section>
 
-    <section class="panel decision-panel">
+    <section class="panel decision-panel app-view-section" data-view="home">
       <p class="eyebrow">When it feels overwhelming</p>
       <h2>Take the decision away</h2>
       <div class="button-grid">
@@ -86,11 +93,11 @@
         <button type="button" onclick="chooseQuickWin()">Quick win</button>
       </div>
       <div id="choiceCard" class="choice-card">
-        Press a button and the app will choose one manageable task.
+        Press a button and the app will suggest three manageable tasks.
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="tasks">
       <div class="section-heading">
         <div>
           <p class="eyebrow">My list</p>
@@ -102,7 +109,7 @@
       <div id="todoArea" class="stack-list"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="planner">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Annual reminders</p>
@@ -114,7 +121,7 @@
       <div id="annualArea" class="stack-list"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="planner">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Flexible work</p>
@@ -126,7 +133,7 @@
       <div id="projectsArea" class="stack-list"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="tasks">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Home care</p>
@@ -140,7 +147,7 @@
     </section>
 
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="planner">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Everything saved</p>
@@ -150,7 +157,7 @@
       <div id="mainOverviewArea" class="overview-grid"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel app-view-section" data-view="planner">
       <div class="section-heading">
         <div>
           <p class="eyebrow">End of day</p>
@@ -161,71 +168,46 @@
       <div id="eveningChecklist" class="checklist"></div>
     </section>
 
-    <section class="panel settings-panel" id="settings">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Personalise and protect</p>
-          <h2>Settings</h2>
+    <dialog id="settingsDialog" class="settings-dialog">
+      <div class="dialog-header">
+        <div><p class="eyebrow">Personalise and protect</p><h2>Settings</h2></div>
+        <button type="button" class="icon-button" onclick="closeSettingsDialog()">X</button>
+      </div>
+      <div class="settings-content">
+        <div class="settings-grid">
+          <label>Your name (optional)<input id="ownerName" type="text" maxlength="40" placeholder="For example: Mary"></label>
+          <label>Box colour
+            <select id="themeChoice" onchange="previewSettings()">
+              <option value="sage">Sage green</option><option value="blue">Soft blue</option><option value="rose">Warm rose</option><option value="lavender">Lavender</option><option value="sand">Soft sand</option><option value="mint">Fresh mint</option><option value="peach">Soft peach</option><option value="teal">Calm teal</option><option value="grey">Soft grey</option><option value="berry">Muted berry</option>
+            </select>
+          </label>
+          <div id="themePreview" class="setting-preview">Example box</div>
+          <label>Font
+            <select id="fontChoice" onchange="previewSettings()">
+              <option value="clear">Clear and simple</option><option value="rounded">Soft and rounded</option><option value="classic">Classic serif</option><option value="modern">Modern</option><option value="large">Easy-read large</option><option value="friendly">Friendly</option><option value="book">Book style</option><option value="compact">Compact</option><option value="softserif">Soft serif</option><option value="spacious">Spacious</option>
+            </select>
+          </label>
+          <div id="fontPreview" class="setting-preview font-preview">This is how your planner text will look.</div>
         </div>
+        <div class="card-actions"><button type="button" onclick="saveSettings()">Save customisation</button></div>
+        <hr class="settings-divider">
+        <h3>Five daily backups</h3>
+        <p class="card-meta">One dated copy is kept for each of the latest five days. A safety copy is also made before data migration or restore.</p>
+        <div id="dailyBackupsArea" class="stack-list"></div>
+        <details class="storage-details"><summary>Where can I find my backups?</summary><p><strong>Automatic daily backups:</strong> stored privately inside this browser on this device.</p><p><strong>Visible backup files:</strong> choose Save backup file or Share backup, then save to iCloud Drive, OneDrive or Files.</p></details>
+        <div class="card-actions"><button type="button" onclick="exportPlanner()">Save backup file</button><button type="button" onclick="sharePlannerBackup()">Share backup</button><button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button><input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)"></div>
+        <p id="storageStatus" class="storage-status"></p><p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
+        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.2</p><p><strong>Updated:</strong> 29 July 2026</p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
       </div>
+    </dialog>
 
-      <div class="settings-grid">
-        <label>
-          Your name (optional)
-          <input id="ownerName" type="text" maxlength="40" placeholder="For example: Mary">
-        </label>
-        <label>
-          Box colour
-          <select id="themeChoice">
-            <option value="sage">Sage green</option>
-            <option value="blue">Soft blue</option>
-            <option value="rose">Warm rose</option>
-            <option value="lavender">Lavender</option>
-            <option value="sand">Soft sand</option>
-          </select>
-        </label>
-        <label>
-          Font
-          <select id="fontChoice">
-            <option value="clear">Clear and simple</option>
-            <option value="rounded">Soft and rounded</option>
-            <option value="classic">Classic</option>
-            <option value="modern">Modern</option>
-            <option value="large">Easy-read large</option>
-          </select>
-        </label>
-      </div>
-      <div class="card-actions">
-        <button type="button" onclick="saveSettings()">Save customisation</button>
-      </div>
-
-      <hr class="settings-divider">
-      <h3>Five daily backups</h3>
-      <p class="card-meta">The planner keeps one dated copy for each of the latest five days. Each day's copy is refreshed whenever you save, so it contains the latest state from that day.</p>
-      <div id="dailyBackupsArea" class="stack-list"></div>
-
-      <details class="storage-details" open>
-        <summary>Where can I find my backups?</summary>
-        <p><strong>Automatic daily backups:</strong> Settings → Five daily backups. They are stored privately inside Safari on this device and are not visible in the Files app.</p>
-        <p><strong>Backups you can see:</strong> tap Save backup file or Share backup, then choose Save to Files and select iCloud Drive or OneDrive.</p>
-      </details>
-
-      <div class="card-actions">
-        <button type="button" onclick="exportPlanner()">Save backup file</button>
-        <button type="button" onclick="sharePlannerBackup()">Share backup</button>
-        <button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button>
-        <input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)">
-      </div>
-      <p id="storageStatus" class="storage-status"></p>
-      <p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-
-      <details class="storage-details">
-        <summary>About My Life Planner</summary>
-        <p><strong>Version:</strong> 9</p>
-        <p><strong>Updated:</strong> 29 July 2026</p>
-        <p>GitHub stores the app files only. Your personal planner information remains in this browser on this device. Each person who installs the planner has their own separate information.</p>
-      </details>
-    </section>
+    <nav class="bottom-nav" aria-label="Main navigation">
+      <button type="button" class="nav-button active" data-tab="home" onclick="showAppView('home', this)"><span>🏠</span><small>Home</small></button>
+      <button type="button" class="nav-button" data-tab="tasks" onclick="showAppView('tasks', this)"><span>✅</span><small>Tasks</small></button>
+      <button type="button" class="nav-button" data-tab="planner" onclick="showAppView('planner', this)"><span>📅</span><small>Planner</small></button>
+      <button type="button" class="nav-button" onclick="openAddDialog()"><span>➕</span><small>Add</small></button>
+      <button type="button" class="nav-button" onclick="openSettingsDialog()"><span>☰</span><small>Menu</small></button>
+    </nav>
   </main>
 
 

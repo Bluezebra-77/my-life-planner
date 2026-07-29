@@ -37,44 +37,56 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-function getData() {
-  const keys = ["lifePlannerDataV9", "lifePlannerDataV8", "lifePlannerDataV7", "lifePlannerDataV4", "lifePlannerDataV3"];
-  for (const key of keys) {
-    const saved = localStorage.getItem(key);
-    if (!saved) continue;
-    try {
-      const loaded = JSON.parse(saved);
-      loaded.todos = loaded.todos || [];
-      loaded.projects = loaded.projects || [];
-      loaded.annualDates = loaded.annualDates || [];
-      loaded.cleaningTasks = loaded.cleaningTasks || [];
-      loaded.dailyTasks = loaded.dailyTasks || JSON.parse(JSON.stringify(dailyTasks));
-      loaded.eveningTasks = loaded.eveningTasks || JSON.parse(JSON.stringify(eveningTasks));
-      loaded.categoryTasks = loaded.categoryTasks || JSON.parse(JSON.stringify(defaultCategories));
-      return normaliseData(loaded);
-    } catch (error) {
-      console.error("Could not read saved planner data", error);
-    }
-  }
+function scoreData(candidate = {}) {
+  return [candidate.todos, candidate.projects, candidate.annualDates, candidate.cleaningTasks]
+    .reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
+}
 
-  return {
-    todos: [],
-    projects: [],
-    annualDates: [],
-    cleaningTasks: [],
-    dailyTasks: JSON.parse(JSON.stringify(dailyTasks)),
-    eveningTasks: JSON.parse(JSON.stringify(eveningTasks)),
-    categoryTasks: JSON.parse(JSON.stringify(defaultCategories))
-  };
+function mergeUniqueLists(candidates, field) {
+  const result = [];
+  const seen = new Set();
+  candidates.forEach(candidate => (candidate.value[field] || []).forEach(item => {
+    const signature = item.id || `${item.name || item.title || ""}|${item.dueDate || item.nextDue || item.monthDay || ""}`;
+    if (!seen.has(signature)) { seen.add(signature); result.push(item); }
+  }));
+  return result;
+}
+
+function getData() {
+  const keys = ["lifePlannerData", "lifePlannerDataV9", "lifePlannerDataV8A", "lifePlannerDataV8", "lifePlannerDataV7", "lifePlannerDataV6", "lifePlannerDataV5", "lifePlannerDataV4", "lifePlannerDataV3"];
+  const candidates = [];
+  keys.forEach((key, priority) => {
+    const saved = localStorage.getItem(key);
+    if (!saved) return;
+    try { candidates.push({ key, priority, value: normaliseData(JSON.parse(saved)) }); }
+    catch (error) { console.warn("Could not read", key, error); }
+  });
+  if (!candidates.length) return normaliseData({});
+  candidates.sort((a,b) => a.priority-b.priority);
+  const preferred = candidates[0].value;
+  const merged = normaliseData({
+    ...preferred,
+    todos: mergeUniqueLists(candidates,"todos"),
+    projects: mergeUniqueLists(candidates,"projects"),
+    annualDates: mergeUniqueLists(candidates,"annualDates"),
+    cleaningTasks: mergeUniqueLists(candidates,"cleaningTasks")
+  });
+  try {
+    localStorage.setItem("lifePlannerMigrationSafety", JSON.stringify({savedAt:new Date().toISOString(), sourceKeys:candidates.map(x=>x.key), data:merged}));
+    localStorage.setItem("lifePlannerData", JSON.stringify(merged));
+  } catch {}
+  return merged;
 }
 
 let data = getData();
 
-const DATA_KEY = "lifePlannerDataV9";
-const LEGACY_DATA_KEY = "lifePlannerDataV8";
-const RECOVERY_KEY = "lifePlannerDailyBackupsV9";
-const SETTINGS_KEY = "lifePlannerSettingsV9";
-const APP_VERSION = "9";
+const DATA_KEY = "lifePlannerData";
+const LEGACY_DATA_KEYS = ["lifePlannerDataV9","lifePlannerDataV8A","lifePlannerDataV8","lifePlannerDataV7","lifePlannerDataV6","lifePlannerDataV5","lifePlannerDataV4","lifePlannerDataV3"];
+const RECOVERY_KEY = "lifePlannerDailyBackups";
+const LEGACY_RECOVERY_KEYS = ["lifePlannerDailyBackupsV9"];
+const SETTINGS_KEY = "lifePlannerSettings";
+const LEGACY_SETTINGS_KEYS = ["lifePlannerSettingsV9","lifePlannerSettingsV8","lifePlannerSettingsV7"];
+const APP_VERSION = "9.2";
 let saveIndicatorTimer = null;
 
 function normaliseData(loaded = {}) {
@@ -108,7 +120,9 @@ function collectChecks() {
 function createRecoveryCopy(serialised) {
   try {
     const today = localDateKey();
-    let copies = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]");
+    let rawRecovery = localStorage.getItem(RECOVERY_KEY);
+    if (!rawRecovery) { for (const key of LEGACY_RECOVERY_KEYS) { rawRecovery = localStorage.getItem(key); if (rawRecovery) break; } }
+    let copies = JSON.parse(rawRecovery || "[]");
     if (!Array.isArray(copies)) copies = [];
     const snapshot = {
       date: today,
@@ -286,11 +300,11 @@ function chooseFrom(poolName) {
   if (poolName === "normal") pool = [...saved, ...choicePools.normal];
   if (poolName === "low") pool = [...data.dailyTasks.slice(-3).map(x => x.title), ...choicePools.low];
   if (poolName === "quick") pool = [...(data.categoryTasks?.admin || []).slice(0,2), ...choicePools.quick];
-  pool = pool.filter(Boolean);
+  pool = [...new Set(pool.filter(Boolean))];
   const card = document.getElementById("choiceCard");
-  card.textContent = pool.length
-    ? pool[Math.floor(Math.random() * pool.length)]
-    : "There are no available tasks yet. Add one to a list first.";
+  if (!pool.length) { card.textContent = "There are no available tasks yet. Add one to a list first."; return; }
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(3, pool.length));
+  card.innerHTML = `<ol class="choice-list">${shuffled.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ol><button type="button" class="small-button" onclick="chooseFrom('${poolName}')">Give me three different ideas</button>`;
 }
 
 function chooseForMe() { chooseFrom("normal"); }
@@ -434,7 +448,7 @@ function deleteRoutineTask(group, id) {
 function updateStorageStatus() {
   const status = document.getElementById("storageStatus");
   if (!status) return;
-  const saved = localStorage.getItem(DATA_KEY) || localStorage.getItem(LEGACY_DATA_KEY);
+  const saved = localStorage.getItem(DATA_KEY) || LEGACY_DATA_KEYS.map(key => localStorage.getItem(key)).find(Boolean);
   let recoveries = 0;
   try { recoveries = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]").length; } catch {}
   status.textContent = saved
@@ -642,32 +656,16 @@ function editCleaning(id) {
 
 function renderCleaningToday() {
   const area = document.getElementById("cleaningTodayArea");
-  const due = data.cleaningTasks
-    .filter(item => isDueTodayOrEarlier(item.nextDue))
-    .sort((a,b) => dateOnly(a.nextDue) - dateOnly(b.nextDue));
-
+  const items = getTodayReminderItems().filter(item => item.itemType !== "annual");
   area.innerHTML = "";
-  if (!due.length) {
-    area.innerHTML = `<div class="empty-state">No cleaning jobs are due today.</div>`;
-    return;
-  }
-
-  due.forEach(item => {
-    const card = document.createElement("div");
-    card.className = "list-card cleaning-card due-today";
-    card.innerHTML = `
-      <div class="card-top">
-        <div>
-          <div class="card-title">${escapeHtml(item.name)}</div>
-          <div class="card-meta">${escapeHtml(item.room || "General")} - ${frequencyLabel(item.frequency)}</div>
-        </div>
-        <span class="badge due">Due now</span>
-      </div>
-      <div class="card-actions">
-        <button type="button" onclick="completeCleaning('${item.id}')">Done - set next date</button>
-        <button type="button" onclick="editCleaning('${item.id}')">Edit</button>
-      </div>`;
-    area.appendChild(card);
+  if (!items.length) { area.innerHTML = `<div class="empty-state">No actionable tasks are due today.</div>`; return; }
+  items.forEach(item => {
+    let onComplete = null;
+    if (item.itemType === "cleaning") onComplete = () => completeCleaning(item.id);
+    if (item.itemType === "todo") onComplete = () => toggleTodo(item.id);
+    if (item.itemType === "project") onComplete = () => toggleProject(item.id);
+    if (item.itemType === "step") onComplete = () => toggleStep(item.parentId,item.id);
+    area.appendChild(compactReminderRow(item,{meta:item.source,actionable:true,onComplete}));
   });
 }
 
@@ -815,46 +813,32 @@ function getTodayReminderItems() {
     .sort((a,b) => dateOnly(a.dueDate) - dateOnly(b.dueDate));
 }
 
+
+function compactReminderRow(item, options = {}) {
+  const row = document.createElement("div");
+  row.className = "compact-reminder-row";
+  const actionable = options.actionable;
+  const icon = item.itemType === "annual" ? "🎂" : "";
+  const control = actionable ? `<input type="checkbox" aria-label="Complete ${escapeHtml(item.name)}">` : `<span class="compact-icon">${icon}</span>`;
+  row.innerHTML = `${control}<div class="compact-copy"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(options.meta || "")}</span></div>${options.badge ? `<span class="compact-badge">${escapeHtml(options.badge)}</span>` : ""}`;
+  if (actionable) row.querySelector("input").addEventListener("change", () => { options.onComplete?.(); });
+  return row;
+}
+
 function renderTodayReminders() {
   const area = document.getElementById("todayRemindersArea");
   const items = getTodayReminderItems();
   area.innerHTML = "";
-
-  if (!items.length) {
-    area.innerHTML = `<div class="empty-state">No dated reminders need attention today.</div>`;
-    return;
-  }
-
+  if (!items.length) { area.innerHTML = `<div class="empty-state">No dated reminders need attention today.</div>`; return; }
   items.forEach(item => {
-    const card = document.createElement("div");
-    card.className = "list-card today-highlight";
-
-    let actions = "";
-    if (item.itemType === "annual") {
-      actions = `<button type="button" onclick="editAnnual('${item.id}')">Edit</button>`;
-    } else if (item.itemType === "cleaning") {
-      actions = `<button type="button" onclick="completeCleaning('${item.id}')">Complete</button>
-                 <button type="button" onclick="editCleaning('${item.id}')">Edit</button>`;
-    } else if (item.itemType === "todo") {
-      actions = `<button type="button" onclick="editTodo('${item.id}')">Edit</button>`;
-    } else if (item.itemType === "project") {
-      actions = `<button type="button" onclick="editProject('${item.id}')">Edit</button>`;
-    } else if (item.itemType === "step") {
-      actions = `<button type="button" onclick="editStep('${item.parentId}','${item.id}')">Edit step</button>`;
-    }
-
-    card.innerHTML = `
-      <div class="card-top">
-        <div>
-          <div class="card-title">${escapeHtml(item.name)}</div>
-          <div class="card-meta">${escapeHtml(item.source)} - ${formatDate(item.dueDate, item.itemType !== "annual")}</div>
-          <div class="card-details">${escapeHtml(item.details || "")}</div>
-        </div>
-        <span class="badge due">Today</span>
-      </div>
-      <div class="card-actions">${actions}</div>
-    `;
-    area.appendChild(card);
+    const meta = `${item.source} · ${formatDate(item.dueDate, item.itemType !== "annual")}`;
+    const actionable = item.itemType !== "annual";
+    let onComplete = null;
+    if (item.itemType === "cleaning") onComplete = () => completeCleaning(item.id);
+    if (item.itemType === "todo") onComplete = () => toggleTodo(item.id);
+    if (item.itemType === "project") onComplete = () => toggleProject(item.id);
+    if (item.itemType === "step") onComplete = () => toggleStep(item.parentId,item.id);
+    area.appendChild(compactReminderRow(item,{meta,badge:"Today",actionable,onComplete}));
   });
 }
 
@@ -872,17 +856,10 @@ function renderWeekly() {
   const area = document.getElementById("weeklyArea");
   const items = getWeeklyItems();
   area.innerHTML = "";
-  if (!items.length) {
-    area.innerHTML = `<div class="empty-state">Nothing time-sensitive needs attention this week.</div>`;
-    return;
-  }
-
+  if (!items.length) { area.innerHTML = `<div class="empty-state">Nothing time-sensitive needs attention this week.</div>`; return; }
   items.forEach(item => {
-    const card = document.createElement("div");
-    card.className = "list-card";
-    const label = item.annual ? `${item.source} - ${formatDate(item.dueDate, false)}` : `${item.source} - ${getTimingText(item)}`;
-    card.innerHTML = `<div class="card-top"><div><div class="card-title">${escapeHtml(item.name)}</div><div class="card-meta">${escapeHtml(label)}</div></div><span class="badge due">This week</span></div>`;
-    area.appendChild(card);
+    const meta = item.annual ? `${item.source} · ${formatDate(item.dueDate, false)}` : `${item.source} · ${getTimingText(item)}`;
+    area.appendChild(compactReminderRow({...item,itemType:item.annual?"annual":item.itemType},{meta,badge:"This week",actionable:false}));
   });
 }
 
@@ -1213,10 +1190,26 @@ function escapeHtml(value) {
   return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
+function getSettingsFromAnyKey() {
+  const keys = ["lifePlannerSettings","lifePlannerSettingsV9","lifePlannerSettingsV8","lifePlannerSettingsV7"];
+  for (const key of keys) {
+    try { const raw=localStorage.getItem(key); if(raw) return JSON.parse(raw); } catch {}
+  }
+  return {};
+}
 function getSettings() {
-  try {
-    return { ownerName:"", theme:"sage", font:"clear", ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
-  } catch { return { ownerName:"", theme:"sage", font:"clear" }; }
+  return { ownerName:"", theme:"sage", font:"clear", ...getSettingsFromAnyKey() };
+}
+
+function openSettingsDialog() { document.getElementById("settingsDialog")?.showModal(); applySettings(); previewSettings(); renderDailyBackups(); updateStorageStatus(); }
+function closeSettingsDialog() { document.getElementById("settingsDialog")?.close(); }
+function previewSettings() {
+  const theme=document.getElementById("themeChoice")?.value || "sage";
+  const font=document.getElementById("fontChoice")?.value || "clear";
+  const themePreview=document.getElementById("themePreview");
+  const fontPreview=document.getElementById("fontPreview");
+  if(themePreview) themePreview.dataset.themePreview=theme;
+  if(fontPreview) fontPreview.dataset.fontPreview=font;
 }
 
 function applySettings() {
@@ -1231,6 +1224,7 @@ function applySettings() {
   if (owner) owner.value = settings.ownerName;
   if (theme) theme.value = settings.theme;
   if (font) font.value = settings.font;
+  previewSettings();
 }
 
 function saveSettings() {
@@ -1243,6 +1237,7 @@ function saveSettings() {
   applySettings();
   saveData();
   showSaved("Customisation saved");
+  closeSettingsDialog();
 }
 
 function renderAll() {
@@ -1275,7 +1270,7 @@ function applyAppUpdate() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./service-worker.js?v=9", { updateViaCache: "none" });
+      const registration = await navigator.serviceWorker.register("./service-worker.js?v=9.2", { updateViaCache: "none" });
       if (registration.waiting) {
         waitingServiceWorker = registration.waiting;
         document.getElementById("updateButton")?.classList.remove("hidden");
@@ -1299,3 +1294,30 @@ if ("serviceWorker" in navigator) {
 applySettings();
 createRecoveryCopy(JSON.stringify(data));
 renderAll();
+
+
+function showAppView(view, button) {
+  const titles = {
+    home: ["Home", "Today at a glance"],
+    tasks: ["Tasks", "Manage your active lists"],
+    planner: ["Planner", "Projects, dates and routines"]
+  };
+  document.querySelectorAll('.app-view-section').forEach(section => {
+    section.hidden = section.dataset.view !== view;
+  });
+  document.querySelectorAll('.bottom-nav .nav-button[data-tab]').forEach(btn => btn.classList.remove('active'));
+  const activeButton = button || document.querySelector(`.bottom-nav .nav-button[data-tab="${view}"]`);
+  if (activeButton) activeButton.classList.add('active');
+  const copy = titles[view] || titles.home;
+  const eyebrow = document.getElementById('viewEyebrow');
+  const title = document.getElementById('viewTitle');
+  if (eyebrow) eyebrow.textContent = copy[0];
+  if (title) title.textContent = copy[1];
+  localStorage.setItem('myLifePlannerActiveView', view);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const savedView = localStorage.getItem('myLifePlannerActiveView') || 'home';
+  showAppView(savedView);
+});
