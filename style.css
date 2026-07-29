@@ -561,3 +561,9 @@ body[data-theme="mint"] .panel{background:#f7fffb}body[data-theme="peach"] .pane
   .bottom-nav { bottom: max(6px, env(safe-area-inset-bottom)); width: calc(100% - 12px); }
   .panel { padding: 16px; }
 }
+
+/* v9.3 clickable summary rows */
+.clickable-reminder{cursor:pointer}
+.clickable-reminder:hover,.clickable-reminder:focus-visible{border-color:var(--accent,#5f7d68);box-shadow:0 0 0 3px rgba(95,125,104,.14);outline:none}
+.clickable-reminder .compact-copy strong{text-decoration-thickness:1px;text-underline-offset:3px}
+.clickable-reminder:hover .compact-copy strong{text-decoration:underline}

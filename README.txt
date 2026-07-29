@@ -1,4 +1,4 @@
-My Life Planner v9.2
+My Life Planner v9.3
 
 Upload all eight files to the root of the GitHub Pages repository, replacing the existing files.
 

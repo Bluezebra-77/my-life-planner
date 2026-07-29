@@ -37,19 +37,42 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
+function normaliseLegacyShape(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    ...source,
+    todos: source.todos || source.todoItems || source.tasks || [],
+    projects: source.projects || source.projectItems || [],
+    annualDates: source.annualDates || source.birthdays || source.annualReminders || [],
+    cleaningTasks: source.cleaningTasks || source.cleaning || source.cleaningJobs || source.householdTasks || []
+  };
+}
+
 function scoreData(candidate = {}) {
-  return [candidate.todos, candidate.projects, candidate.annualDates, candidate.cleaningTasks]
+  const shaped = normaliseLegacyShape(candidate);
+  return [shaped.todos, shaped.projects, shaped.annualDates, shaped.cleaningTasks]
     .reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
 }
 
 function mergeUniqueLists(candidates, field) {
   const result = [];
   const seen = new Set();
-  candidates.forEach(candidate => (candidate.value[field] || []).forEach(item => {
-    const signature = item.id || `${item.name || item.title || ""}|${item.dueDate || item.nextDue || item.monthDay || ""}`;
-    if (!seen.has(signature)) { seen.add(signature); result.push(item); }
-  }));
+  candidates.forEach(candidate => {
+    const shaped = normaliseLegacyShape(candidate.value);
+    (shaped[field] || []).forEach(item => {
+      const signature = item.id || `${item.name || item.title || ""}|${item.dueDate || item.nextDue || item.monthDay || ""}`;
+      if (!seen.has(signature)) { seen.add(signature); result.push(item); }
+    });
+  });
   return result;
+}
+
+function addCandidate(candidates, key, priority, value) {
+  if (!value || typeof value !== "object") return;
+  const shaped = normaliseLegacyShape(value);
+  if (scoreData(shaped) || key === "lifePlannerData") {
+    candidates.push({ key, priority, value: normaliseData(shaped) });
+  }
 }
 
 function getData() {
@@ -58,9 +81,29 @@ function getData() {
   keys.forEach((key, priority) => {
     const saved = localStorage.getItem(key);
     if (!saved) return;
-    try { candidates.push({ key, priority, value: normaliseData(JSON.parse(saved)) }); }
+    try { addCandidate(candidates, key, priority, JSON.parse(saved)); }
     catch (error) { console.warn("Could not read", key, error); }
   });
+
+  // One-time v9.3 rescue pass: inspect safety copies and daily snapshots so a list
+  // missed by an earlier migration can be recovered rather than silently lost.
+  if (!localStorage.getItem("lifePlannerMigrationV93Done")) {
+    try {
+      const safety = JSON.parse(localStorage.getItem("lifePlannerMigrationSafety") || "null");
+      if (safety?.data) addCandidate(candidates, "migrationSafety", 20, safety.data);
+    } catch {}
+    ["lifePlannerDailyBackups", "lifePlannerDailyBackupsV9"].forEach((key, keyIndex) => {
+      try {
+        const copies = JSON.parse(localStorage.getItem(key) || "[]");
+        if (Array.isArray(copies)) copies.forEach((copy, index) => {
+          let snapshot = copy?.data;
+          if (typeof snapshot === "string") { try { snapshot = JSON.parse(snapshot); } catch { snapshot = null; } }
+          if (snapshot) addCandidate(candidates, `${key}:${copy.date || index}`, 30 + keyIndex, snapshot);
+        });
+      } catch {}
+    });
+  }
+
   if (!candidates.length) return normaliseData({});
   candidates.sort((a,b) => a.priority-b.priority);
   const preferred = candidates[0].value;
@@ -74,6 +117,7 @@ function getData() {
   try {
     localStorage.setItem("lifePlannerMigrationSafety", JSON.stringify({savedAt:new Date().toISOString(), sourceKeys:candidates.map(x=>x.key), data:merged}));
     localStorage.setItem("lifePlannerData", JSON.stringify(merged));
+    localStorage.setItem("lifePlannerMigrationV93Done", new Date().toISOString());
   } catch {}
   return merged;
 }
@@ -86,7 +130,7 @@ const RECOVERY_KEY = "lifePlannerDailyBackups";
 const LEGACY_RECOVERY_KEYS = ["lifePlannerDailyBackupsV9"];
 const SETTINGS_KEY = "lifePlannerSettings";
 const LEGACY_SETTINGS_KEYS = ["lifePlannerSettingsV9","lifePlannerSettingsV8","lifePlannerSettingsV7"];
-const APP_VERSION = "9.2";
+const APP_VERSION = "9.3";
 let saveIndicatorTimer = null;
 
 function normaliseData(loaded = {}) {
@@ -94,7 +138,7 @@ function normaliseData(loaded = {}) {
     todos: Array.isArray(loaded.todos) ? loaded.todos : [],
     projects: Array.isArray(loaded.projects) ? loaded.projects : [],
     annualDates: Array.isArray(loaded.annualDates) ? loaded.annualDates : [],
-    cleaningTasks: Array.isArray(loaded.cleaningTasks) ? loaded.cleaningTasks : [],
+    cleaningTasks: Array.isArray(loaded.cleaningTasks) ? loaded.cleaningTasks : Array.isArray(loaded.cleaning) ? loaded.cleaning : Array.isArray(loaded.cleaningJobs) ? loaded.cleaningJobs : [],
     dailyTasks: Array.isArray(loaded.dailyTasks) ? loaded.dailyTasks : JSON.parse(JSON.stringify(dailyTasks)),
     eveningTasks: Array.isArray(loaded.eveningTasks) ? loaded.eveningTasks : JSON.parse(JSON.stringify(eveningTasks)),
     categoryTasks: loaded.categoryTasks && typeof loaded.categoryTasks === "object"
@@ -656,16 +700,17 @@ function editCleaning(id) {
 
 function renderCleaningToday() {
   const area = document.getElementById("cleaningTodayArea");
-  const items = getTodayReminderItems().filter(item => item.itemType !== "annual");
+  const items = getWeeklyItems().filter(item => !item.annual && item.itemType !== "annual");
   area.innerHTML = "";
-  if (!items.length) { area.innerHTML = `<div class="empty-state">No actionable tasks are due today.</div>`; return; }
+  if (!items.length) { area.innerHTML = `<div class="empty-state">No actionable tasks are due within the next week.</div>`; return; }
   items.forEach(item => {
     let onComplete = null;
     if (item.itemType === "cleaning") onComplete = () => completeCleaning(item.id);
     if (item.itemType === "todo") onComplete = () => toggleTodo(item.id);
     if (item.itemType === "project") onComplete = () => toggleProject(item.id);
     if (item.itemType === "step") onComplete = () => toggleStep(item.parentId,item.id);
-    area.appendChild(compactReminderRow(item,{meta:item.source,actionable:true,onComplete}));
+    const meta = `${item.source} · ${getTimingText(item)}`;
+    area.appendChild(compactReminderRow(item,{meta,actionable:true,onComplete,clickable:true}));
   });
 }
 
@@ -708,9 +753,9 @@ function getWeeklyItems() {
   const end = new Date(today); end.setDate(end.getDate() + 7);
 
   const ordinary = [
-    ...data.todos.map(item => ({ ...item, source: "To-do" })),
-    ...data.projects.map(item => ({ ...item, source: "Project" })),
-    ...data.projects.flatMap(project => project.steps.map(step => ({ ...step, source: `Project step: ${project.name}` }))),
+    ...data.todos.map(item => ({ ...item, source: "To-do", itemType: "todo" })),
+    ...data.projects.map(item => ({ ...item, source: "Project", itemType: "project" })),
+    ...data.projects.flatMap(project => project.steps.map(step => ({ ...step, source: `Project step: ${project.name}`, itemType: "step", parentId: project.id }))),
     ...data.cleaningTasks.map(item => ({
       id: item.id,
       name: item.name,
@@ -719,7 +764,8 @@ function getWeeklyItems() {
       dueDate: item.nextDue,
       leadDays: 0,
       completed: false,
-      timingType: "date"
+      timingType: "date",
+      itemType: "cleaning"
     }))
   ].filter(item => !item.completed && item.dueDate)
    .filter(item => {
@@ -814,14 +860,29 @@ function getTodayReminderItems() {
 }
 
 
+function openReminderItem(item) {
+  if (item.itemType === "todo") editTodo(item.id);
+  else if (item.itemType === "project") editProject(item.id);
+  else if (item.itemType === "step") editStep(item.parentId, item.id);
+  else if (item.itemType === "cleaning") editCleaning(item.id);
+  else if (item.itemType === "annual" || item.annual) editAnnual(item.id);
+}
+
 function compactReminderRow(item, options = {}) {
   const row = document.createElement("div");
-  row.className = "compact-reminder-row";
+  row.className = `compact-reminder-row${options.clickable ? " clickable-reminder" : ""}`;
   const actionable = options.actionable;
   const icon = item.itemType === "annual" ? "🎂" : "";
   const control = actionable ? `<input type="checkbox" aria-label="Complete ${escapeHtml(item.name)}">` : `<span class="compact-icon">${icon}</span>`;
   row.innerHTML = `${control}<div class="compact-copy"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(options.meta || "")}</span></div>${options.badge ? `<span class="compact-badge">${escapeHtml(options.badge)}</span>` : ""}`;
-  if (actionable) row.querySelector("input").addEventListener("change", () => { options.onComplete?.(); });
+  if (actionable) row.querySelector("input").addEventListener("change", event => { event.stopPropagation(); options.onComplete?.(); });
+  if (options.clickable) {
+    row.tabIndex = 0;
+    row.setAttribute("role", "button");
+    row.setAttribute("aria-label", `Open ${item.name}`);
+    row.addEventListener("click", event => { if (event.target.matches('input,button')) return; openReminderItem(item); });
+    row.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openReminderItem(item); } });
+  }
   return row;
 }
 
@@ -838,7 +899,7 @@ function renderTodayReminders() {
     if (item.itemType === "todo") onComplete = () => toggleTodo(item.id);
     if (item.itemType === "project") onComplete = () => toggleProject(item.id);
     if (item.itemType === "step") onComplete = () => toggleStep(item.parentId,item.id);
-    area.appendChild(compactReminderRow(item,{meta,badge:"Today",actionable,onComplete}));
+    area.appendChild(compactReminderRow(item,{meta,badge:"Today",actionable,onComplete,clickable:true}));
   });
 }
 
@@ -859,7 +920,7 @@ function renderWeekly() {
   if (!items.length) { area.innerHTML = `<div class="empty-state">Nothing time-sensitive needs attention this week.</div>`; return; }
   items.forEach(item => {
     const meta = item.annual ? `${item.source} · ${formatDate(item.dueDate, false)}` : `${item.source} · ${getTimingText(item)}`;
-    area.appendChild(compactReminderRow({...item,itemType:item.annual?"annual":item.itemType},{meta,badge:"This week",actionable:false}));
+    area.appendChild(compactReminderRow({...item,itemType:item.annual?"annual":item.itemType},{meta,actionable:false,clickable:true}));
   });
 }
 
@@ -1270,7 +1331,7 @@ function applyAppUpdate() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./service-worker.js?v=9.2", { updateViaCache: "none" });
+      const registration = await navigator.serviceWorker.register("./service-worker.js?v=9.3", { updateViaCache: "none" });
       if (registration.waiting) {
         waitingServiceWorker = registration.waiting;
         document.getElementById("updateButton")?.classList.remove("hidden");
