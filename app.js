@@ -1090,8 +1090,7 @@ function openAddDialog(type="todo",projectId="") {
   clearForm();
   itemType.value=type;
   document.getElementById("editingParentId").value=projectId;
-  populateProjectPicker();
-  if(projectId) document.getElementById("projectPicker").value=projectId;
+  populateProjectPicker(projectId);
   document.getElementById("dialogTitle").textContent="New item";
   updateFormVisibility();
   dialog.showModal();
@@ -1101,10 +1100,18 @@ function openAddDialog(type="todo",projectId="") {
 function openAnnualDialog() { openAddDialog("annual"); }
 function closeAddDialog() { dialog.close(); }
 
-function populateProjectPicker() {
-  document.getElementById("projectPicker").innerHTML=data.projects
-    .filter(p=>!p.completed)
-    .map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
+function populateProjectPicker(selectedId="") {
+  const picker = document.getElementById("projectPicker");
+  const projects = Array.isArray(data.projects) ? data.projects : [];
+  if (!projects.length) {
+    picker.innerHTML = `<option value="">No projects available — add a project first</option>`;
+    picker.disabled = true;
+    return;
+  }
+  picker.disabled = false;
+  picker.innerHTML = projects
+    .map(p=>`<option value="${p.id}">${escapeHtml(p.name)}${p.completed ? " (completed)" : ""}</option>`).join("");
+  if (selectedId && projects.some(p => p.id === selectedId)) picker.value = selectedId;
 }
 
 function updateFormVisibility() {
@@ -1126,7 +1133,10 @@ function updateFormVisibility() {
     routine ? "For example: 10 minutes, after breakfast, or any helpful note" : "Notes, contact details, what needs doing...";
 }
 
-itemType.addEventListener("change",updateFormVisibility);
+itemType.addEventListener("change",()=>{
+  if (itemType.value === "step") populateProjectPicker(document.getElementById("editingParentId").value);
+  updateFormVisibility();
+});
 timingType.addEventListener("change",updateFormVisibility);
 
 function loadCommon(item,type,parentId="") {
@@ -1384,7 +1394,7 @@ renderAll();
 function showAppView(view, button) {
   const titles = {
     home: ["Home", "Today at a glance"],
-    tasks: ["Tasks", "Manage your active lists"],
+    tasks: ["Tasks", "To-dos, cleaning, projects and annual reminders"],
     planner: ["Planner", "Projects, dates and routines"]
   };
   document.querySelectorAll('.app-view-section').forEach(section => {
