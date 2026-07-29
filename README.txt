@@ -1,21 +1,16 @@
-MY LIFE PLANNER VERSION 9
+MY LIFE PLANNER — VERSION 9
 
-UPLOAD TO GITHUB
-Replace all existing planner files in your repository with every file in this folder, then commit the changes.
+Upload every file in this folder to the ROOT of the GitHub repository, replacing the old files.
 
-NEW IN VERSION 9
-- Five dated daily backups, visible in Settings
-- Restore any of the five backup dates
-- Clear explanation of where backups are stored
-- Optional owner name
-- Five box-colour themes
-- Five font choices
-- Settings and About area
-- Export/import includes customisation
-- Existing Version 8/8A information migrates automatically
+Version 9 includes:
+- migration from Version 8A data
+- five dated daily backups stored in Safari
+- restore by date
+- optional owner name
+- five box-colour themes
+- five font choices
+- Settings and backup-location guidance
+- improved update handling
 
-WHERE BACKUPS ARE
-Open the planner and tap Settings, then look under Five daily backups. These five copies are inside Safari on that device. For protection if the phone is lost or Safari data is erased, also use Save or share backup and save the JSON file in iCloud Drive or OneDrive.
-
-PRIVACY
-Every user receives the same app but has separate private information stored on their own device. Updating the app changes the program files and keeps each person's local data.
+After committing, open the website once in a Safari Private tab to confirm it says v9. Then open the Home Screen app while online.
+Do not clear Safari website data, because that can erase local planner data and automatic backups.

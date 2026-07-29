@@ -71,9 +71,10 @@ function getData() {
 let data = getData();
 
 const DATA_KEY = "lifePlannerDataV9";
-const RECOVERY_KEY = "lifePlannerRecoveryV9";
-const DAILY_BACKUP_KEY = "lifePlannerDailyBackupsV9";
+const LEGACY_DATA_KEY = "lifePlannerDataV8";
+const RECOVERY_KEY = "lifePlannerDailyBackupsV9";
 const SETTINGS_KEY = "lifePlannerSettingsV9";
+const APP_VERSION = "9";
 let saveIndicatorTimer = null;
 
 function normaliseData(loaded = {}) {
@@ -89,116 +90,41 @@ function normaliseData(loaded = {}) {
   };
 }
 
+function localDateKey(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function collectChecks() {
+  return Object.fromEntries(
+    Object.keys(localStorage)
+      .filter(key => key.startsWith("lifePlanner:"))
+      .map(key => [key, localStorage.getItem(key)])
+  );
+}
+
 function createRecoveryCopy(serialised) {
   try {
-    const copies = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]");
-    if (copies[0]?.data === serialised) return;
-    copies.unshift({ savedAt: new Date().toISOString(), data: serialised });
+    const today = localDateKey();
+    let copies = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]");
+    if (!Array.isArray(copies)) copies = [];
+    const snapshot = {
+      date: today,
+      savedAt: new Date().toISOString(),
+      data: serialised,
+      checks: collectChecks(),
+      settings: getSettings()
+    };
+    const existing = copies.findIndex(copy => copy.date === today);
+    if (existing >= 0) copies[existing] = snapshot;
+    else copies.push(snapshot);
+    copies.sort((a,b) => String(b.date).localeCompare(String(a.date)));
     localStorage.setItem(RECOVERY_KEY, JSON.stringify(copies.slice(0, 5)));
   } catch (error) {
-    console.warn("Could not create recovery copy", error);
+    console.warn("Could not create daily backup", error);
   }
-}
-
-const defaultSettings = { ownerName: "", colourTheme: "sage", fontChoice: "clean" };
-let plannerSettings = loadSettings();
-
-function loadSettings() {
-  try { return { ...defaultSettings, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") }; }
-  catch { return { ...defaultSettings }; }
-}
-
-function todayKey() {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
-
-function getDailyBackups() {
-  try {
-    const list = JSON.parse(localStorage.getItem(DAILY_BACKUP_KEY) || "[]");
-    return Array.isArray(list) ? list : [];
-  } catch { return []; }
-}
-
-function updateDailyBackup(serialised) {
-  try {
-    const date = todayKey();
-    let list = getDailyBackups().filter(item => item && item.date !== date);
-    list.unshift({ date, savedAt: new Date().toISOString(), data: serialised });
-    list = list.sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5);
-    localStorage.setItem(DAILY_BACKUP_KEY, JSON.stringify(list));
-  } catch (error) {
-    console.warn("Could not update daily backup", error);
-  }
-}
-
-function applySettings() {
-  document.body.dataset.theme = plannerSettings.colourTheme;
-  document.body.dataset.font = plannerSettings.fontChoice;
-  const title = document.getElementById("plannerTitle");
-  if (title) {
-    const name = plannerSettings.ownerName.trim();
-    title.innerHTML = `${name ? escapeHtml(name) + "'s " : "My "}Life Planner <span class="version-badge">v9</span>`;
-  }
-  const nameInput = document.getElementById("ownerName");
-  const themeInput = document.getElementById("colourTheme");
-  const fontInput = document.getElementById("fontChoice");
-  if (nameInput) nameInput.value = plannerSettings.ownerName;
-  if (themeInput) themeInput.value = plannerSettings.colourTheme;
-  if (fontInput) fontInput.value = plannerSettings.fontChoice;
-}
-
-function openSettings(section = "") {
-  applySettings();
-  renderDailyBackups();
-  const dialog = document.getElementById("settingsDialog");
-  dialog.showModal();
-  if (section === "backups") setTimeout(() => document.getElementById("dailyBackupsSection")?.scrollIntoView({behavior:"smooth"}), 100);
-}
-
-function closeSettings() { document.getElementById("settingsDialog").close(); }
-
-function saveSettings() {
-  plannerSettings = {
-    ownerName: document.getElementById("ownerName").value.trim(),
-    colourTheme: document.getElementById("colourTheme").value,
-    fontChoice: document.getElementById("fontChoice").value
-  };
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(plannerSettings));
-  applySettings();
-  showSaved("Settings saved");
-}
-
-function renderDailyBackups() {
-  const area = document.getElementById("dailyBackupList");
-  if (!area) return;
-  const list = getDailyBackups();
-  if (!list.length) {
-    area.innerHTML = '<div class="empty-state">Your first daily backup will appear after the planner saves.</div>';
-    return;
-  }
-  area.innerHTML = list.map(item => {
-    const date = new Date(item.date + "T12:00:00").toLocaleDateString("en-GB", {weekday:"short", day:"numeric", month:"short", year:"numeric"});
-    const time = new Date(item.savedAt).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"});
-    return `<div class="list-card backup-card"><div><strong>${date}</strong><div class="card-meta">Latest save at ${time}</div></div><button type="button" class="secondary-button" onclick="restoreDailyBackup('${item.date}')">Restore</button></div>`;
-  }).join("");
-}
-
-function restoreDailyBackup(date) {
-  const item = getDailyBackups().find(entry => entry.date === date);
-  if (!item) return alert("That backup is no longer available.");
-  const label = new Date(date + "T12:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"});
-  if (!confirm(`Restore the backup from ${label}? A safety copy of your current planner will be made first.`)) return;
-  try {
-    createRecoveryCopy(JSON.stringify(data));
-    data = normaliseData(JSON.parse(item.data));
-    localStorage.setItem(DATA_KEY, JSON.stringify(data));
-    updateDailyBackup(JSON.stringify(data));
-    renderAll();
-    renderDailyBackups();
-    showSaved("Daily backup restored");
-  } catch { alert("That backup could not be restored."); }
 }
 
 function showSaved(message = "Saved on this device") {
@@ -216,9 +142,7 @@ function saveData() {
     const serialised = JSON.stringify(data);
     createRecoveryCopy(serialised);
     localStorage.setItem(DATA_KEY, serialised);
-    updateDailyBackup(serialised);
     updateStorageStatus();
-    renderDailyBackups();
     showSaved();
   } catch (error) {
     console.error("Could not save planner data", error);
@@ -510,12 +434,11 @@ function deleteRoutineTask(group, id) {
 function updateStorageStatus() {
   const status = document.getElementById("storageStatus");
   if (!status) return;
-  const saved = localStorage.getItem(DATA_KEY) || localStorage.getItem("lifePlannerDataV8");
+  const saved = localStorage.getItem(DATA_KEY) || localStorage.getItem(LEGACY_DATA_KEY);
   let recoveries = 0;
   try { recoveries = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]").length; } catch {}
-  const dailyCount = getDailyBackups().length;
   status.textContent = saved
-    ? `Saved privately on this device · ${dailyCount} of 5 daily backups available in Settings.`
+    ? `Saved privately on this device (${Math.max(1, Math.round(new Blob([saved]).size / 1024))} KB) · ${recoveries} daily backup${recoveries === 1 ? "" : "s"}.`
     : "No planner information has been saved yet.";
 }
 
@@ -523,15 +446,11 @@ function exportPlanner() {
   saveData();
   const backup = {
     app: "My Life Planner",
-    version: "8A",
+    version: APP_VERSION,
     exportedAt: new Date().toISOString(),
     data,
-    settings: plannerSettings,
-    checks: Object.fromEntries(
-      Object.keys(localStorage)
-        .filter(key => key.startsWith("lifePlanner:"))
-        .map(key => [key, localStorage.getItem(key)])
-    )
+    checks: collectChecks(),
+    settings: getSettings()
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const link = document.createElement("a");
@@ -545,15 +464,11 @@ async function sharePlannerBackup() {
   saveData();
   const backup = {
     app: "My Life Planner",
-    version: "8A",
+    version: APP_VERSION,
     exportedAt: new Date().toISOString(),
     data,
-    settings: plannerSettings,
-    checks: Object.fromEntries(
-      Object.keys(localStorage)
-        .filter(key => key.startsWith("lifePlanner:"))
-        .map(key => [key, localStorage.getItem(key)])
-    )
+    checks: collectChecks(),
+    settings: getSettings()
   };
   const file = new File([JSON.stringify(backup, null, 2)],
     `my-life-planner-backup-${new Date().toISOString().slice(0,10)}.json`,
@@ -571,24 +486,54 @@ async function sharePlannerBackup() {
   exportPlanner();
 }
 
-function restoreLatestRecovery() {
-  let copies = [];
-  try { copies = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]"); } catch {}
+function getDailyBackups() {
+  try {
+    const copies = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]");
+    return Array.isArray(copies) ? copies : [];
+  } catch { return []; }
+}
+
+function renderDailyBackups() {
+  const area = document.getElementById("dailyBackupsArea");
+  if (!area) return;
+  const copies = getDailyBackups();
+  area.innerHTML = "";
   if (!copies.length) {
-    alert("There is no recovery copy available yet.");
+    area.innerHTML = '<div class="empty-state">Your first dated backup will appear after the planner saves.</div>';
     return;
   }
-  const latest = copies[0];
-  const date = new Date(latest.savedAt).toLocaleString("en-GB");
-  if (!confirm(`Restore the recovery copy saved ${date}? Your current planner will be replaced.`)) return;
+  copies.forEach(copy => {
+    const row = document.createElement("div");
+    row.className = "backup-row";
+    const date = new Date(`${copy.date}T12:00:00`).toLocaleDateString("en-GB", { weekday:"short", day:"numeric", month:"short", year:"numeric" });
+    const time = new Date(copy.savedAt).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
+    row.innerHTML = `<div><strong>${escapeHtml(date)}</strong><div class="card-meta">Latest save at ${escapeHtml(time)}</div></div><button type="button" class="small-button">Restore</button>`;
+    row.querySelector("button").addEventListener("click", () => restoreDailyBackup(copy.date));
+    area.appendChild(row);
+  });
+}
+
+function restoreDailyBackup(dateKey) {
+  const copy = getDailyBackups().find(item => item.date === dateKey);
+  if (!copy) return alert("That daily backup is no longer available.");
+  const label = new Date(`${dateKey}T12:00:00`).toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" });
+  if (!confirm(`Restore the backup from ${label}? A safety copy of your current planner will be made first.`)) return;
   try {
-    data = normaliseData(JSON.parse(latest.data));
+    createRecoveryCopy(JSON.stringify(data));
+    data = normaliseData(JSON.parse(copy.data));
     localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    Object.entries(copy.checks || {}).forEach(([key,value]) => localStorage.setItem(key,value));
+    if (copy.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(copy.settings));
+    applySettings();
     renderAll();
-    showSaved("Recovery restored");
-  } catch {
-    alert("That recovery copy could not be restored.");
-  }
+    showSaved("Daily backup restored");
+  } catch { alert("That daily backup could not be restored."); }
+}
+
+function restoreLatestRecovery() {
+  const latest = getDailyBackups()[0];
+  if (!latest) return alert("There is no daily backup available yet.");
+  restoreDailyBackup(latest.date);
 }
 
 function importPlanner(event) {
@@ -601,8 +546,9 @@ function importPlanner(event) {
       const imported = backup.data || backup;
       if (!imported || typeof imported !== "object") throw new Error("Invalid backup");
       data = normaliseData(imported);
-      if (backup.settings) { plannerSettings = { ...defaultSettings, ...backup.settings }; localStorage.setItem(SETTINGS_KEY, JSON.stringify(plannerSettings)); applySettings(); }
       Object.entries(backup.checks || {}).forEach(([key, value]) => localStorage.setItem(key, value));
+      if (backup.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(backup.settings));
+      applySettings();
       saveData();
       renderAll();
       alert("Planner backup imported successfully.");
@@ -1267,10 +1213,39 @@ function escapeHtml(value) {
   return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
-function renderAll() {
+function getSettings() {
+  try {
+    return { ownerName:"", theme:"sage", font:"clear", ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+  } catch { return { ownerName:"", theme:"sage", font:"clear" }; }
+}
+
+function applySettings() {
+  const settings = getSettings();
+  document.body.dataset.theme = settings.theme;
+  document.body.dataset.font = settings.font;
+  const title = document.getElementById("plannerTitle");
+  if (title) title.textContent = settings.ownerName ? `${settings.ownerName}'s Life Planner` : "My Life Planner";
+  const owner = document.getElementById("ownerName");
+  const theme = document.getElementById("themeChoice");
+  const font = document.getElementById("fontChoice");
+  if (owner) owner.value = settings.ownerName;
+  if (theme) theme.value = settings.theme;
+  if (font) font.value = settings.font;
+}
+
+function saveSettings() {
+  const settings = {
+    ownerName: document.getElementById("ownerName")?.value.trim() || "",
+    theme: document.getElementById("themeChoice")?.value || "sage",
+    font: document.getElementById("fontChoice")?.value || "clear"
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   applySettings();
-  updateDailyBackup(JSON.stringify(normaliseData(data)));
-  renderDailyBackups();
+  saveData();
+  showSaved("Customisation saved");
+}
+
+function renderAll() {
   setDate();
   renderChecklist("dailyChecklist",data.dailyTasks,"daily",false);
   renderChecklist("eveningChecklist",data.eveningTasks,"daily",false);
@@ -1284,6 +1259,8 @@ function renderAll() {
   renderMainOverview();
   updateProgress();
   updateStorageStatus();
+  renderDailyBackups();
+  applySettings();
   restorePanelStates();
 }
 
@@ -1298,11 +1275,10 @@ function applyAppUpdate() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./service-worker.js");
+      const registration = await navigator.serviceWorker.register("./service-worker.js?v=9", { updateViaCache: "none" });
       if (registration.waiting) {
         waitingServiceWorker = registration.waiting;
         document.getElementById("updateButton")?.classList.remove("hidden");
-        document.getElementById("settingsUpdateButton")?.classList.remove("hidden");
       }
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
@@ -1310,7 +1286,6 @@ if ("serviceWorker" in navigator) {
           if (worker.state === "installed" && navigator.serviceWorker.controller) {
             waitingServiceWorker = worker;
             document.getElementById("updateButton")?.classList.remove("hidden");
-        document.getElementById("settingsUpdateButton")?.classList.remove("hidden");
           }
         });
       });
@@ -1321,4 +1296,6 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
 }
 
+applySettings();
+createRecoveryCopy(JSON.stringify(data));
 renderAll();

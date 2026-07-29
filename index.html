@@ -17,12 +17,11 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1>My Life Planner <span class="version-badge">v8A</span></h1>
+        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
         <button type="button" class="small-button" onclick="openAddDialog()">+ Add</button>
-        <button type="button" class="small-button" onclick="openSettings()">Settings</button>
         <button id="installButton" type="button" class="small-button hidden" onclick="installPlanner()">Install app</button>
         <button id="updateButton" type="button" class="small-button hidden" onclick="applyAppUpdate()">Update available</button>
       </div>
@@ -162,81 +161,73 @@
       <div id="eveningChecklist" class="checklist"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel settings-panel" id="settings">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Safety and transfer</p>
-          <h2>Backups and settings</h2>
+          <p class="eyebrow">Personalise and protect</p>
+          <h2>Settings</h2>
         </div>
-        <button class="small-button" type="button" onclick="openSettings('backups')">Open settings</button>
       </div>
-      <p id="storageStatus" class="storage-status"></p>
-      <p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-      <p class="card-meta">Your five daily backups, personalisation and import/export tools are all together in Settings.</p>
-    </section>
-  </main>
 
-  <dialog id="settingsDialog" class="settings-dialog">
-    <div class="dialog-header">
-      <div>
-        <p class="eyebrow">My Life Planner</p>
-        <h2>Settings</h2>
+      <div class="settings-grid">
+        <label>
+          Your name (optional)
+          <input id="ownerName" type="text" maxlength="40" placeholder="For example: Mary">
+        </label>
+        <label>
+          Box colour
+          <select id="themeChoice">
+            <option value="sage">Sage green</option>
+            <option value="blue">Soft blue</option>
+            <option value="rose">Warm rose</option>
+            <option value="lavender">Lavender</option>
+            <option value="sand">Soft sand</option>
+          </select>
+        </label>
+        <label>
+          Font
+          <select id="fontChoice">
+            <option value="clear">Clear and simple</option>
+            <option value="rounded">Soft and rounded</option>
+            <option value="classic">Classic</option>
+            <option value="modern">Modern</option>
+            <option value="large">Easy-read large</option>
+          </select>
+        </label>
       </div>
-      <button type="button" class="icon-button" onclick="closeSettings()">X</button>
-    </div>
-
-    <section class="settings-section">
-      <h3>Personalise your planner</h3>
-      <label>Your name (optional)
-        <input id="ownerName" type="text" maxlength="40" placeholder="For example: Jane">
-      </label>
-      <label>Box colour
-        <select id="colourTheme">
-          <option value="sage">Sage green</option>
-          <option value="blue">Soft blue</option>
-          <option value="rose">Warm rose</option>
-          <option value="lavender">Lavender</option>
-          <option value="sand">Soft sand</option>
-        </select>
-      </label>
-      <label>Font
-        <select id="fontChoice">
-          <option value="clean">Clean and simple</option>
-          <option value="rounded">Rounded</option>
-          <option value="classic">Classic</option>
-          <option value="friendly">Friendly</option>
-          <option value="large">Easy-read</option>
-        </select>
-      </label>
-      <button type="button" onclick="saveSettings()">Save customisation</button>
-    </section>
-
-    <section id="dailyBackupsSection" class="settings-section">
-      <h3>Five daily backups</h3>
-      <p class="card-meta"><strong>Where to find them:</strong> Settings → Five daily backups. They are stored privately inside Safari on this device and are listed below by date.</p>
-      <p class="card-meta">The planner keeps the latest five calendar days. Each day's copy is updated as you use the planner, so it contains that day's latest saved information.</p>
-      <div id="dailyBackupList" class="stack-list"></div>
-    </section>
-
-    <section class="settings-section">
-      <h3>Backup outside this phone</h3>
-      <p class="card-meta">For protection if the phone is lost or Safari data is cleared, save an exported file to iCloud Drive or OneDrive.</p>
       <div class="card-actions">
-        <button type="button" onclick="sharePlannerBackup()">Save or share backup</button>
-        <button type="button" class="secondary-button" onclick="exportPlanner()">Export backup</button>
+        <button type="button" onclick="saveSettings()">Save customisation</button>
+      </div>
+
+      <hr class="settings-divider">
+      <h3>Five daily backups</h3>
+      <p class="card-meta">The planner keeps one dated copy for each of the latest five days. Each day's copy is refreshed whenever you save, so it contains the latest state from that day.</p>
+      <div id="dailyBackupsArea" class="stack-list"></div>
+
+      <details class="storage-details" open>
+        <summary>Where can I find my backups?</summary>
+        <p><strong>Automatic daily backups:</strong> Settings → Five daily backups. They are stored privately inside Safari on this device and are not visible in the Files app.</p>
+        <p><strong>Backups you can see:</strong> tap Save backup file or Share backup, then choose Save to Files and select iCloud Drive or OneDrive.</p>
+      </details>
+
+      <div class="card-actions">
+        <button type="button" onclick="exportPlanner()">Save backup file</button>
+        <button type="button" onclick="sharePlannerBackup()">Share backup</button>
         <button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button>
         <input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)">
       </div>
-    </section>
+      <p id="storageStatus" class="storage-status"></p>
+      <p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
 
-    <section class="settings-section">
-      <h3>About and updates</h3>
-      <p><strong>Version:</strong> 9</p>
-      <p><strong>Personal data:</strong> stays separately on each person's device. Other users cannot see your information.</p>
-      <p><strong>App updates:</strong> GitHub updates the planner program while each person's saved information remains on their own device.</p>
-      <button id="settingsUpdateButton" type="button" class="secondary-button hidden" onclick="applyAppUpdate()">Install available update</button>
+      <details class="storage-details">
+        <summary>About My Life Planner</summary>
+        <p><strong>Version:</strong> 9</p>
+        <p><strong>Updated:</strong> 29 July 2026</p>
+        <p>GitHub stores the app files only. Your personal planner information remains in this browser on this device. Each person who installs the planner has their own separate information.</p>
+      </details>
     </section>
-  </dialog>
+  </main>
+
 
   <dialog id="routineManagerDialog" class="manager-dialog">
     <div class="dialog-header">
