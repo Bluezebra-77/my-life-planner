@@ -18,7 +18,7 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.7</span></h1>
+        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.8</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
@@ -207,7 +207,7 @@
         <details class="storage-details"><summary>Where can I find my backups?</summary><p><strong>Automatic daily backups:</strong> stored privately inside this browser on this device.</p><p><strong>Visible backup files:</strong> choose Save backup file or Share backup, then save to iCloud Drive, OneDrive or Files.</p></details>
         <div class="card-actions"><button type="button" onclick="exportPlanner()">Save backup file</button><button type="button" onclick="sharePlannerBackup()">Share backup</button><button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button><input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)"></div>
         <p id="storageStatus" class="storage-status"></p><p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.7</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
+        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.8</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
       </div>
     </dialog>
 
@@ -279,9 +279,8 @@
         <textarea id="itemDetails" rows="3" placeholder="Notes, contact details, what needs doing..."></textarea>
       </label>
 
-      <label id="projectStepsLabel" class="hidden">Steps<textarea id="projectSteps" rows="6" placeholder="Enter each step on a new line"></textarea><span class="field-help">The first unfinished step will appear in Today and This Week. Completing it reveals the next step.</span></label>
-      <label id="itemStepsLabel" class="hidden">Steps and dates<textarea id="itemSteps" rows="5" placeholder="02-07-26 | Measure window
-03-07-26 | Order made-to-measure curtain"></textarea><span class="field-help">Use one line per step. Add a date, then a vertical bar, then the step. Dates may be DD-MM-YY or YYYY-MM-DD.</span></label>
+      <div id="projectStepsLabel" class="hidden step-builder-section"><div class="step-builder-heading"><strong>Steps</strong><button type="button" class="small-button" onclick="addStepBuilderRow('projectStepsBuilder')">+ Add step</button></div><div id="projectStepsBuilder" class="step-builder"></div><textarea id="projectSteps" class="hidden" aria-hidden="true"></textarea><span class="field-help">Choose a date for each step, or set it a number of days before the project date.</span></div>
+      <div id="itemStepsLabel" class="hidden step-builder-section"><div class="step-builder-heading"><strong>Steps</strong><button type="button" class="small-button" onclick="addStepBuilderRow('itemStepsBuilder')">+ Add step</button></div><div id="itemStepsBuilder" class="step-builder"></div><textarea id="itemSteps" class="hidden" aria-hidden="true"></textarea><span class="field-help">Choose a date for each step, or set it a number of days before the main item date.</span></div>
 
       <label id="projectPickerLabel" class="hidden">
         Choose project

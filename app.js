@@ -130,7 +130,7 @@ const RECOVERY_KEY = "lifePlannerDailyBackups";
 const LEGACY_RECOVERY_KEYS = ["lifePlannerDailyBackupsV9"];
 const SETTINGS_KEY = "lifePlannerSettings";
 const LEGACY_SETTINGS_KEYS = ["lifePlannerSettingsV9","lifePlannerSettingsV8","lifePlannerSettingsV7"];
-const APP_VERSION = "9.4";
+const APP_VERSION = "9.8";
 let saveIndicatorTimer = null;
 
 function normaliseData(loaded = {}) {
@@ -1113,6 +1113,7 @@ const itemType=document.getElementById("itemType");
 const timingType=document.getElementById("timingType");
 
 function clearForm() {
+  loadStepBuilder("projectStepsBuilder",[]); loadStepBuilder("itemStepsBuilder",[]);
   addForm.reset();
   document.getElementById("editingId").value="";
   document.getElementById("editingParentId").value="";
@@ -1185,8 +1186,8 @@ function loadCommon(item,type,parentId="") {
   document.getElementById("editingParentId").value=parentId;
   document.getElementById("itemName").value=item.name || "";
   document.getElementById("itemDetails").value=item.details || "";
-  if (type === "project") document.getElementById("projectSteps").value = (item.steps || []).map(step => `${step.dueDate || ""}${step.dueDate ? " | " : ""}${step.name}`).join("\n");
-  if (type === "todo") document.getElementById("itemSteps").value = (item.steps || []).map(step => `${step.dueDate || ""}${step.dueDate ? " | " : ""}${step.name}`).join("\n");
+  if (type === "project") loadStepBuilder("projectStepsBuilder", item.steps || []);
+  if (["todo","cleaning","annual"].includes(type)) loadStepBuilder("itemStepsBuilder", item.steps || []);
   timingType.value=item.timingType || (item.dueDate ? "date" : "none");
   document.getElementById("dueDate").value=item.dueDate || "";
   document.getElementById("leadDays").value=item.leadDays ?? 7;
@@ -1228,6 +1229,7 @@ addForm.addEventListener("submit",event=>{
   const details=document.getElementById("itemDetails").value.trim();
   const timing=timingType.value;
   const leadDays=Number(document.getElementById("leadDays").value || 7);
+  syncStepBuilders();
   if(!name)return;
 
   if(type==="daily" || type==="evening") {
@@ -1298,11 +1300,11 @@ addForm.addEventListener("submit",event=>{
       const oldSteps = old?.steps || [];
       const steps = enteredSteps.map((entry,index) => {
         const existing = oldSteps[index];
-        return existing ? {...existing,name:entry.name,dueDate:entry.dueDate || existing.dueDate || null,order:index} : {id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:common.leadDays,completed:false,order:index};
+        return existing ? {...existing,name:entry.name,dueDate:entry.dueDate || existing.dueDate || null,order:index} : {id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:entry.leadDays || common.leadDays,completed:false,order:index};
       });
       data.projects[data.projects.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,steps};
     } else {
-      const steps = enteredSteps.map((entry,index) => ({id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:common.leadDays,completed:false,order:index}));
+      const steps = enteredSteps.map((entry,index) => ({id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:entry.leadDays || common.leadDays,completed:false,order:index}));
       data.projects.push({...common,steps});
     }
   }
@@ -1330,16 +1332,19 @@ function parseDatedSteps(text) {
     const parts=line.split("|");
     let raw=parts.length>1?parts.shift().trim():"";
     let name=(parts.length?parts.join("|"):line).trim();
+    let leadDays=0;
+    const leadMatch=name.match(/\|\s*lead:(\d+)\s*$/);
+    if(leadMatch){leadDays=Number(leadMatch[1]);name=name.replace(/\|\s*lead:\d+\s*$/,"").trim();}
     let dueDate=null;
     let m=raw.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2}|\d{4})$/);
     if(m){let y=m[3]; if(y.length===2)y="20"+y; dueDate=`${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;}
     else if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) dueDate=raw;
     else if(parts.length===0) name=line;
-    return {name,dueDate};
+    return {name,dueDate,leadDays};
   });
 }
 function mergeEnteredSteps(oldSteps, entered, defaults={}) {
-  return entered.map((entry,index)=>{const old=oldSteps[index]; return old?{...old,name:entry.name,dueDate:entry.dueDate||old.dueDate||null,order:index}:{id:uid(),name:entry.name,dueDate:entry.dueDate||null,details:"",completed:false,order:index,leadDays:defaults.leadDays||0,timingType:entry.dueDate?"date":"none"};});
+  return entered.map((entry,index)=>{const old=oldSteps[index]; return old?{...old,name:entry.name,dueDate:entry.dueDate||old.dueDate||null,order:index}:{id:uid(),name:entry.name,dueDate:entry.dueDate||null,details:"",completed:false,order:index,leadDays:entry.leadDays||defaults.leadDays||0,timingType:entry.dueDate?"date":"none"};});
 }
 
 function escapeHtml(value) {
@@ -1516,9 +1521,39 @@ function openReminderItem(item){if(item.itemType==="todo")editTodo(item.id);else
 function completionFor(item){if(item.itemType==="cleaning")return()=>completeCleaning(item.id);if(item.itemType==="todo")return()=>toggleTodo(item.id);if(item.itemType==="todoStep")return()=>toggleTodoStep(item.parentId,item.id);if(item.itemType==="step")return()=>toggleStep(item.parentId,item.id);return null;}
 function renderTodayReminders(){const area=document.getElementById("todayRemindersArea"),items=getTodayReminderItems();area.innerHTML="";if(!items.length){area.innerHTML='<div class="empty-state">No dated reminders need attention today.</div>';return;}items.forEach(item=>{const overdue=item.itemType!=="annual"&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));area.appendChild(compactReminderRow(item,{meta:`${item.source} · ${formatDate(item.dueDate,item.itemType!=="annual")}${overdue?" · OVERDUE":""}`,actionable:item.itemType!=="annual",onComplete:completionFor(item),clickable:true}));});}
 function renderWeekly(){const area=document.getElementById("weeklyArea"),items=getWeeklyItems();area.innerHTML="";if(!items.length){area.innerHTML='<div class="empty-state">Nothing needs attention this week.</div>';return;}items.forEach(item=>area.appendChild(compactReminderRow(item,{meta:`${item.source} · ${formatDate(item.dueDate,item.itemType!=="annual")}`,actionable:item.itemType!=="annual",onComplete:completionFor(item),clickable:true})));}
-function closeAllItemMenus(except=null){document.querySelectorAll('details.item-menu[open]').forEach(d=>{if(d!==except)d.removeAttribute('open')});}
-document.addEventListener('click',e=>{const d=e.target.closest('details.item-menu');if(!d)closeAllItemMenus();});
-function compactMenu(actions,label){return `<details class="item-menu" onclick="closeAllItemMenus(this)"><summary aria-label="Options for ${escapeHtml(label)}">⋯</summary><div class="item-menu-popover"><button type="button" class="menu-close-x" onclick="this.closest('details').removeAttribute('open')">×</button>${actions}</div></details>`;}
-function renderTodos(){const area=document.getElementById("todoArea");area.innerHTML="";if(!data.todos.length){area.innerHTML='<div class="empty-state">No to-do items yet.</div>';return;}[...data.todos].sort(sortByDueDate).forEach(todo=>{const row=document.createElement('div');row.className=`compact-manage-row ${todo.completed?'completed-row':''}`;const next=(todo.steps||[]).find(s=>!s.completed);row.innerHTML=`<button class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name)}</span><span class="compact-row-meta">${next?`Next: ${escapeHtml(next.name)}${next.dueDate?` · ${formatDate(next.dueDate)}`:''}`:getTimingText(todo)}</span></button>${compactMenu(`<button onclick="editTodo('${todo.id}')">Edit</button><button onclick="toggleTodo('${todo.id}')">${todo.completed?'Mark active':'Complete'}</button><button class="danger-text" onclick="deleteTodo('${todo.id}')">Delete</button>`,todo.name)}`;area.appendChild(row);});}
-function renderAnnualDates(){const area=document.getElementById('annualArea');area.innerHTML='';if(!data.annualDates.length){area.innerHTML='<div class="empty-state">No birthdays or annual dates yet.</div>';return;}[...data.annualDates].sort((a,b)=>nextAnnualOccurrence(a.monthDay)-nextAnnualOccurrence(b.monthDay)).forEach(item=>{const next=nextAnnualOccurrence(item.monthDay),row=document.createElement('div');row.className='annual-manage-row';row.innerHTML=`<div><strong>${escapeHtml(item.name)}</strong><div class="card-meta">${next?next.toLocaleDateString('en-GB',{day:'numeric',month:'long'}):''}</div></div>${compactMenu(`<button onclick="editAnnual('${item.id}')">Edit</button><button class="danger-text" onclick="deleteAnnual('${item.id}')">Delete</button>`,item.name)}`;area.appendChild(row);});}
-function renderProjects(){const area=document.getElementById('projectsArea');area.innerHTML='';if(!data.projects.length){area.innerHTML='<div class="empty-state">No projects yet.</div>';return;}[...data.projects].sort(sortByDueDate).forEach(project=>{const card=document.createElement('div');card.className=`list-card ${project.completed?'completed-card':''}`;const steps=(project.steps||[]).map(step=>`<div class="step-compact-row"><label><input type="checkbox" ${step.completed?'checked':''} onchange="toggleStep('${project.id}','${step.id}')"> <strong>${escapeHtml(step.name)}</strong>${step.dueDate?` <span class="card-meta">${formatDate(step.dueDate)}</span>`:''}</label><button class="step-quick" onclick="editStep('${project.id}','${step.id}')" aria-label="Open step">›</button></div>`).join('')||'<div class="card-meta">No steps added yet.</div>';card.innerHTML=`<div class="card-top"><div><div class="card-title">${escapeHtml(project.name)}</div><div class="card-details">${escapeHtml(project.details||'')}</div></div>${compactMenu(`<button onclick="editProject('${project.id}')">Edit project</button><button onclick="openAddDialog('step','${project.id}')">Add step</button><button onclick="toggleProject('${project.id}')">${project.completed?'Mark active':'Complete project'}</button><button class="danger-text" onclick="deleteProject('${project.id}')">Delete</button>`,project.name)}</div><div class="steps-list">${steps}</div>`;area.appendChild(card);});}
+let activeAnchoredMenu=null;
+function closeAnchoredMenu(){if(activeAnchoredMenu){activeAnchoredMenu.remove();activeAnchoredMenu=null;}}
+function showAnchoredMenu(button){
+  closeAnchoredMenu();
+  const template=button.parentElement.querySelector('.item-menu-template');
+  if(!template)return;
+  const pop=document.createElement('div'); pop.className='anchored-item-menu';
+  pop.innerHTML=`<button type="button" class="menu-close-x" aria-label="Close">×</button>${template.innerHTML}`;
+  document.body.appendChild(pop); activeAnchoredMenu=pop;
+  const r=button.getBoundingClientRect(), gap=6;
+  const w=pop.offsetWidth, h=pop.offsetHeight;
+  let left=Math.min(window.innerWidth-w-8,Math.max(8,r.right-w));
+  let top=r.bottom+gap;
+  if(top+h>window.innerHeight-8) top=Math.max(8,r.top-h-gap);
+  pop.style.left=`${left}px`; pop.style.top=`${top}px`;
+  pop.querySelector('.menu-close-x').onclick=closeAnchoredMenu;
+}
+document.addEventListener('click',e=>{if(activeAnchoredMenu&&!activeAnchoredMenu.contains(e.target)&&!e.target.closest('.item-menu-trigger'))closeAnchoredMenu();});
+window.addEventListener('scroll',closeAnchoredMenu,true); window.addEventListener('resize',closeAnchoredMenu);
+function compactMenu(actions,label){return `<span class="item-menu-anchor"><button type="button" class="item-menu-trigger" onclick="event.stopPropagation();showAnchoredMenu(this)" aria-label="Options for ${escapeHtml(label)}">⋯</button><span class="item-menu-template hidden">${actions}</span></span>`;}
+function renderTodos(){const area=document.getElementById("todoArea");area.innerHTML="";if(!data.todos.length){area.innerHTML='<div class="empty-state">No to-do items yet.</div>';return;}[...data.todos].sort(sortByDueDate).forEach(todo=>{const row=document.createElement('div');row.className=`compact-manage-row ${todo.completed?'completed-row':''}`;const next=(todo.steps||[]).find(s=>!s.completed);row.innerHTML=`<button class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name)}</span><span class="compact-row-meta">${next?`Next: ${escapeHtml(next.name)}${next.dueDate?` · ${formatDate(next.dueDate)}`:''}`:getTimingText(todo)}</span></button>${compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleTodo('${todo.id}')">${todo.completed?'Mark active':'Complete'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteTodo('${todo.id}')">Delete</button>`,todo.name)}`;area.appendChild(row);});}
+function renderAnnualDates(){const area=document.getElementById('annualArea');area.innerHTML='';if(!data.annualDates.length){area.innerHTML='<div class="empty-state">No birthdays or annual dates yet.</div>';return;}[...data.annualDates].sort((a,b)=>nextAnnualOccurrence(a.monthDay)-nextAnnualOccurrence(b.monthDay)).forEach(item=>{const next=nextAnnualOccurrence(item.monthDay),row=document.createElement('div');row.className='annual-manage-row';row.innerHTML=`<div><strong>${escapeHtml(item.name)}</strong><div class="card-meta">${next?next.toLocaleDateString('en-GB',{day:'numeric',month:'long'}):''}</div></div>${compactMenu(`<button onclick="closeAnchoredMenu();editAnnual('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteAnnual('${item.id}')">Delete</button>`,item.name)}`;area.appendChild(row);});}
+function renderProjects(){const area=document.getElementById('projectsArea');area.innerHTML='';if(!data.projects.length){area.innerHTML='<div class="empty-state">No projects yet.</div>';return;}[...data.projects].sort(sortByDueDate).forEach(project=>{const card=document.createElement('div');card.className=`list-card ${project.completed?'completed-card':''}`;const steps=(project.steps||[]).map(step=>`<div class="step-compact-row"><label><input type="checkbox" ${step.completed?'checked':''} onchange="toggleStep('${project.id}','${step.id}')"> <strong>${escapeHtml(step.name)}</strong>${step.dueDate?` <span class="card-meta">${formatDate(step.dueDate)}</span>`:''}</label>${compactMenu(`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}')">${step.completed?'Mark active':'Complete'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}')">Delete</button>`,step.name)}</div>`).join('')||'<div class="card-meta">No steps added yet.</div>';card.innerHTML=`<div class="card-top"><div><div class="card-title">${escapeHtml(project.name)}</div><div class="card-details">${escapeHtml(project.details||'')}</div></div>${compactMenu(`<button onclick="closeAnchoredMenu();editProject('${project.id}')">Edit project</button><button onclick="closeAnchoredMenu();openAddDialog('step','${project.id}')">Add step</button><button onclick="closeAnchoredMenu();toggleProject('${project.id}')">${project.completed?'Mark active':'Complete project'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${project.id}')">Delete</button>`,project.name)}</div><div class="steps-list">${steps}</div>`;area.appendChild(card);});}
+
+function addStepBuilderRow(builderId, step={}){
+ const box=document.getElementById(builderId); if(!box)return;
+ const row=document.createElement('div'); row.className='step-builder-row';
+ const mode=step.leadDays>0?'before':(step.dueDate?'date':'none');
+ row.innerHTML=`<input class="step-name-input" type="text" placeholder="Step description" value="${escapeHtml(step.name||'')}"><select class="step-date-mode"><option value="none">No date</option><option value="date" ${mode==='date'?'selected':''}>Choose date</option><option value="before" ${mode==='before'?'selected':''}>Days before event</option></select><input class="step-date-input ${mode==='date'?'':'hidden'}" type="date" value="${step.dueDate||''}"><div class="step-before-input ${mode==='before'?'':'hidden'}"><input type="number" min="0" max="3650" value="${step.leadDays||1}"><span>days before</span></div><button type="button" class="step-remove" aria-label="Remove step">×</button>`;
+ row.querySelector('.step-date-mode').addEventListener('change',e=>{row.querySelector('.step-date-input').classList.toggle('hidden',e.target.value!=='date');row.querySelector('.step-before-input').classList.toggle('hidden',e.target.value!=='before');});
+ row.querySelector('.step-remove').onclick=()=>row.remove(); box.appendChild(row);
+}
+function loadStepBuilder(builderId,steps=[]){const box=document.getElementById(builderId);if(!box)return;box.innerHTML='';(steps||[]).forEach(s=>addStepBuilderRow(builderId,s));}
+function baseDateForSteps(builderId){if(builderId==='projectStepsBuilder'||builderId==='itemStepsBuilder'){const t=document.getElementById('itemType').value;if(t==='annual'){const v=document.getElementById('annualDate').value;return v||null;}return document.getElementById('dueDate').value||null;}return null;}
+function serializeStepBuilder(builderId){const box=document.getElementById(builderId),base=baseDateForSteps(builderId);if(!box)return '';return [...box.querySelectorAll('.step-builder-row')].map(row=>{const name=row.querySelector('.step-name-input').value.trim();if(!name)return null;const mode=row.querySelector('.step-date-mode').value;let date='';let leadDays=0;if(mode==='date')date=row.querySelector('.step-date-input').value||'';if(mode==='before'){leadDays=Number(row.querySelector('.step-before-input input').value||0);if(base){const d=new Date(base+'T12:00:00');d.setDate(d.getDate()-leadDays);date=d.toISOString().slice(0,10);}}return `${date} | ${name} | lead:${leadDays}`;}).filter(Boolean).join('\n');}
+function syncStepBuilders(){const a=document.getElementById('projectSteps');const b=document.getElementById('itemSteps');if(a)a.value=serializeStepBuilder('projectStepsBuilder');if(b)b.value=serializeStepBuilder('itemStepsBuilder');}
