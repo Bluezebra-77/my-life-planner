@@ -1,7 +1,7 @@
 {
-  "name": "My Life Planner v8A",
+  "name": "My Life Planner v9",
   "short_name": "Life Planner",
-  "description": "A private offline personal organiser with collapsible reminders and simplified routine management.",
+  "description": "A private personal organiser with daily backups and customisation.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

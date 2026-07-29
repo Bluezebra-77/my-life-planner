@@ -22,6 +22,7 @@
       </div>
       <div class="header-actions">
         <button type="button" class="small-button" onclick="openAddDialog()">+ Add</button>
+        <button type="button" class="small-button" onclick="openSettings()">Settings</button>
         <button id="installButton" type="button" class="small-button hidden" onclick="installPlanner()">Install app</button>
         <button id="updateButton" type="button" class="small-button hidden" onclick="applyAppUpdate()">Update available</button>
       </div>
@@ -165,29 +166,77 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">Safety and transfer</p>
-          <h2>Backup and restore</h2>
+          <h2>Backups and settings</h2>
         </div>
-      </div>
-      <p class="card-meta">Your information is saved in this device's browser. Export a backup before clearing browser data or moving to another device.</p>
-      <div class="card-actions">
-        <button type="button" onclick="exportPlanner()">Export backup</button>
-        <button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button>
-        <input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)">
+        <button class="small-button" type="button" onclick="openSettings('backups')">Open settings</button>
       </div>
       <p id="storageStatus" class="storage-status"></p>
       <p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-      <div class="card-actions">
-        <button type="button" onclick="sharePlannerBackup()">Share backup</button>
-        <button type="button" class="secondary-button" onclick="restoreLatestRecovery()">Restore latest recovery copy</button>
-      </div>
-      <details class="storage-details">
-        <summary>Where is my information stored?</summary>
-        <p>Your lists are stored privately in Safari on this device. GitHub stores only the app itself, not your personal entries. Information entered on your iPhone does not automatically appear on your Mac.</p>
-        <p>The app keeps up to five rolling recovery copies on this device. Export or Share a backup regularly for protection outside Safari.</p>
-      </details>
+      <p class="card-meta">Your five daily backups, personalisation and import/export tools are all together in Settings.</p>
     </section>
   </main>
 
+  <dialog id="settingsDialog" class="settings-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">My Life Planner</p>
+        <h2>Settings</h2>
+      </div>
+      <button type="button" class="icon-button" onclick="closeSettings()">X</button>
+    </div>
+
+    <section class="settings-section">
+      <h3>Personalise your planner</h3>
+      <label>Your name (optional)
+        <input id="ownerName" type="text" maxlength="40" placeholder="For example: Jane">
+      </label>
+      <label>Box colour
+        <select id="colourTheme">
+          <option value="sage">Sage green</option>
+          <option value="blue">Soft blue</option>
+          <option value="rose">Warm rose</option>
+          <option value="lavender">Lavender</option>
+          <option value="sand">Soft sand</option>
+        </select>
+      </label>
+      <label>Font
+        <select id="fontChoice">
+          <option value="clean">Clean and simple</option>
+          <option value="rounded">Rounded</option>
+          <option value="classic">Classic</option>
+          <option value="friendly">Friendly</option>
+          <option value="large">Easy-read</option>
+        </select>
+      </label>
+      <button type="button" onclick="saveSettings()">Save customisation</button>
+    </section>
+
+    <section id="dailyBackupsSection" class="settings-section">
+      <h3>Five daily backups</h3>
+      <p class="card-meta"><strong>Where to find them:</strong> Settings → Five daily backups. They are stored privately inside Safari on this device and are listed below by date.</p>
+      <p class="card-meta">The planner keeps the latest five calendar days. Each day's copy is updated as you use the planner, so it contains that day's latest saved information.</p>
+      <div id="dailyBackupList" class="stack-list"></div>
+    </section>
+
+    <section class="settings-section">
+      <h3>Backup outside this phone</h3>
+      <p class="card-meta">For protection if the phone is lost or Safari data is cleared, save an exported file to iCloud Drive or OneDrive.</p>
+      <div class="card-actions">
+        <button type="button" onclick="sharePlannerBackup()">Save or share backup</button>
+        <button type="button" class="secondary-button" onclick="exportPlanner()">Export backup</button>
+        <button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button>
+        <input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)">
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <h3>About and updates</h3>
+      <p><strong>Version:</strong> 9</p>
+      <p><strong>Personal data:</strong> stays separately on each person's device. Other users cannot see your information.</p>
+      <p><strong>App updates:</strong> GitHub updates the planner program while each person's saved information remains on their own device.</p>
+      <button id="settingsUpdateButton" type="button" class="secondary-button hidden" onclick="applyAppUpdate()">Install available update</button>
+    </section>
+  </dialog>
 
   <dialog id="routineManagerDialog" class="manager-dialog">
     <div class="dialog-header">

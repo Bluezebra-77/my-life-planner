@@ -38,7 +38,7 @@ const choicePools = {
 };
 
 function getData() {
-  const keys = ["lifePlannerDataV8", "lifePlannerDataV7", "lifePlannerDataV4", "lifePlannerDataV3"];
+  const keys = ["lifePlannerDataV9", "lifePlannerDataV8", "lifePlannerDataV7", "lifePlannerDataV4", "lifePlannerDataV3"];
   for (const key of keys) {
     const saved = localStorage.getItem(key);
     if (!saved) continue;
@@ -70,8 +70,10 @@ function getData() {
 
 let data = getData();
 
-const DATA_KEY = "lifePlannerDataV8";
-const RECOVERY_KEY = "lifePlannerRecoveryV8";
+const DATA_KEY = "lifePlannerDataV9";
+const RECOVERY_KEY = "lifePlannerRecoveryV9";
+const DAILY_BACKUP_KEY = "lifePlannerDailyBackupsV9";
+const SETTINGS_KEY = "lifePlannerSettingsV9";
 let saveIndicatorTimer = null;
 
 function normaliseData(loaded = {}) {
@@ -98,6 +100,107 @@ function createRecoveryCopy(serialised) {
   }
 }
 
+const defaultSettings = { ownerName: "", colourTheme: "sage", fontChoice: "clean" };
+let plannerSettings = loadSettings();
+
+function loadSettings() {
+  try { return { ...defaultSettings, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") }; }
+  catch { return { ...defaultSettings }; }
+}
+
+function todayKey() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function getDailyBackups() {
+  try {
+    const list = JSON.parse(localStorage.getItem(DAILY_BACKUP_KEY) || "[]");
+    return Array.isArray(list) ? list : [];
+  } catch { return []; }
+}
+
+function updateDailyBackup(serialised) {
+  try {
+    const date = todayKey();
+    let list = getDailyBackups().filter(item => item && item.date !== date);
+    list.unshift({ date, savedAt: new Date().toISOString(), data: serialised });
+    list = list.sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5);
+    localStorage.setItem(DAILY_BACKUP_KEY, JSON.stringify(list));
+  } catch (error) {
+    console.warn("Could not update daily backup", error);
+  }
+}
+
+function applySettings() {
+  document.body.dataset.theme = plannerSettings.colourTheme;
+  document.body.dataset.font = plannerSettings.fontChoice;
+  const title = document.getElementById("plannerTitle");
+  if (title) {
+    const name = plannerSettings.ownerName.trim();
+    title.innerHTML = `${name ? escapeHtml(name) + "'s " : "My "}Life Planner <span class="version-badge">v9</span>`;
+  }
+  const nameInput = document.getElementById("ownerName");
+  const themeInput = document.getElementById("colourTheme");
+  const fontInput = document.getElementById("fontChoice");
+  if (nameInput) nameInput.value = plannerSettings.ownerName;
+  if (themeInput) themeInput.value = plannerSettings.colourTheme;
+  if (fontInput) fontInput.value = plannerSettings.fontChoice;
+}
+
+function openSettings(section = "") {
+  applySettings();
+  renderDailyBackups();
+  const dialog = document.getElementById("settingsDialog");
+  dialog.showModal();
+  if (section === "backups") setTimeout(() => document.getElementById("dailyBackupsSection")?.scrollIntoView({behavior:"smooth"}), 100);
+}
+
+function closeSettings() { document.getElementById("settingsDialog").close(); }
+
+function saveSettings() {
+  plannerSettings = {
+    ownerName: document.getElementById("ownerName").value.trim(),
+    colourTheme: document.getElementById("colourTheme").value,
+    fontChoice: document.getElementById("fontChoice").value
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(plannerSettings));
+  applySettings();
+  showSaved("Settings saved");
+}
+
+function renderDailyBackups() {
+  const area = document.getElementById("dailyBackupList");
+  if (!area) return;
+  const list = getDailyBackups();
+  if (!list.length) {
+    area.innerHTML = '<div class="empty-state">Your first daily backup will appear after the planner saves.</div>';
+    return;
+  }
+  area.innerHTML = list.map(item => {
+    const date = new Date(item.date + "T12:00:00").toLocaleDateString("en-GB", {weekday:"short", day:"numeric", month:"short", year:"numeric"});
+    const time = new Date(item.savedAt).toLocaleTimeString("en-GB", {hour:"2-digit", minute:"2-digit"});
+    return `<div class="list-card backup-card"><div><strong>${date}</strong><div class="card-meta">Latest save at ${time}</div></div><button type="button" class="secondary-button" onclick="restoreDailyBackup('${item.date}')">Restore</button></div>`;
+  }).join("");
+}
+
+function restoreDailyBackup(date) {
+  const item = getDailyBackups().find(entry => entry.date === date);
+  if (!item) return alert("That backup is no longer available.");
+  const label = new Date(date + "T12:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"});
+  if (!confirm(`Restore the backup from ${label}? A safety copy of your current planner will be made first.`)) return;
+  try {
+    createRecoveryCopy(JSON.stringify(data));
+    data = normaliseData(JSON.parse(item.data));
+    localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    updateDailyBackup(JSON.stringify(data));
+    renderAll();
+    renderDailyBackups();
+    showSaved("Daily backup restored");
+  } catch { alert("That backup could not be restored."); }
+}
+
 function showSaved(message = "Saved on this device") {
   const indicator = document.getElementById("saveIndicator");
   if (!indicator) return;
@@ -113,7 +216,9 @@ function saveData() {
     const serialised = JSON.stringify(data);
     createRecoveryCopy(serialised);
     localStorage.setItem(DATA_KEY, serialised);
+    updateDailyBackup(serialised);
     updateStorageStatus();
+    renderDailyBackups();
     showSaved();
   } catch (error) {
     console.error("Could not save planner data", error);
@@ -405,11 +510,12 @@ function deleteRoutineTask(group, id) {
 function updateStorageStatus() {
   const status = document.getElementById("storageStatus");
   if (!status) return;
-  const saved = localStorage.getItem(DATA_KEY) || localStorage.getItem("lifePlannerDataV7");
+  const saved = localStorage.getItem(DATA_KEY) || localStorage.getItem("lifePlannerDataV8");
   let recoveries = 0;
   try { recoveries = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]").length; } catch {}
+  const dailyCount = getDailyBackups().length;
   status.textContent = saved
-    ? `Saved privately on this device (${Math.max(1, Math.round(new Blob([saved]).size / 1024))} KB) · ${recoveries} recovery cop${recoveries === 1 ? "y" : "ies"}.`
+    ? `Saved privately on this device · ${dailyCount} of 5 daily backups available in Settings.`
     : "No planner information has been saved yet.";
 }
 
@@ -420,6 +526,7 @@ function exportPlanner() {
     version: "8A",
     exportedAt: new Date().toISOString(),
     data,
+    settings: plannerSettings,
     checks: Object.fromEntries(
       Object.keys(localStorage)
         .filter(key => key.startsWith("lifePlanner:"))
@@ -441,6 +548,7 @@ async function sharePlannerBackup() {
     version: "8A",
     exportedAt: new Date().toISOString(),
     data,
+    settings: plannerSettings,
     checks: Object.fromEntries(
       Object.keys(localStorage)
         .filter(key => key.startsWith("lifePlanner:"))
@@ -493,6 +601,7 @@ function importPlanner(event) {
       const imported = backup.data || backup;
       if (!imported || typeof imported !== "object") throw new Error("Invalid backup");
       data = normaliseData(imported);
+      if (backup.settings) { plannerSettings = { ...defaultSettings, ...backup.settings }; localStorage.setItem(SETTINGS_KEY, JSON.stringify(plannerSettings)); applySettings(); }
       Object.entries(backup.checks || {}).forEach(([key, value]) => localStorage.setItem(key, value));
       saveData();
       renderAll();
@@ -1159,6 +1268,9 @@ function escapeHtml(value) {
 }
 
 function renderAll() {
+  applySettings();
+  updateDailyBackup(JSON.stringify(normaliseData(data)));
+  renderDailyBackups();
   setDate();
   renderChecklist("dailyChecklist",data.dailyTasks,"daily",false);
   renderChecklist("eveningChecklist",data.eveningTasks,"daily",false);
@@ -1190,6 +1302,7 @@ if ("serviceWorker" in navigator) {
       if (registration.waiting) {
         waitingServiceWorker = registration.waiting;
         document.getElementById("updateButton")?.classList.remove("hidden");
+        document.getElementById("settingsUpdateButton")?.classList.remove("hidden");
       }
       registration.addEventListener("updatefound", () => {
         const worker = registration.installing;
@@ -1197,6 +1310,7 @@ if ("serviceWorker" in navigator) {
           if (worker.state === "installed" && navigator.serviceWorker.controller) {
             waitingServiceWorker = worker;
             document.getElementById("updateButton")?.classList.remove("hidden");
+        document.getElementById("settingsUpdateButton")?.classList.remove("hidden");
           }
         });
       });

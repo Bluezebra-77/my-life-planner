@@ -1,14 +1,26 @@
+
+:root {
+  --page-bg: #eef3ef;
+  --page-bg-2: #f8faf8;
+  --panel-bg: #ffffff;
+  --panel-border: #dce6de;
+  --primary: #5f7d68;
+  --primary-dark: #4d6957;
+  --soft: #f3f7f4;
+  --text: #243229;
+  --muted: #6c7d71;
+}
 * { box-sizing: border-box; }
 
 :root {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #243229;
-  background: #eef3ef;
+  font-family: var(--planner-font, Arial, Helvetica, sans-serif);
+  color: var(--text);
+  background: var(--page-bg);
 }
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #eef3ef 0%, #f8faf8 100%);
+  background: linear-gradient(180deg, var(--page-bg) 0%, var(--page-bg-2) 100%);
 }
 
 button, input, select, textarea { font: inherit; }
@@ -17,14 +29,14 @@ button {
   border: 0;
   border-radius: 14px;
   padding: 14px 16px;
-  background: #5f7d68;
+  background: var(--primary);
   color: white;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(36, 50, 41, 0.12);
 }
 
-button:hover { background: #4d6957; }
+button:hover { background: var(--primary-dark); }
 
 button:focus-visible,
 input:focus-visible,
@@ -69,7 +81,7 @@ textarea:focus-visible {
   margin-top: 18px;
   padding: 20px;
   border-radius: 22px;
-  background: rgba(255,255,255,0.96);
+  background: color-mix(in srgb, var(--panel-bg) 96%, transparent);
   box-shadow: 0 10px 26px rgba(53,77,60,0.1);
 }
 
@@ -131,7 +143,7 @@ textarea:focus-visible {
 .task-row,
 .list-card {
   padding: 14px;
-  border: 1px solid #dce6de;
+  border: 1px solid var(--panel-border);
   border-radius: 16px;
   background: #fbfdfb;
 }
@@ -284,7 +296,7 @@ input, select, textarea {
   border-radius: 12px;
   padding: 12px;
   background: white;
-  color: #243229;
+  color: var(--text);
 }
 
 textarea { resize: vertical; }
@@ -480,3 +492,23 @@ button,input,select,textarea{font-size:16px}
 .manager-add{display:grid;gap:10px;padding-top:14px;border-top:1px solid #d9e1da}
 .manager-add label{display:grid;gap:5px;font-weight:700;color:#496052}
 @media(max-width:560px){.manager-row{align-items:flex-start;flex-direction:column}.manager-row .mini-actions{justify-content:flex-start}}
+
+
+body[data-theme="sage"] { --page-bg:#eef3ef; --page-bg-2:#f8faf8; --panel-bg:#ffffff; --panel-border:#dce6de; --primary:#5f7d68; --primary-dark:#4d6957; --soft:#f3f7f4; --text:#243229; --muted:#6c7d71; }
+body[data-theme="blue"] { --page-bg:#edf4f8; --page-bg-2:#f8fbfd; --panel-bg:#ffffff; --panel-border:#d6e4ec; --primary:#587b91; --primary-dark:#456579; --soft:#f0f6f9; --text:#23343e; --muted:#637985; }
+body[data-theme="rose"] { --page-bg:#f8eff1; --page-bg-2:#fdf9fa; --panel-bg:#ffffff; --panel-border:#ecdade; --primary:#976b75; --primary-dark:#7e5660; --soft:#faf2f4; --text:#3b292e; --muted:#806c72; }
+body[data-theme="lavender"] { --page-bg:#f2eff8; --page-bg-2:#faf9fd; --panel-bg:#ffffff; --panel-border:#e0daec; --primary:#74658e; --primary-dark:#5f5277; --soft:#f5f2fa; --text:#302a3b; --muted:#746c82; }
+body[data-theme="sand"] { --page-bg:#f5f1e8; --page-bg-2:#fbfaf6; --panel-bg:#fffefd; --panel-border:#e7decc; --primary:#857353; --primary-dark:#6d5d42; --soft:#f8f4ec; --text:#382f22; --muted:#7a6f5d; }
+
+body[data-font="clean"] { --planner-font: Arial, Helvetica, sans-serif; }
+body[data-font="rounded"] { --planner-font: "Trebuchet MS", Arial, sans-serif; }
+body[data-font="classic"] { --planner-font: Georgia, "Times New Roman", serif; }
+body[data-font="friendly"] { --planner-font: Verdana, Geneva, sans-serif; }
+body[data-font="large"] { --planner-font: Arial, Helvetica, sans-serif; font-size: 18px; }
+
+.settings-dialog { max-height: 88vh; overflow-y: auto; }
+.settings-section { margin: 0 20px 18px; padding: 18px; border: 1px solid var(--panel-border); border-radius: 18px; background: var(--soft); }
+.settings-section h3 { margin-top: 0; }
+.settings-section label { display: grid; gap: 7px; margin: 12px 0; font-weight: 700; }
+.settings-section input, .settings-section select { width: 100%; padding: 12px; border: 1px solid var(--panel-border); border-radius: 12px; background: white; }
+.backup-card { display:flex; align-items:center; justify-content:space-between; gap:12px; }

@@ -1,4 +1,4 @@
-const CACHE = "my-life-planner-v8a";
+const CACHE = "my-life-planner-v9a";
 const FILES = ["./","./index.html","./style.css","./app.js","./manifest.json","./icon-192.png","./icon-512.png"];
 
 self.addEventListener("install", event => {
