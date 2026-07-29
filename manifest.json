@@ -1,12 +1,12 @@
 {
-  "name": "My Life Planner v10",
-  "short_name": "Life Planner",
+  "name": "My Life Planner 77",
+  "short_name": "Life Planner 77",
   "description": "A calm personal planner with Focus Today, projects, routines, thoughts inbox and Waiting For.",
   "start_url": "./index.html?v=9.8",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#eef3ef",
-  "theme_color": "#5f7d68",
+  "background_color": "#f4f8ff",
+  "theme_color": "#1769c2",
   "orientation": "portrait-primary",
   "icons": [
     {

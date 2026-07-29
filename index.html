@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Life Planner</title>
-  <link rel="stylesheet" href="style.css?v=10.0">
-  <link rel="manifest" href="manifest.json?v=10.0">
-  <meta name="theme-color" content="#5f7d68">
+  <link rel="stylesheet" href="style.css?v=10.1">
+  <link rel="manifest" href="manifest.json?v=10.1">
+  <meta name="theme-color" content="#1769c2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Life Planner">
@@ -18,7 +18,7 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v10.0</span></h1>
+        <h1 class="brand-title"><img src="icon-192.png" class="header-zebra" alt=""><span id="plannerTitle">My Life Planner</span> <span class="brand-77">77</span> <span class="version-badge">v10.1</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
@@ -35,16 +35,22 @@
 
     <section id="viewHeading" class="view-heading" aria-live="polite">
       <p class="eyebrow" id="viewEyebrow">Home</p>
-      <h2 id="viewTitle">Today at a glance</h2>
+      <h2 id="viewTitle">Your day</h2>
     </section>
 
-    <section class="hero-focus app-view-section" data-view="home">
+    <section class="panel focus-panel app-view-section" data-view="home">
       <div class="focus-heading"><div><p class="eyebrow">Your calm starting point</p><h2>Focus Today</h2><p>Only the things most worth your attention now.</p></div><button class="icon-button" type="button" onclick="refreshFocusToday()" aria-label="Refresh focus">↻</button></div>
       <div id="focusTodayArea" class="focus-list"></div>
+      <div class="focus-tools" aria-label="Helpful task choices">
+        <button type="button" class="choice-tool" onclick="chooseHelpfulTask('random')"><span>🎲</span>Random task</button>
+        <button type="button" class="choice-tool" onclick="chooseHelpfulTask('useful')"><span>★</span>Useful task</button>
+        <button type="button" class="choice-tool" onclick="chooseHelpfulTask('extra')"><span>✨</span>Extra useful task</button>
+      </div>
+      <div id="helpfulChoiceResult" class="decision-result hidden"></div>
     </section>
 
     <section class="panel app-view-section" data-view="home">
-      <div class="section-heading"><div><p class="eyebrow">Capture first, organise later</p><h2>Thoughts Inbox</h2></div><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Capture a thought">+</button></div>
+      <div class="section-heading"><div><p class="eyebrow">Capture first, organise later</p><h2>Thoughts Inbox</h2></div><div class="section-actions"><button class="voice-button" type="button" onclick="startVoiceCapture('inbox')" aria-label="Dictate a thought" title="Dictate a thought">🎤</button><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Capture a thought">+</button></div></div>
       <div id="inboxPreviewArea" class="compact-list"></div>
     </section>
 
@@ -182,7 +188,7 @@
 
     <nav class="bottom-nav" aria-label="Main navigation">
       <button type="button" class="nav-button active" data-tab="home" onclick="showAppView('home', this)"><span>🏠</span><small>Home</small></button>
-      <button type="button" class="nav-button" data-tab="tasks" onclick="showAppView('tasks', this)"><span>✅</span><small>Tasks</small></button>
+      <button type="button" class="nav-button" data-tab="tasks" onclick="showAppView('tasks', this)"><span>✅</span><small>Lists</small></button>
       <button type="button" class="nav-button" data-tab="planner" onclick="showAppView('planner', this)"><span>📅</span><small>Planner</small></button>
       <button type="button" class="nav-button" onclick="openAddDialog()"><span>➕</span><small>Add</small></button>
       <button type="button" class="nav-button" onclick="openSettingsDialog()"><span>⚙</span><small>Settings</small></button>
@@ -321,17 +327,17 @@
 
 
   <dialog id="captureDialog" class="bottom-sheet">
-    <form id="captureForm" method="dialog">
+    <form id="captureForm">
       <input id="captureId" type="hidden"><input id="captureType" type="hidden" value="inbox">
       <div class="sheet-handle"></div>
       <div class="dialog-header"><div><p class="eyebrow">Quick capture</p><h2 id="captureTitle">Capture a thought</h2></div><button type="button" class="dialog-close" onclick="closeCaptureDialog()" aria-label="Close">×</button></div>
-      <label>What is on your mind?<input id="captureName" type="text" maxlength="160" required placeholder="Type it here…"></label>
+      <label>What is on your mind?<div class="capture-input-row"><input id="captureName" type="text" maxlength="160" required placeholder="Type it here…"><button type="button" class="voice-button capture-mic" onclick="startVoiceCapture()" aria-label="Dictate" title="Dictate">🎤</button></div></label>
       <label>Note (optional)<textarea id="captureNote" rows="3" placeholder="Any detail you do not want to forget"></textarea></label>
       <label id="waitingDateLabel" class="hidden">Review date<input id="captureDate" type="date"></label>
-      <div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeCaptureDialog()">Cancel</button><button type="submit">Save</button></div>
+      <div id="captureConvertActions" class="convert-actions hidden"><button type="button" onclick="saveCaptureAs('todo')">Save as to-do</button><button type="button" onclick="saveCaptureAs('project')">Save as project</button><button type="button" onclick="saveCaptureAs('waiting')">Save as Waiting For</button></div><div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeCaptureDialog()">Cancel</button><button type="button" onclick="saveCapture()">Save thought</button></div>
     </form>
   </dialog>
 
-  <script src="app.js?v=10.0"></script>
+  <script src="app.js?v=10.1"></script>
 </body>
 </html>

@@ -361,38 +361,32 @@ function chooseForMe() { chooseFrom("normal"); }
 function chooseLowEnergy() { chooseFrom("low"); }
 function chooseQuickWin() { chooseFrom("quick"); }
 
-function decideDailyTask() {
-  const candidates = [
-    ...data.todos.filter(item => !item.completed && !item.dueDate).map(item => ({
-      label: item.name, detail: item.details || "Undated to-do", type: "todo", id: item.id
-    })),
-    ...data.projects.flatMap(project => {
-      if (project.completed) return [];
-      const nextStep = (project.steps || []).find(step => !step.completed);
-      if (nextStep && !nextStep.dueDate) return [{
-        label: nextStep.name, detail: `Project: ${project.name}`, type: "step", id: nextStep.id, parentId: project.id
-      }];
-      if (!(project.steps || []).length && !project.dueDate) return [{
-        label: `Review project: ${project.name}`, detail: project.details || "Add the next practical step", type: "project", id: project.id
-      }];
-      return [];
-    })
+let lastHelpfulChoiceKey = '';
+function helpfulCandidates(mode='extra') {
+  const items = [
+    ...data.todos.filter(x=>!x.completed).map(x=>({key:`todo:${x.id}`,label:x.name,detail:x.dueDate?getTimingText(x):'To-do',open:()=>editTodo(x.id),priority:x.dueDate?0:3})),
+    ...data.projects.filter(x=>!x.completed).flatMap(p=>{
+      const s=(p.steps||[]).find(x=>!x.completed);
+      return s?[{key:`step:${p.id}:${s.id}`,label:s.name,detail:`Project: ${p.name}`,open:()=>editStep(p.id,s.id),priority:s.dueDate?0:2}]:[{key:`project:${p.id}`,label:`Review ${p.name}`,detail:'Project without a next step',open:()=>editProject(p.id),priority:4}];
+    }),
+    ...data.cleaningTasks.filter(x=>!x.completed).map(x=>({key:`clean:${x.id}`,label:x.name,detail:`Cleaning · ${x.room||'Home'}`,open:()=>editCleaning(x.id),priority:isDueTodayOrEarlier(x.nextDue)?0:5})),
+    ...Object.entries(data.categoryTasks||{}).flatMap(([group,list])=>(list||[]).map((name,i)=>({key:`category:${group}:${i}`,label:name,detail:categoryNames[group]||'Useful task',open:null,priority:6})))
   ];
-  const result = document.getElementById("dailyDecisionResult");
-  if (!candidates.length) {
-    result.classList.remove("hidden");
-    result.innerHTML = "No active undated projects or to-dos are available.";
-    return;
-  }
-  const item = candidates[Math.floor(Math.random() * candidates.length)];
-  const action = item.type === "step"
-    ? `openReminderItem({itemType:'step',id:'${item.id}',parentId:'${item.parentId}'})`
-    : item.type === "todo"
-      ? `editTodo('${item.id}')`
-      : `editProject('${item.id}')`;
-  result.classList.remove("hidden");
-  result.innerHTML = `<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span><button type="button" class="small-button" onclick="${action}">Open</button>`;
+  let pool=items.filter(x=>x.key!==lastHelpfulChoiceKey);
+  if(!pool.length) pool=items;
+  if(mode==='useful') pool=pool.sort((a,b)=>a.priority-b.priority).slice(0,Math.max(3,Math.ceil(pool.length/2)));
+  if(mode==='extra') pool=pool.filter(x=>x.priority>=2 || !x.detail.includes('Project')) || pool;
+  return pool;
 }
+function chooseHelpfulTask(mode='extra'){
+  const result=document.getElementById('helpfulChoiceResult')||document.getElementById('dailyDecisionResult');
+  const pool=helpfulCandidates(mode);
+  if(!pool.length){result.classList.remove('hidden');result.textContent='Add a to-do, project, cleaning task or routine item first.';return;}
+  const item=pool[Math.floor(Math.random()*pool.length)]; lastHelpfulChoiceKey=item.key;
+  result.classList.remove('hidden');result.innerHTML=`<strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span>${item.open?'<button type="button" class="small-button" id="helpfulOpenButton">Open</button>':''}`;
+  if(item.open) document.getElementById('helpfulOpenButton').onclick=item.open;
+}
+function decideDailyTask(){ chooseHelpfulTask('extra'); }
 
 
 function showCategory(categoryKey) {
@@ -1439,7 +1433,7 @@ function applyAppUpdate() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./service-worker.js?v=10.0", { updateViaCache: "none" });
+      const registration = await navigator.serviceWorker.register("./service-worker.js?v=10.1", { updateViaCache: "none" });
       if (registration.waiting) {
         waitingServiceWorker = registration.waiting;
         document.getElementById("updateButton")?.classList.remove("hidden");
@@ -1467,8 +1461,8 @@ renderAll();
 
 function showAppView(view, button) {
   const titles = {
-    home: ["Home", "Today at a glance"],
-    tasks: ["Tasks", "To-dos, cleaning, projects and annual reminders"],
+    home: ["Home", "Your day"],
+    tasks: ["Lists", "All your saved entries, ready to manage"],
     planner: ["Planner", "Projects, dates and routines"]
   };
   document.querySelectorAll('.app-view-section').forEach(section => {
@@ -1594,12 +1588,41 @@ function makeV10Row(item,{complete=true,menu='' }={}){
 function renderFocusToday(){const area=document.getElementById('focusTodayArea');if(!area)return;area.innerHTML='';const items=focusCandidateRows();if(!items.length){area.innerHTML='<div class="empty-state calm-empty"><strong>You are clear for now.</strong><span>Capture a thought or add a task when something comes to mind.</span></div>';return;}items.forEach(x=>area.appendChild(makeV10Row(x)));}
 function refreshFocusToday(){renderFocusToday();const el=document.getElementById('focusTodayArea');el?.animate([{opacity:.35,transform:'translateY(4px)'},{opacity:1,transform:'none'}],{duration:260});}
 function renderProjectNextActions(){const area=document.getElementById('projectNextActionsArea');if(!area)return;area.innerHTML='';const active=data.projects.filter(p=>!p.completed).map(p=>({p,s:(p.steps||[]).find(x=>!x.completed)})).filter(x=>x.s);if(!active.length){area.innerHTML='<div class="empty-state">No project needs a next action.</div>';return;}active.forEach(({p,s})=>area.appendChild(makeV10Row({name:s.name,meta:`${p.name}${s.dueDate?' · '+formatDate(s.dueDate):''}`,dueDate:s.dueDate,action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id)})));}
-function openCaptureDialog(type='inbox',id=''){const item=(data[type]||[]).find(x=>x.id===id);document.getElementById('captureType').value=type;document.getElementById('captureId').value=id;document.getElementById('captureTitle').textContent=type==='waiting'?(id?'Edit waiting item':'Add Waiting For'):(id?'Edit thought':'Capture a thought');document.getElementById('captureName').value=item?.name||'';document.getElementById('captureNote').value=item?.note||'';document.getElementById('captureDate').value=item?.reviewDate||'';document.getElementById('waitingDateLabel').classList.toggle('hidden',type!=='waiting');document.getElementById('captureDialog').showModal();setTimeout(()=>document.getElementById('captureName').focus(),80);}
+function openCaptureDialog(type='inbox',id=''){
+ const item=(data[type]||[]).find(x=>x.id===id);
+ document.getElementById('captureType').value=type;document.getElementById('captureId').value=id;
+ document.getElementById('captureTitle').textContent=type==='waiting'?(id?'Edit waiting item':'Add Waiting For'):(id?'Edit thought':'Capture a thought');
+ document.getElementById('captureName').value=item?.name||'';document.getElementById('captureNote').value=item?.note||'';document.getElementById('captureDate').value=item?.reviewDate||'';
+ document.getElementById('waitingDateLabel').classList.toggle('hidden',type!=='waiting');
+ document.getElementById('captureConvertActions')?.classList.toggle('hidden',type!=='inbox');
+ const saveBtn=document.querySelector('#captureForm .dialog-actions button:last-child');if(saveBtn)saveBtn.textContent=type==='waiting'?'Save item':'Save thought';
+ document.getElementById('captureDialog').showModal();setTimeout(()=>document.getElementById('captureName').focus(),80);
+}
 function closeCaptureDialog(){document.getElementById('captureDialog')?.close();}
 function editCapture(type,id){openCaptureDialog(type,id);}
-function deleteCapture(type,id){data[type]=data[type].filter(x=>x.id!==id);saveData();renderAll();}
+function deleteCapture(type,id){data[type]=data[type].filter(x=>x.id!==id);saveData();renderAll();showSaved('Deleted');}
 function completeWaiting(id){const x=data.waiting.find(x=>x.id===id);if(x)x.completed=!x.completed;saveData();renderAll();}
-function convertInbox(id,type){const x=data.inbox.find(x=>x.id===id);if(!x)return;data.inbox=data.inbox.filter(i=>i.id!==id);if(type==='todo')data.todos.push({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[]});else if(type==='project')data.projects.push({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[]});else data.waiting.push({id:uid(),name:x.name,note:x.note||'',reviewDate:'',completed:false});saveData();renderAll();}
+function captureDraft(){return {type:document.getElementById('captureType').value,id:document.getElementById('captureId').value,name:document.getElementById('captureName').value.trim(),note:document.getElementById('captureNote').value.trim(),reviewDate:document.getElementById('captureDate').value};}
+function saveCapture(targetType=''){
+ const d=captureDraft(); if(!d.name){document.getElementById('captureName').focus();return false;}
+ const type=targetType||d.type;
+ if(type==='todo'){data.todos.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[]});}
+ else if(type==='project'){data.projects.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[]});}
+ else {const list=data[type]||(data[type]=[]),existing=list.find(x=>x.id===d.id);const record={id:existing?.id||uid(),name:d.name,note:d.note,reviewDate:type==='waiting'?d.reviewDate:'',completed:existing?.completed||false,createdAt:existing?.createdAt||new Date().toISOString()};if(existing)Object.assign(existing,record);else list.unshift(record);}
+ saveData();closeCaptureDialog();renderAll();showSaved(targetType?`Saved as ${targetType==='waiting'?'Waiting For':targetType}`:'Saved');return true;
+}
+function saveCaptureAs(type){saveCapture(type);}
+function convertInbox(id,type){const x=data.inbox.find(x=>x.id===id);if(!x)return;data.inbox=data.inbox.filter(i=>i.id!==id);if(type==='todo')data.todos.unshift({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[]});else if(type==='project')data.projects.unshift({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[]});else data.waiting.unshift({id:uid(),name:x.name,note:x.note||'',reviewDate:'',completed:false});saveData();renderAll();showSaved('Thought converted');}
 function renderInbox(){const full=document.getElementById('inboxArea'),preview=document.getElementById('inboxPreviewArea');[full,preview].forEach(area=>{if(!area)return;area.innerHTML='';const items=area===preview?data.inbox.slice(0,3):data.inbox;if(!items.length){area.innerHTML='<div class="empty-state">Nothing waiting in your inbox.</div>';return;}items.forEach(x=>area.appendChild(makeV10Row({name:x.name,meta:x.note||'Unsorted thought',open:()=>editCapture('inbox',x.id)},{complete:false,menu:compactMenu(`<button onclick="closeAnchoredMenu();editCapture('inbox','${x.id}')">Edit</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','todo')">Make a to-do</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','project')">Make a project</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','waiting')">Move to Waiting For</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('inbox','${x.id}')">Delete</button>`,x.name)})));});}
 function renderWaiting(){const area=document.getElementById('waitingArea');if(!area)return;area.innerHTML='';if(!data.waiting.length){area.innerHTML='<div class="empty-state">Nothing being waited for.</div>';return;}data.waiting.forEach(x=>area.appendChild(makeV10Row({name:x.name,meta:x.reviewDate?`Review ${formatDate(x.reviewDate)}`:(x.note||'No review date'),dueDate:x.reviewDate,action:()=>completeWaiting(x.id),open:()=>editCapture('waiting',x.id)},{menu:compactMenu(`<button onclick="closeAnchoredMenu();editCapture('waiting','${x.id}')">Edit</button><button onclick="closeAnchoredMenu();completeWaiting('${x.id}')">${x.completed?'Mark active':'Complete'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('waiting','${x.id}')">Delete</button>`,x.name)})));}
-document.getElementById('captureForm')?.addEventListener('submit',e=>{e.preventDefault();const type=document.getElementById('captureType').value,id=document.getElementById('captureId').value,name=document.getElementById('captureName').value.trim();if(!name)return;const list=data[type]||(data[type]=[]),existing=list.find(x=>x.id===id);const record={id:existing?.id||uid(),name,note:document.getElementById('captureNote').value.trim(),reviewDate:type==='waiting'?document.getElementById('captureDate').value:'',completed:existing?.completed||false,createdAt:existing?.createdAt||new Date().toISOString()};if(existing)Object.assign(existing,record);else list.unshift(record);saveData();closeCaptureDialog();renderAll();});
+function startVoiceCapture(type=''){
+ if(type) openCaptureDialog(type);
+ const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SpeechRecognition){alert('Voice dictation is not supported by this browser. You can use the microphone button on your phone keyboard instead.');return;}
+ const r=new SpeechRecognition();r.lang='en-GB';r.interimResults=false;r.maxAlternatives=1;
+ const mic=document.querySelector('.capture-mic');mic?.classList.add('listening');
+ r.onresult=e=>{const text=e.results[0][0].transcript.trim();const input=document.getElementById('captureName');input.value=input.value?`${input.value} ${text}`:text;input.dispatchEvent(new Event('input'));};
+ r.onerror=()=>alert('I could not hear that clearly. Please try again or use your keyboard microphone.');
+ r.onend=()=>mic?.classList.remove('listening');r.start();
+}
+document.getElementById('captureForm')?.addEventListener('submit',e=>{e.preventDefault();saveCapture();});
