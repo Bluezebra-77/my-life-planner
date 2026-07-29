@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Life Planner</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#5f7d68">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Life Planner">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">My flexible daily planner</p>
+        <h1>My Life Planner</h1>
+        <p id="todayDate" class="date-line"></p>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="small-button" onclick="openAddDialog()">+ Add</button>
+        <button id="installButton" type="button" class="small-button hidden" onclick="installPlanner()">Install app</button>
+      </div>
+      <div class="compact-progress" aria-label="Daily progress">
+        <span id="progressText">0 of 0</span>
+        <div class="progress-wrap"><div id="progressBar" class="progress-bar"></div></div>
+      </div>
+    </header>
+
+    <section class="panel due-panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Today</p>
+          <h2>Today's reminders</h2>
+        </div>
+      </div>
+      <div id="todayRemindersArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel due-panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Time-sensitive</p>
+          <h2>This week</h2>
+        </div>
+      </div>
+      <div id="weeklyArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Cleaning today</p>
+          <h2>Cleaning jobs due now</h2>
+        </div>
+      </div>
+      <div id="cleaningTodayArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Main area</p>
+          <h2>Daily rhythm</h2>
+        </div>
+        <div class="inline-actions">
+          <button class="small-button" type="button" onclick="openAddDialog('daily')">Add task</button>
+          <button class="small-button" type="button" onclick="resetDailyTasks()">Reset today</button>
+        </div>
+      </div>
+      <div id="dailyChecklist" class="checklist"></div>
+    </section>
+
+    <section class="panel decision-panel">
+      <p class="eyebrow">When it feels overwhelming</p>
+      <h2>Take the decision away</h2>
+      <div class="button-grid">
+        <button type="button" onclick="chooseForMe()">Choose for me</button>
+        <button type="button" onclick="chooseLowEnergy()">Low-energy choice</button>
+        <button type="button" onclick="chooseQuickWin()">Quick win</button>
+      </div>
+      <div id="choiceCard" class="choice-card">
+        Press a button and the app will choose one manageable task.
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">My list</p>
+          <h2>To-do list</h2>
+        </div>
+        <button class="small-button" type="button" onclick="openAddDialog('todo')">Add to-do</button>
+      </div>
+      <p class="card-meta">Every saved to-do appears below. You can edit, complete or delete it.</p>
+      <div id="todoArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Annual reminders</p>
+          <h2>Birthdays and memorable dates list</h2>
+        </div>
+        <button class="small-button" type="button" onclick="openAnnualDialog()">Add annual date</button>
+      </div>
+      <p class="card-meta">Every birthday or annual date appears below. You can edit or delete it at any time.</p>
+      <div id="annualArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Flexible work</p>
+          <h2>Projects list</h2>
+        </div>
+        <button class="small-button" type="button" onclick="openAddDialog('project')">Add project</button>
+      </div>
+      <p class="card-meta">Every project and all its steps appear below. Projects and steps can be edited or deleted.</p>
+      <div id="projectsArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Home care</p>
+          <h2>Cleaning task list</h2>
+        </div>
+        <button class="small-button" type="button" onclick="openCleaningDialog()">Add cleaning task</button>
+      </div>
+      <p class="card-meta">Add daily, weekly, fortnightly or monthly cleaning jobs. Completing a job automatically sets its next due date.</p>
+      <p class="card-meta">Every cleaning task appears below. You can edit, complete or delete it.</p>
+      <div id="cleaningArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Existing areas</p>
+          <h2>Things I can work on</h2>
+        </div>
+      </div>
+
+      <div class="category-buttons">
+        <button type="button" onclick="showCategory('photography')">Photography</button>
+        <button type="button" onclick="showCategory('decluttering')">Decluttering</button>
+        <button type="button" onclick="showCategory('vinted')">Vinted</button>
+        <button type="button" onclick="showCategory('admin')">Admin</button>
+        <button type="button" onclick="showCategory('house')">House</button>
+      </div>
+
+      <div id="categoryArea" class="category-area">
+        Choose a category to see its checklist.
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Everything saved</p>
+          <h2>Main list overview</h2>
+        </div>
+      </div>
+      <div id="mainOverviewArea" class="overview-grid"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">End of day</p>
+          <h2>Gentle close-down</h2>
+        </div>
+        <button class="small-button" type="button" onclick="openAddDialog('evening')">Add evening task</button>
+      </div>
+      <div id="eveningChecklist" class="checklist"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Safety and transfer</p>
+          <h2>Backup and restore</h2>
+        </div>
+      </div>
+      <p class="card-meta">Your information is saved in this device's browser. Export a backup before clearing browser data or moving to another device.</p>
+      <div class="card-actions">
+        <button type="button" onclick="exportPlanner()">Export backup</button>
+        <button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button>
+        <input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)">
+      </div>
+      <p id="storageStatus" class="storage-status"></p>
+    </section>
+  </main>
+
+  <dialog id="addDialog">
+    <form id="addForm" method="dialog">
+      <input id="editingId" type="hidden">
+      <input id="editingParentId" type="hidden">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">Add something</p>
+          <h2 id="dialogTitle">New item</h2>
+        </div>
+        <button type="button" class="icon-button" onclick="closeAddDialog()">X</button>
+      </div>
+
+      <label>
+        What are you adding?
+        <select id="itemType">
+          <option value="todo">A to-do item</option>
+          <option value="project">A new project</option>
+          <option value="step">A step to an existing project</option>
+          <option value="category">A task to an existing area</option>
+          <option value="annual">A birthday or annual date</option>
+          <option value="cleaning">A cleaning task</option>
+          <option value="daily">A daily rhythm task</option>
+          <option value="evening">An evening task</option>
+        </select>
+      </label>
+
+      <label>
+        Name
+        <input id="itemName" type="text" required placeholder="For example: Enter spring exhibition">
+      </label>
+
+      <label id="detailsLabel">
+        Details
+        <textarea id="itemDetails" rows="3" placeholder="Notes, contact details, what needs doing..."></textarea>
+      </label>
+
+      <label id="projectPickerLabel" class="hidden">
+        Choose project
+        <select id="projectPicker"></select>
+      </label>
+
+      <label id="categoryPickerLabel" class="hidden">
+        Choose area
+        <select id="categoryPicker">
+          <option value="photography">Photography</option>
+          <option value="decluttering">Decluttering</option>
+          <option value="vinted">Vinted</option>
+          <option value="admin">Admin</option>
+          <option value="house">House</option>
+        </select>
+      </label>
+
+      <label>
+        Timing
+        <select id="timingType">
+          <option value="none">No date</option>
+          <option value="date">Due on a date</option>
+          <option value="ongoing">Ongoing</option>
+          <option value="months">Finish within a number of months</option>
+        </select>
+      </label>
+
+      <label id="dateLabel" class="hidden">
+        Due date
+        <input id="dueDate" type="date">
+      </label>
+
+      <label id="monthsLabel" class="hidden">
+        Number of months
+        <input id="monthsCount" type="number" min="1" max="60" value="3">
+      </label>
+
+      <label id="cleaningAreaLabel" class="hidden">
+        Room or area
+        <input id="cleaningRoom" type="text" placeholder="For example: Bedroom, kitchen or bathroom">
+      </label>
+
+      <label id="cleaningFrequencyLabel" class="hidden">
+        How often?
+        <select id="cleaningFrequency">
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="fortnightly">Every two weeks</option>
+          <option value="monthly">Monthly</option>
+        </select>
+      </label>
+
+      <label id="cleaningStartLabel" class="hidden">
+        First due date
+        <input id="cleaningStartDate" type="date">
+      </label>
+
+      <label id="annualDateLabel" class="hidden">
+        Annual date
+        <input id="annualDate" type="date">
+      </label>
+
+      <label id="annualReminderLabel" class="hidden">
+        Remind me this many days before
+        <input id="annualReminderDays" type="number" min="0" max="90" value="7">
+      </label>
+
+      <label id="leadLabel" class="hidden">
+        Put into the schedule this many days before
+        <input id="leadDays" type="number" min="0" max="365" value="7">
+      </label>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary-button" onclick="closeAddDialog()">Cancel</button>
+        <button type="submit">Save item</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js"));
+    }
+  </script>
+</body>
+</html>
