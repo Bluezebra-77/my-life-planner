@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Life Planner</title>
-  <link rel="stylesheet" href="style.css?v=9.6">
-  <link rel="manifest" href="manifest.json?v=9.6">
+  <link rel="stylesheet" href="style.css?v=9.7">
+  <link rel="manifest" href="manifest.json?v=9.7">
   <meta name="theme-color" content="#5f7d68">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -18,7 +18,7 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.6</span></h1>
+        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.7</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
@@ -41,7 +41,6 @@
     <section class="panel due-panel app-view-section" data-view="home">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Today</p>
           <h2>Today's reminders</h2>
         </div>
         <button id="todayToggle" class="small-button" type="button" onclick="togglePanel('todayRemindersArea','todayToggle')">Hide</button>
@@ -52,7 +51,6 @@
     <section class="panel due-panel app-view-section" data-view="home">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Time-sensitive</p>
           <h2>This week</h2>
         </div>
         <button id="weekToggle" class="small-button" type="button" onclick="togglePanel('weeklyArea','weekToggle')">Hide</button>
@@ -76,10 +74,14 @@
           <p class="eyebrow">Main area</p>
           <h2>Daily rhythm</h2>
         </div>
-        <div class="inline-actions">
-          <button class="small-button" type="button" onclick="openRoutineManager('daily')">Manage list</button>
-          <button class="small-button" type="button" onclick="resetDailyTasks()">Reset today</button>
-        </div>
+        <details class="item-menu rhythm-menu">
+          <summary aria-label="Daily Rhythm options">⋯</summary>
+          <div class="item-menu-popover">
+            <button type="button" class="menu-close-x" onclick="this.closest('details').removeAttribute('open')" aria-label="Close menu">×</button>
+            <button type="button" onclick="openRoutineManager('daily'); this.closest('details').removeAttribute('open')">Manage list</button>
+            <button type="button" onclick="resetDailyTasks(); this.closest('details').removeAttribute('open')">Reset today</button>
+          </div>
+        </details>
       </div>
       <div id="dailyChecklist" class="checklist"></div>
       <div class="daily-decider">
@@ -205,7 +207,7 @@
         <details class="storage-details"><summary>Where can I find my backups?</summary><p><strong>Automatic daily backups:</strong> stored privately inside this browser on this device.</p><p><strong>Visible backup files:</strong> choose Save backup file or Share backup, then save to iCloud Drive, OneDrive or Files.</p></details>
         <div class="card-actions"><button type="button" onclick="exportPlanner()">Save backup file</button><button type="button" onclick="sharePlannerBackup()">Share backup</button><button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button><input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)"></div>
         <p id="storageStatus" class="storage-status"></p><p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.6</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
+        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.7</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
       </div>
     </dialog>
 
@@ -278,6 +280,8 @@
       </label>
 
       <label id="projectStepsLabel" class="hidden">Steps<textarea id="projectSteps" rows="6" placeholder="Enter each step on a new line"></textarea><span class="field-help">The first unfinished step will appear in Today and This Week. Completing it reveals the next step.</span></label>
+      <label id="itemStepsLabel" class="hidden">Steps and dates<textarea id="itemSteps" rows="5" placeholder="02-07-26 | Measure window
+03-07-26 | Order made-to-measure curtain"></textarea><span class="field-help">Use one line per step. Add a date, then a vertical bar, then the step. Dates may be DD-MM-YY or YYYY-MM-DD.</span></label>
 
       <label id="projectPickerLabel" class="hidden">
         Choose project
@@ -347,6 +351,6 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=9.6"></script>
+  <script src="app.js?v=9.7"></script>
 </body>
 </html>

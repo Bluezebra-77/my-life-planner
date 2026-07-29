@@ -1121,6 +1121,7 @@ function clearForm() {
   document.getElementById("annualReminderDays").value=7;
   document.getElementById("cleaningFrequency").value="weekly";
   document.getElementById("cleaningStartDate").value=new Date().toISOString().slice(0,10);
+  const itemSteps=document.getElementById("itemSteps"); if(itemSteps)itemSteps.value="";
 }
 
 function openAddDialog(type="todo",projectId="") {
@@ -1157,6 +1158,7 @@ function updateFormVisibility() {
   const routine = type === "daily" || type === "evening";
   document.getElementById("projectPickerLabel").classList.toggle("hidden",type!=="step");
   document.getElementById("projectStepsLabel").classList.toggle("hidden",type!=="project");
+  document.getElementById("itemStepsLabel")?.classList.toggle("hidden",!["todo","cleaning","annual"].includes(type));
   document.getElementById("cleaningAreaLabel").classList.toggle("hidden",type!=="cleaning");
   document.getElementById("cleaningFrequencyLabel").classList.toggle("hidden",type!=="cleaning");
   document.getElementById("cleaningStartLabel").classList.toggle("hidden",type!=="cleaning");
@@ -1183,7 +1185,8 @@ function loadCommon(item,type,parentId="") {
   document.getElementById("editingParentId").value=parentId;
   document.getElementById("itemName").value=item.name || "";
   document.getElementById("itemDetails").value=item.details || "";
-  if (type === "project") document.getElementById("projectSteps").value = (item.steps || []).map(step => step.name).join("\n");
+  if (type === "project") document.getElementById("projectSteps").value = (item.steps || []).map(step => `${step.dueDate || ""}${step.dueDate ? " | " : ""}${step.name}`).join("\n");
+  if (type === "todo") document.getElementById("itemSteps").value = (item.steps || []).map(step => `${step.dueDate || ""}${step.dueDate ? " | " : ""}${step.name}`).join("\n");
   timingType.value=item.timingType || (item.dueDate ? "date" : "none");
   document.getElementById("dueDate").value=item.dueDate || "";
   document.getElementById("leadDays").value=item.leadDays ?? 7;
@@ -1244,7 +1247,8 @@ addForm.addEventListener("submit",event=>{
       room: document.getElementById("cleaningRoom").value.trim(),
       frequency: document.getElementById("cleaningFrequency").value,
       nextDue: startDate,
-      lastCompleted: null
+      lastCompleted: null,
+      steps: mergeEnteredSteps(id?(data.cleaningTasks.find(x=>x.id===id)?.steps||[]):[], parseDatedSteps(document.getElementById("itemSteps")?.value||""), {})
     };
     if(id) {
       const old = data.cleaningTasks.find(x => x.id === id);
@@ -1260,7 +1264,8 @@ addForm.addEventListener("submit",event=>{
     const annualDate=document.getElementById("annualDate").value;
     if(!annualDate)return;
     const monthDay=annualDate.slice(5);
-    const payload={id:id||uid(),name,details,monthDay,reminderDays:Number(document.getElementById("annualReminderDays").value||7),kind:"Birthday / annual date"};
+    const oldAnnual=id?data.annualDates.find(x=>x.id===id):null;
+    const payload={id:id||uid(),name,details,monthDay,reminderDays:Number(document.getElementById("annualReminderDays").value||7),kind:"Birthday / annual date",steps:mergeEnteredSteps(oldAnnual?.steps||[],parseDatedSteps(document.getElementById("itemSteps")?.value||""),{})};
     if(id) data.annualDates[data.annualDates.findIndex(x=>x.id===id)]=payload;
     else data.annualDates.push(payload);
     saveData(); closeAddDialog(); renderAll(); return;
@@ -1275,27 +1280,29 @@ addForm.addEventListener("submit",event=>{
   }
 
   const common={id:id||uid(),name,details,timingType:timing,dueDate,leadDays,completed:false};
+  const parsedItemSteps = parseDatedSteps(document.getElementById("itemSteps")?.value || "");
 
   if(type==="todo") {
     if(id) {
       const old=data.todos.find(x=>x.id===id);
       common.completed=old?.completed||false;
+      common.steps=mergeEnteredSteps(old?.steps || [], parsedItemSteps, common);
       data.todos[data.todos.findIndex(x=>x.id===id)]=common;
-    } else data.todos.push(common);
+    } else { common.steps=mergeEnteredSteps([], parsedItemSteps, common); data.todos.push(common); }
   }
 
   if(type==="project") {
-    const enteredSteps = document.getElementById("projectSteps").value.split(/\n/).map(x=>x.trim()).filter(Boolean);
+    const enteredSteps = parseDatedSteps(document.getElementById("projectSteps").value);
     if(id) {
       const old=data.projects.find(x=>x.id===id);
       const oldSteps = old?.steps || [];
-      const steps = enteredSteps.map((stepName,index) => {
+      const steps = enteredSteps.map((entry,index) => {
         const existing = oldSteps[index];
-        return existing ? {...existing,name:stepName,order:index} : {id:uid(),name:stepName,details:"",timingType:common.timingType,dueDate:common.dueDate,leadDays:common.leadDays,completed:false,order:index};
+        return existing ? {...existing,name:entry.name,dueDate:entry.dueDate || existing.dueDate || null,order:index} : {id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:common.leadDays,completed:false,order:index};
       });
       data.projects[data.projects.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,steps};
     } else {
-      const steps = enteredSteps.map((stepName,index) => ({id:uid(),name:stepName,details:"",timingType:common.timingType,dueDate:common.dueDate,leadDays:common.leadDays,completed:false,order:index}));
+      const steps = enteredSteps.map((entry,index) => ({id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:common.leadDays,completed:false,order:index}));
       data.projects.push({...common,steps});
     }
   }
@@ -1317,6 +1324,23 @@ addForm.addEventListener("submit",event=>{
 
   saveData(); closeAddDialog(); renderAll();
 });
+
+function parseDatedSteps(text) {
+  return String(text||"").split(/\n/).map(x=>x.trim()).filter(Boolean).map(line=>{
+    const parts=line.split("|");
+    let raw=parts.length>1?parts.shift().trim():"";
+    let name=(parts.length?parts.join("|"):line).trim();
+    let dueDate=null;
+    let m=raw.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2}|\d{4})$/);
+    if(m){let y=m[3]; if(y.length===2)y="20"+y; dueDate=`${y}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;}
+    else if(/^\d{4}-\d{2}-\d{2}$/.test(raw)) dueDate=raw;
+    else if(parts.length===0) name=line;
+    return {name,dueDate};
+  });
+}
+function mergeEnteredSteps(oldSteps, entered, defaults={}) {
+  return entered.map((entry,index)=>{const old=oldSteps[index]; return old?{...old,name:entry.name,dueDate:entry.dueDate||old.dueDate||null,order:index}:{id:uid(),name:entry.name,dueDate:entry.dueDate||null,details:"",completed:false,order:index,leadDays:defaults.leadDays||0,timingType:entry.dueDate?"date":"none"};});
+}
 
 function escapeHtml(value) {
   return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
@@ -1453,3 +1477,48 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedView = localStorage.getItem('myLifePlannerActiveView') || 'home';
   showAppView(savedView);
 });
+
+/* v9.7 dashboard and compact-management refinements */
+function activeProjectDashboardItems() {
+  const today = new Date().toISOString().slice(0,10);
+  return data.projects.flatMap(project => {
+    if (project.completed) return [];
+    const nextStep = (project.steps || []).find(step => !step.completed);
+    if (!nextStep) return [];
+    return [{...nextStep, dueDate: nextStep.dueDate || today, source:`Project: ${project.name}`, itemType:"step", parentId:project.id, isUndatedProjectStep:!nextStep.dueDate}];
+  });
+}
+function activeTodoDashboardItems() {
+  return data.todos.flatMap(todo=>{
+    if(todo.completed) return [];
+    const steps=todo.steps||[];
+    const next=steps.find(s=>!s.completed);
+    if(next) return [{...next,source:`To-do: ${todo.name}`,itemType:"todoStep",parentId:todo.id}];
+    return [{...todo,source:"To-do",itemType:"todo"}];
+  });
+}
+function getTodayReminderItems() {
+  const today=new Date(); today.setHours(12,0,0,0);
+  const dated=[...activeTodoDashboardItems(),...activeProjectDashboardItems()].filter(x=>!x.completed&&x.dueDate&&dateOnly(x.dueDate)<=today);
+  const annual=data.annualDates.map(item=>({item,status:annualStatus(item)})).filter(e=>e.status&&(e.status.isToday||e.status.inReminderWindow)).map(e=>({id:e.item.id,name:e.item.name,details:e.item.details,source:e.status.isToday?"Annual date today":"Annual reminder",dueDate:e.status.occurrence.toISOString().slice(0,10),itemType:"annual"}));
+  const cleaning=data.cleaningTasks.filter(i=>isDueTodayOrEarlier(i.nextDue)).map(i=>({id:i.id,name:i.name,details:i.details,source:`Cleaning: ${i.room||"General"}`,dueDate:i.nextDue,itemType:"cleaning"}));
+  return [...dated,...annual,...cleaning].sort((a,b)=>dateOnly(a.dueDate)-dateOnly(b.dueDate));
+}
+function getWeeklyItems() {
+  const today=new Date(); today.setHours(12,0,0,0); const end=new Date(today); end.setDate(end.getDate()+7);
+  const ordinary=[...activeTodoDashboardItems(),...activeProjectDashboardItems(),...data.cleaningTasks.map(i=>({id:i.id,name:i.name,details:i.details,source:`Cleaning: ${i.room||"General"}`,dueDate:i.nextDue,itemType:"cleaning",completed:false,leadDays:0}))]
+    .filter(i=>!i.completed&&i.dueDate).filter(i=>{const d=dateOnly(i.dueDate),lead=Number(i.leadDays||0),start=new Date(d);start.setDate(start.getDate()-lead);return start<=end;});
+  const annual=data.annualDates.map(i=>{const o=nextAnnualOccurrence(i.monthDay);return {...i,source:i.kind||"Annual reminder",dueDate:o?o.toISOString().slice(0,10):null,annual:true,itemType:"annual"};}).filter(i=>i.dueDate&&dateOnly(i.dueDate)<=end);
+  return [...ordinary,...annual].sort((a,b)=>dateOnly(a.dueDate)-dateOnly(b.dueDate));
+}
+function toggleTodoStep(todoId,stepId){const todo=data.todos.find(x=>x.id===todoId),step=todo?.steps?.find(x=>x.id===stepId);if(!todo||!step)return;step.completed=!step.completed;todo.completed=(todo.steps||[]).length>0&&todo.steps.every(s=>s.completed);saveData();renderAll();}
+function openReminderItem(item){if(item.itemType==="todo")editTodo(item.id);else if(item.itemType==="todoStep")editTodo(item.parentId);else if(item.itemType==="step")editStep(item.parentId,item.id);else if(item.itemType==="cleaning")editCleaning(item.id);else if(item.itemType==="annual"||item.annual)editAnnual(item.id);else if(item.itemType==="project")editProject(item.id);}
+function completionFor(item){if(item.itemType==="cleaning")return()=>completeCleaning(item.id);if(item.itemType==="todo")return()=>toggleTodo(item.id);if(item.itemType==="todoStep")return()=>toggleTodoStep(item.parentId,item.id);if(item.itemType==="step")return()=>toggleStep(item.parentId,item.id);return null;}
+function renderTodayReminders(){const area=document.getElementById("todayRemindersArea"),items=getTodayReminderItems();area.innerHTML="";if(!items.length){area.innerHTML='<div class="empty-state">No dated reminders need attention today.</div>';return;}items.forEach(item=>{const overdue=item.itemType!=="annual"&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));area.appendChild(compactReminderRow(item,{meta:`${item.source} · ${formatDate(item.dueDate,item.itemType!=="annual")}${overdue?" · OVERDUE":""}`,actionable:item.itemType!=="annual",onComplete:completionFor(item),clickable:true}));});}
+function renderWeekly(){const area=document.getElementById("weeklyArea"),items=getWeeklyItems();area.innerHTML="";if(!items.length){area.innerHTML='<div class="empty-state">Nothing needs attention this week.</div>';return;}items.forEach(item=>area.appendChild(compactReminderRow(item,{meta:`${item.source} · ${formatDate(item.dueDate,item.itemType!=="annual")}`,actionable:item.itemType!=="annual",onComplete:completionFor(item),clickable:true})));}
+function closeAllItemMenus(except=null){document.querySelectorAll('details.item-menu[open]').forEach(d=>{if(d!==except)d.removeAttribute('open')});}
+document.addEventListener('click',e=>{const d=e.target.closest('details.item-menu');if(!d)closeAllItemMenus();});
+function compactMenu(actions,label){return `<details class="item-menu" onclick="closeAllItemMenus(this)"><summary aria-label="Options for ${escapeHtml(label)}">⋯</summary><div class="item-menu-popover"><button type="button" class="menu-close-x" onclick="this.closest('details').removeAttribute('open')">×</button>${actions}</div></details>`;}
+function renderTodos(){const area=document.getElementById("todoArea");area.innerHTML="";if(!data.todos.length){area.innerHTML='<div class="empty-state">No to-do items yet.</div>';return;}[...data.todos].sort(sortByDueDate).forEach(todo=>{const row=document.createElement('div');row.className=`compact-manage-row ${todo.completed?'completed-row':''}`;const next=(todo.steps||[]).find(s=>!s.completed);row.innerHTML=`<button class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name)}</span><span class="compact-row-meta">${next?`Next: ${escapeHtml(next.name)}${next.dueDate?` · ${formatDate(next.dueDate)}`:''}`:getTimingText(todo)}</span></button>${compactMenu(`<button onclick="editTodo('${todo.id}')">Edit</button><button onclick="toggleTodo('${todo.id}')">${todo.completed?'Mark active':'Complete'}</button><button class="danger-text" onclick="deleteTodo('${todo.id}')">Delete</button>`,todo.name)}`;area.appendChild(row);});}
+function renderAnnualDates(){const area=document.getElementById('annualArea');area.innerHTML='';if(!data.annualDates.length){area.innerHTML='<div class="empty-state">No birthdays or annual dates yet.</div>';return;}[...data.annualDates].sort((a,b)=>nextAnnualOccurrence(a.monthDay)-nextAnnualOccurrence(b.monthDay)).forEach(item=>{const next=nextAnnualOccurrence(item.monthDay),row=document.createElement('div');row.className='annual-manage-row';row.innerHTML=`<div><strong>${escapeHtml(item.name)}</strong><div class="card-meta">${next?next.toLocaleDateString('en-GB',{day:'numeric',month:'long'}):''}</div></div>${compactMenu(`<button onclick="editAnnual('${item.id}')">Edit</button><button class="danger-text" onclick="deleteAnnual('${item.id}')">Delete</button>`,item.name)}`;area.appendChild(row);});}
+function renderProjects(){const area=document.getElementById('projectsArea');area.innerHTML='';if(!data.projects.length){area.innerHTML='<div class="empty-state">No projects yet.</div>';return;}[...data.projects].sort(sortByDueDate).forEach(project=>{const card=document.createElement('div');card.className=`list-card ${project.completed?'completed-card':''}`;const steps=(project.steps||[]).map(step=>`<div class="step-compact-row"><label><input type="checkbox" ${step.completed?'checked':''} onchange="toggleStep('${project.id}','${step.id}')"> <strong>${escapeHtml(step.name)}</strong>${step.dueDate?` <span class="card-meta">${formatDate(step.dueDate)}</span>`:''}</label><button class="step-quick" onclick="editStep('${project.id}','${step.id}')" aria-label="Open step">›</button></div>`).join('')||'<div class="card-meta">No steps added yet.</div>';card.innerHTML=`<div class="card-top"><div><div class="card-title">${escapeHtml(project.name)}</div><div class="card-details">${escapeHtml(project.details||'')}</div></div>${compactMenu(`<button onclick="editProject('${project.id}')">Edit project</button><button onclick="openAddDialog('step','${project.id}')">Add step</button><button onclick="toggleProject('${project.id}')">${project.completed?'Mark active':'Complete project'}</button><button class="danger-text" onclick="deleteProject('${project.id}')">Delete</button>`,project.name)}</div><div class="steps-list">${steps}</div>`;area.appendChild(card);});}
