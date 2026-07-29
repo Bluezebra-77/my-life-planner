@@ -17,12 +17,13 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1>My Life Planner</h1>
+        <h1>My Life Planner <span class="version-badge">v8A</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
         <button type="button" class="small-button" onclick="openAddDialog()">+ Add</button>
         <button id="installButton" type="button" class="small-button hidden" onclick="installPlanner()">Install app</button>
+        <button id="updateButton" type="button" class="small-button hidden" onclick="applyAppUpdate()">Update available</button>
       </div>
       <div class="compact-progress" aria-label="Daily progress">
         <span id="progressText">0 of 0</span>
@@ -36,6 +37,7 @@
           <p class="eyebrow">Today</p>
           <h2>Today's reminders</h2>
         </div>
+        <button id="todayToggle" class="small-button" type="button" onclick="togglePanel('todayRemindersArea','todayToggle')">Hide</button>
       </div>
       <div id="todayRemindersArea" class="stack-list"></div>
     </section>
@@ -46,6 +48,7 @@
           <p class="eyebrow">Time-sensitive</p>
           <h2>This week</h2>
         </div>
+        <button id="weekToggle" class="small-button" type="button" onclick="togglePanel('weeklyArea','weekToggle')">Hide</button>
       </div>
       <div id="weeklyArea" class="stack-list"></div>
     </section>
@@ -67,7 +70,7 @@
           <h2>Daily rhythm</h2>
         </div>
         <div class="inline-actions">
-          <button class="small-button" type="button" onclick="openAddDialog('daily')">Add task</button>
+          <button class="small-button" type="button" onclick="openRoutineManager('daily')">Manage list</button>
           <button class="small-button" type="button" onclick="resetDailyTasks()">Reset today</button>
         </div>
       </div>
@@ -136,26 +139,6 @@
       <div id="cleaningArea" class="stack-list"></div>
     </section>
 
-    <section class="panel">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Existing areas</p>
-          <h2>Things I can work on</h2>
-        </div>
-      </div>
-
-      <div class="category-buttons">
-        <button type="button" onclick="showCategory('photography')">Photography</button>
-        <button type="button" onclick="showCategory('decluttering')">Decluttering</button>
-        <button type="button" onclick="showCategory('vinted')">Vinted</button>
-        <button type="button" onclick="showCategory('admin')">Admin</button>
-        <button type="button" onclick="showCategory('house')">House</button>
-      </div>
-
-      <div id="categoryArea" class="category-area">
-        Choose a category to see its checklist.
-      </div>
-    </section>
 
     <section class="panel">
       <div class="section-heading">
@@ -173,7 +156,7 @@
           <p class="eyebrow">End of day</p>
           <h2>Gentle close-down</h2>
         </div>
-        <button class="small-button" type="button" onclick="openAddDialog('evening')">Add evening task</button>
+        <button class="small-button" type="button" onclick="openRoutineManager('evening')">Manage list</button>
       </div>
       <div id="eveningChecklist" class="checklist"></div>
     </section>
@@ -192,8 +175,42 @@
         <input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)">
       </div>
       <p id="storageStatus" class="storage-status"></p>
+      <p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
+      <div class="card-actions">
+        <button type="button" onclick="sharePlannerBackup()">Share backup</button>
+        <button type="button" class="secondary-button" onclick="restoreLatestRecovery()">Restore latest recovery copy</button>
+      </div>
+      <details class="storage-details">
+        <summary>Where is my information stored?</summary>
+        <p>Your lists are stored privately in Safari on this device. GitHub stores only the app itself, not your personal entries. Information entered on your iPhone does not automatically appear on your Mac.</p>
+        <p>The app keeps up to five rolling recovery copies on this device. Export or Share a backup regularly for protection outside Safari.</p>
+      </details>
     </section>
   </main>
+
+
+  <dialog id="routineManagerDialog" class="manager-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">Edit your routine</p>
+        <h2 id="routineManagerTitle">Manage list</h2>
+      </div>
+      <button type="button" class="icon-button" onclick="closeRoutineManager()">X</button>
+    </div>
+    <p class="card-meta">Add, edit or delete items here. The main planner stays uncluttered.</p>
+    <div id="routineManagerList" class="manager-list"></div>
+    <div class="manager-add">
+      <label>
+        New item
+        <input id="routineNewName" type="text" placeholder="Type a new routine item">
+      </label>
+      <label>
+        Note or time (optional)
+        <input id="routineNewTime" type="text" placeholder="For example: after breakfast">
+      </label>
+      <button type="button" onclick="addRoutineFromManager()">Add to list</button>
+    </div>
+  </dialog>
 
   <dialog id="addDialog">
     <form id="addForm" method="dialog">
@@ -213,7 +230,6 @@
           <option value="todo">A to-do item</option>
           <option value="project">A new project</option>
           <option value="step">A step to an existing project</option>
-          <option value="category">A task to an existing area</option>
           <option value="annual">A birthday or annual date</option>
           <option value="cleaning">A cleaning task</option>
           <option value="daily">A daily rhythm task</option>
@@ -236,16 +252,6 @@
         <select id="projectPicker"></select>
       </label>
 
-      <label id="categoryPickerLabel" class="hidden">
-        Choose area
-        <select id="categoryPicker">
-          <option value="photography">Photography</option>
-          <option value="decluttering">Decluttering</option>
-          <option value="vinted">Vinted</option>
-          <option value="admin">Admin</option>
-          <option value="house">House</option>
-        </select>
-      </label>
 
       <label>
         Timing
@@ -310,10 +316,5 @@
   </dialog>
 
   <script src="app.js"></script>
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("service-worker.js"));
-    }
-  </script>
 </body>
 </html>

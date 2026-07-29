@@ -38,7 +38,7 @@ const choicePools = {
 };
 
 function getData() {
-  const keys = ["lifePlannerDataV7", "lifePlannerDataV4", "lifePlannerDataV3"];
+  const keys = ["lifePlannerDataV8", "lifePlannerDataV7", "lifePlannerDataV4", "lifePlannerDataV3"];
   for (const key of keys) {
     const saved = localStorage.getItem(key);
     if (!saved) continue;
@@ -51,7 +51,7 @@ function getData() {
       loaded.dailyTasks = loaded.dailyTasks || JSON.parse(JSON.stringify(dailyTasks));
       loaded.eveningTasks = loaded.eveningTasks || JSON.parse(JSON.stringify(eveningTasks));
       loaded.categoryTasks = loaded.categoryTasks || JSON.parse(JSON.stringify(defaultCategories));
-      return loaded;
+      return normaliseData(loaded);
     } catch (error) {
       console.error("Could not read saved planner data", error);
     }
@@ -70,9 +70,57 @@ function getData() {
 
 let data = getData();
 
+const DATA_KEY = "lifePlannerDataV8";
+const RECOVERY_KEY = "lifePlannerRecoveryV8";
+let saveIndicatorTimer = null;
+
+function normaliseData(loaded = {}) {
+  return {
+    todos: Array.isArray(loaded.todos) ? loaded.todos : [],
+    projects: Array.isArray(loaded.projects) ? loaded.projects : [],
+    annualDates: Array.isArray(loaded.annualDates) ? loaded.annualDates : [],
+    cleaningTasks: Array.isArray(loaded.cleaningTasks) ? loaded.cleaningTasks : [],
+    dailyTasks: Array.isArray(loaded.dailyTasks) ? loaded.dailyTasks : JSON.parse(JSON.stringify(dailyTasks)),
+    eveningTasks: Array.isArray(loaded.eveningTasks) ? loaded.eveningTasks : JSON.parse(JSON.stringify(eveningTasks)),
+    categoryTasks: loaded.categoryTasks && typeof loaded.categoryTasks === "object"
+      ? loaded.categoryTasks : JSON.parse(JSON.stringify(defaultCategories))
+  };
+}
+
+function createRecoveryCopy(serialised) {
+  try {
+    const copies = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]");
+    if (copies[0]?.data === serialised) return;
+    copies.unshift({ savedAt: new Date().toISOString(), data: serialised });
+    localStorage.setItem(RECOVERY_KEY, JSON.stringify(copies.slice(0, 5)));
+  } catch (error) {
+    console.warn("Could not create recovery copy", error);
+  }
+}
+
+function showSaved(message = "Saved on this device") {
+  const indicator = document.getElementById("saveIndicator");
+  if (!indicator) return;
+  indicator.textContent = message;
+  indicator.classList.add("saved");
+  clearTimeout(saveIndicatorTimer);
+  saveIndicatorTimer = setTimeout(() => indicator.classList.remove("saved"), 1800);
+}
+
 function saveData() {
-  localStorage.setItem("lifePlannerDataV7", JSON.stringify(data));
-  updateStorageStatus();
+  try {
+    data = normaliseData(data);
+    const serialised = JSON.stringify(data);
+    createRecoveryCopy(serialised);
+    localStorage.setItem(DATA_KEY, serialised);
+    updateStorageStatus();
+    showSaved();
+  } catch (error) {
+    console.error("Could not save planner data", error);
+    const indicator = document.getElementById("saveIndicator");
+    if (indicator) indicator.textContent = "Save failed — export a backup";
+    alert("The planner could not save. Please use Export backup and check that Safari is not in Private Browsing.");
+  }
 }
 
 function uid() {
@@ -187,8 +235,10 @@ function setDate() {
 }
 
 function resetDailyTasks() {
+  if (!confirm("Untick all Daily Rhythm and evening tasks for today?")) return;
   [...data.dailyTasks, ...data.eveningTasks].forEach(task => localStorage.removeItem(storageKey("daily", task.id)));
   renderAll();
+  showSaved("Today reset");
 }
 
 function savedChoiceItems() {
@@ -206,7 +256,7 @@ function chooseFrom(poolName) {
   let pool = choicePools[poolName] || [];
   if (poolName === "normal") pool = [...saved, ...choicePools.normal];
   if (poolName === "low") pool = [...data.dailyTasks.slice(-3).map(x => x.title), ...choicePools.low];
-  if (poolName === "quick") pool = [...data.categoryTasks.admin.slice(0,2), ...choicePools.quick];
+  if (poolName === "quick") pool = [...(data.categoryTasks?.admin || []).slice(0,2), ...choicePools.quick];
   pool = pool.filter(Boolean);
   const card = document.getElementById("choiceCard");
   card.textContent = pool.length
@@ -230,6 +280,98 @@ function showCategory(categoryKey) {
 }
 
 
+
+
+function togglePanel(areaId, buttonId) {
+  const area = document.getElementById(areaId);
+  const button = document.getElementById(buttonId);
+  if (!area || !button) return;
+  const hidden = area.classList.toggle("collapsed-content");
+  button.textContent = hidden ? "Show" : "Hide";
+  localStorage.setItem(`lifePlannerPanel:${areaId}`, hidden ? "hidden" : "shown");
+}
+
+function restorePanelStates() {
+  [["todayRemindersArea","todayToggle"],["weeklyArea","weekToggle"]].forEach(([areaId,buttonId]) => {
+    const hidden = localStorage.getItem(`lifePlannerPanel:${areaId}`) === "hidden";
+    const area = document.getElementById(areaId);
+    const button = document.getElementById(buttonId);
+    if (area) area.classList.toggle("collapsed-content", hidden);
+    if (button) button.textContent = hidden ? "Show" : "Hide";
+  });
+}
+
+let managedRoutineGroup = "daily";
+const routineManagerDialog = document.getElementById("routineManagerDialog");
+
+function openRoutineManager(group) {
+  managedRoutineGroup = group;
+  document.getElementById("routineManagerTitle").textContent = group === "evening" ? "Manage Gentle close-down" : "Manage Daily rhythm";
+  document.getElementById("routineNewName").value = "";
+  document.getElementById("routineNewTime").value = "";
+  renderRoutineManager();
+  routineManagerDialog.showModal();
+}
+
+function closeRoutineManager() { routineManagerDialog.close(); }
+
+function renderRoutineManager() {
+  const area = document.getElementById("routineManagerList");
+  const list = routineList(managedRoutineGroup);
+  area.innerHTML = "";
+  if (!list.length) {
+    area.innerHTML = '<div class="empty-state">No items yet. Add one below.</div>';
+    return;
+  }
+  list.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "manager-row";
+    row.innerHTML = `<div><strong>${escapeHtml(item.title)}</strong>${item.time ? `<div class="card-meta">${escapeHtml(item.time)}</div>` : ""}</div>
+      <div class="mini-actions">
+        <button type="button" class="small-button" onclick="editRoutineInManager('${item.id}')">Edit</button>
+        <button type="button" class="small-button danger-button" onclick="deleteRoutineInManager('${item.id}')">Delete</button>
+      </div>`;
+    area.appendChild(row);
+  });
+}
+
+function addRoutineFromManager() {
+  const nameInput = document.getElementById("routineNewName");
+  const timeInput = document.getElementById("routineNewTime");
+  const title = nameInput.value.trim();
+  if (!title) { nameInput.focus(); return; }
+  routineList(managedRoutineGroup).push({ id: uid(), title, time: timeInput.value.trim() });
+  saveData();
+  nameInput.value = "";
+  timeInput.value = "";
+  renderRoutineManager();
+  renderAll();
+}
+
+function editRoutineInManager(id) {
+  const item = routineList(managedRoutineGroup).find(x => x.id === id);
+  if (!item) return;
+  const title = prompt("Edit item", item.title);
+  if (title === null || !title.trim()) return;
+  const note = prompt("Edit note or time", item.time || "");
+  if (note === null) return;
+  item.title = title.trim();
+  item.time = note.trim();
+  saveData();
+  renderRoutineManager();
+  renderAll();
+}
+
+function deleteRoutineInManager(id) {
+  const item = routineList(managedRoutineGroup).find(x => x.id === id);
+  if (!item || !confirm(`Delete "${item.title}"?`)) return;
+  if (managedRoutineGroup === "evening") data.eveningTasks = data.eveningTasks.filter(x => x.id !== id);
+  else data.dailyTasks = data.dailyTasks.filter(x => x.id !== id);
+  localStorage.removeItem(storageKey("daily", id));
+  saveData();
+  renderRoutineManager();
+  renderAll();
+}
 
 function routineList(group) {
   return group === "evening" ? data.eveningTasks : data.dailyTasks;
@@ -263,17 +405,19 @@ function deleteRoutineTask(group, id) {
 function updateStorageStatus() {
   const status = document.getElementById("storageStatus");
   if (!status) return;
-  const saved = localStorage.getItem("lifePlannerDataV7");
+  const saved = localStorage.getItem(DATA_KEY) || localStorage.getItem("lifePlannerDataV7");
+  let recoveries = 0;
+  try { recoveries = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]").length; } catch {}
   status.textContent = saved
-    ? `Saved on this device (${Math.max(1, Math.round(new Blob([saved]).size / 1024))} KB).`
-    : "No planner data has been saved yet.";
+    ? `Saved privately on this device (${Math.max(1, Math.round(new Blob([saved]).size / 1024))} KB) · ${recoveries} recovery cop${recoveries === 1 ? "y" : "ies"}.`
+    : "No planner information has been saved yet.";
 }
 
 function exportPlanner() {
   saveData();
   const backup = {
     app: "My Life Planner",
-    version: 7,
+    version: "8A",
     exportedAt: new Date().toISOString(),
     data,
     checks: Object.fromEntries(
@@ -290,6 +434,55 @@ function exportPlanner() {
   URL.revokeObjectURL(link.href);
 }
 
+async function sharePlannerBackup() {
+  saveData();
+  const backup = {
+    app: "My Life Planner",
+    version: "8A",
+    exportedAt: new Date().toISOString(),
+    data,
+    checks: Object.fromEntries(
+      Object.keys(localStorage)
+        .filter(key => key.startsWith("lifePlanner:"))
+        .map(key => [key, localStorage.getItem(key)])
+    )
+  };
+  const file = new File([JSON.stringify(backup, null, 2)],
+    `my-life-planner-backup-${new Date().toISOString().slice(0,10)}.json`,
+    { type: "application/json" });
+
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ title: "My Life Planner backup", text: "A backup of my planner information.", files: [file] });
+      showSaved("Backup shared");
+      return;
+    } catch (error) {
+      if (error.name === "AbortError") return;
+    }
+  }
+  exportPlanner();
+}
+
+function restoreLatestRecovery() {
+  let copies = [];
+  try { copies = JSON.parse(localStorage.getItem(RECOVERY_KEY) || "[]"); } catch {}
+  if (!copies.length) {
+    alert("There is no recovery copy available yet.");
+    return;
+  }
+  const latest = copies[0];
+  const date = new Date(latest.savedAt).toLocaleString("en-GB");
+  if (!confirm(`Restore the recovery copy saved ${date}? Your current planner will be replaced.`)) return;
+  try {
+    data = normaliseData(JSON.parse(latest.data));
+    localStorage.setItem(DATA_KEY, JSON.stringify(data));
+    renderAll();
+    showSaved("Recovery restored");
+  } catch {
+    alert("That recovery copy could not be restored.");
+  }
+}
+
 function importPlanner(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -299,15 +492,7 @@ function importPlanner(event) {
       const backup = JSON.parse(reader.result);
       const imported = backup.data || backup;
       if (!imported || typeof imported !== "object") throw new Error("Invalid backup");
-      data = {
-        todos: imported.todos || [],
-        projects: imported.projects || [],
-        annualDates: imported.annualDates || [],
-        cleaningTasks: imported.cleaningTasks || [],
-        dailyTasks: imported.dailyTasks || JSON.parse(JSON.stringify(dailyTasks)),
-        eveningTasks: imported.eveningTasks || JSON.parse(JSON.stringify(eveningTasks)),
-        categoryTasks: imported.categoryTasks || JSON.parse(JSON.stringify(defaultCategories))
-      };
+      data = normaliseData(imported);
       Object.entries(backup.checks || {}).forEach(([key, value]) => localStorage.setItem(key, value));
       saveData();
       renderAll();
@@ -821,7 +1006,6 @@ function updateFormVisibility() {
   const timing=timingType.value;
   const routine = type === "daily" || type === "evening";
   document.getElementById("projectPickerLabel").classList.toggle("hidden",type!=="step");
-  document.getElementById("categoryPickerLabel").classList.toggle("hidden",type!=="category");
   document.getElementById("cleaningAreaLabel").classList.toggle("hidden",type!=="cleaning");
   document.getElementById("cleaningFrequencyLabel").classList.toggle("hidden",type!=="cleaning");
   document.getElementById("cleaningStartLabel").classList.toggle("hidden",type!=="cleaning");
@@ -976,8 +1160,8 @@ function escapeHtml(value) {
 
 function renderAll() {
   setDate();
-  renderChecklist("dailyChecklist",data.dailyTasks,"daily",true);
-  renderChecklist("eveningChecklist",data.eveningTasks,"daily",true);
+  renderChecklist("dailyChecklist",data.dailyTasks,"daily",false);
+  renderChecklist("eveningChecklist",data.eveningTasks,"daily",false);
   renderTodayReminders();
   renderWeekly();
   renderCleaningToday();
@@ -988,6 +1172,39 @@ function renderAll() {
   renderMainOverview();
   updateProgress();
   updateStorageStatus();
+  restorePanelStates();
+}
+
+
+let waitingServiceWorker = null;
+
+function applyAppUpdate() {
+  if (waitingServiceWorker) waitingServiceWorker.postMessage({ type: "SKIP_WAITING" });
+  else window.location.reload();
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("./service-worker.js");
+      if (registration.waiting) {
+        waitingServiceWorker = registration.waiting;
+        document.getElementById("updateButton")?.classList.remove("hidden");
+      }
+      registration.addEventListener("updatefound", () => {
+        const worker = registration.installing;
+        worker?.addEventListener("statechange", () => {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) {
+            waitingServiceWorker = worker;
+            document.getElementById("updateButton")?.classList.remove("hidden");
+          }
+        });
+      });
+    } catch (error) {
+      console.warn("Offline app registration failed", error);
+    }
+  });
+  navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
 }
 
 renderAll();

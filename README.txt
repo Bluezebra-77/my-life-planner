@@ -1,27 +1,17 @@
-MY LIFE PLANNER V7
+MY LIFE PLANNER V8A
 
-WHAT IS INCLUDED
-- Installable Progressive Web App (PWA)
-- Offline use after installation
-- Editable daily and evening routines
-- Fixed birthdays/annual reminders
-- Working task-choice buttons
-- Local automatic saving
-- Export and Import backup
+CHANGES FROM VERSION 8
+- Today's reminders can be shown or hidden.
+- This Week can be shown or hidden independently.
+- The choice is remembered on that device.
+- Daily Rhythm has one Manage list button rather than Edit/Delete beneath every item.
+- Gentle close-down has the same Manage list approach.
+- Items can be added, edited and deleted inside each list manager.
+- The old Existing areas section has been removed. Use Projects or To-do items instead.
+- Includes Version 8 backup, recovery and update improvements.
 
-IMPORTANT ABOUT INSTALLING ON A PHONE
-A PWA must be opened from a secure HTTPS website before a phone can install it.
-Emailing the ZIP to a phone and opening index.html directly will not provide a
-normal Home Screen installation or reliable offline behaviour.
+UPLOAD TO GITHUB
+Upload all files in this folder to the root of your my-life-planner repository and replace the existing files. Commit the changes.
 
-Once the folder is uploaded to an HTTPS web host:
-- iPhone/iPad: open in Safari, tap Share, then Add to Home Screen.
-- Android: open in Chrome, then choose Install app or Add to Home screen.
-
-WHERE DATA IS STORED
-The planner uses browser Local Storage. Information stays on the device and in
-the browser/profile where it was entered. It is not automatically synchronised
-between a Mac and phone.
-
-Use Export backup to create a JSON backup. Send that backup to another device,
-then use Import backup there to copy the planner information.
+DATA
+Your existing Version 7 information is retained and migrated. Personal information remains stored privately in Safari on each device.

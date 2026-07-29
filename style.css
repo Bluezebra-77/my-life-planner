@@ -462,3 +462,21 @@ textarea { resize: vertical; }
     flex-direction: column;
   }
 }
+
+.version-badge{display:inline-block;vertical-align:middle;font-size:.68rem;letter-spacing:.04em;padding:3px 7px;border-radius:999px;background:#e1ebe3;color:#4d6655}
+.save-indicator{display:inline-block;margin:7px 0 12px;padding:5px 9px;border-radius:999px;background:#eef3ef;color:#596b5f;font-size:.82rem;font-weight:700;transition:transform .2s ease,background .2s ease}
+.save-indicator.saved{background:#dcebdd;transform:scale(1.03)}
+.storage-details{margin-top:14px;border-top:1px solid #d9e1da;padding-top:12px}
+.storage-details summary{cursor:pointer;font-weight:700;color:#496052}
+.storage-details p{color:#596b5f;line-height:1.55}
+body{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+button,input,select,textarea{font-size:16px}
+@media (display-mode:standalone){.app-shell{padding-top:max(12px,env(safe-area-inset-top))}}
+
+.collapsed-content{display:none!important}
+.manager-dialog{width:min(680px,calc(100% - 24px));max-height:85vh;overflow:auto}
+.manager-list{display:grid;gap:10px;margin:14px 0}
+.manager-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border:1px solid #d9e1da;border-radius:12px;background:#fff}
+.manager-add{display:grid;gap:10px;padding-top:14px;border-top:1px solid #d9e1da}
+.manager-add label{display:grid;gap:5px;font-weight:700;color:#496052}
+@media(max-width:560px){.manager-row{align-items:flex-start;flex-direction:column}.manager-row .mini-actions{justify-content:flex-start}}
