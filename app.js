@@ -85,7 +85,7 @@ function getData() {
     catch (error) { console.warn("Could not read", key, error); }
   });
 
-  // One-time v9.3 rescue pass: inspect safety copies and daily snapshots so a list
+  // One-time v9.4 rescue pass: inspect safety copies and daily snapshots so a list
   // missed by an earlier migration can be recovered rather than silently lost.
   if (!localStorage.getItem("lifePlannerMigrationV93Done")) {
     try {
@@ -130,7 +130,7 @@ const RECOVERY_KEY = "lifePlannerDailyBackups";
 const LEGACY_RECOVERY_KEYS = ["lifePlannerDailyBackupsV9"];
 const SETTINGS_KEY = "lifePlannerSettings";
 const LEGACY_SETTINGS_KEYS = ["lifePlannerSettingsV9","lifePlannerSettingsV8","lifePlannerSettingsV7"];
-const APP_VERSION = "9.3";
+const APP_VERSION = "9.4";
 let saveIndicatorTimer = null;
 
 function normaliseData(loaded = {}) {
@@ -227,9 +227,11 @@ function dateOnly(value) {
 function formatDate(value, includeYear = true) {
   const date = dateOnly(value);
   if (!date) return "";
-  return date.toLocaleDateString("en-GB", includeYear
-    ? { day: "numeric", month: "short", year: "numeric" }
-    : { day: "numeric", month: "short" });
+  const weekday = date.toLocaleDateString("en-GB", { weekday: "short" });
+  const day = String(date.getDate()).padStart(2,"0");
+  const month = String(date.getMonth()+1).padStart(2,"0");
+  const year = String(date.getFullYear()).slice(-2);
+  return includeYear ? `${weekday} ${day}-${month}-${year}` : `${weekday} ${day}-${month}`;
 }
 
 function daysBetween(from, to) {
@@ -748,14 +750,23 @@ function renderCleaning() {
     });
 }
 
+function activeProjectDashboardItems() {
+  return data.projects.flatMap(project => {
+    const steps = Array.isArray(project.steps) ? project.steps : [];
+    const nextStep = steps.find(step => !step.completed);
+    if (nextStep) return [{ ...nextStep, source: `Project: ${project.name}`, itemType: "step", parentId: project.id }];
+    if (!project.completed) return [{ ...project, source: "Project", itemType: "project" }];
+    return [];
+  });
+}
+
 function getWeeklyItems() {
   const today = new Date(); today.setHours(12,0,0,0);
   const end = new Date(today); end.setDate(end.getDate() + 7);
 
   const ordinary = [
     ...data.todos.map(item => ({ ...item, source: "To-do", itemType: "todo" })),
-    ...data.projects.map(item => ({ ...item, source: "Project", itemType: "project" })),
-    ...data.projects.flatMap(project => project.steps.map(step => ({ ...step, source: `Project step: ${project.name}`, itemType: "step", parentId: project.id }))),
+    ...activeProjectDashboardItems(),
     ...data.cleaningTasks.map(item => ({
       id: item.id,
       name: item.name,
@@ -820,15 +831,7 @@ function getTodayReminderItems() {
 
   const dated = [
     ...data.todos.map(item => ({ ...item, source: "To-do", itemType: "todo" })),
-    ...data.projects.map(item => ({ ...item, source: "Project", itemType: "project" })),
-    ...data.projects.flatMap(project =>
-      project.steps.map(step => ({
-        ...step,
-        source: `Project step: ${project.name}`,
-        itemType: "step",
-        parentId: project.id
-      }))
-    )
+    ...activeProjectDashboardItems()
   ].filter(item => !item.completed && item.dueDate)
    .filter(item => dateOnly(item.dueDate) <= today);
 
@@ -870,7 +873,8 @@ function openReminderItem(item) {
 
 function compactReminderRow(item, options = {}) {
   const row = document.createElement("div");
-  row.className = `compact-reminder-row${options.clickable ? " clickable-reminder" : ""}`;
+  const overdue = item.dueDate && dateOnly(item.dueDate) < new Date(new Date().setHours(0,0,0,0));
+  row.className = `compact-reminder-row${options.clickable ? " clickable-reminder" : ""}${overdue ? " overdue-row" : ""}`;
   const actionable = options.actionable;
   const icon = item.itemType === "annual" ? "🎂" : "";
   const control = actionable ? `<input type="checkbox" aria-label="Complete ${escapeHtml(item.name)}">` : `<span class="compact-icon">${icon}</span>`;
@@ -892,14 +896,15 @@ function renderTodayReminders() {
   area.innerHTML = "";
   if (!items.length) { area.innerHTML = `<div class="empty-state">No dated reminders need attention today.</div>`; return; }
   items.forEach(item => {
-    const meta = `${item.source} · ${formatDate(item.dueDate, item.itemType !== "annual")}`;
+    const overdue = item.itemType !== "annual" && dateOnly(item.dueDate) < new Date(new Date().setHours(0,0,0,0));
+    const meta = `${item.source} · ${formatDate(item.dueDate, item.itemType !== "annual")}${overdue ? " · OVERDUE" : ""}`;
     const actionable = item.itemType !== "annual";
     let onComplete = null;
     if (item.itemType === "cleaning") onComplete = () => completeCleaning(item.id);
     if (item.itemType === "todo") onComplete = () => toggleTodo(item.id);
     if (item.itemType === "project") onComplete = () => toggleProject(item.id);
     if (item.itemType === "step") onComplete = () => toggleStep(item.parentId,item.id);
-    area.appendChild(compactReminderRow(item,{meta,badge:"Today",actionable,onComplete,clickable:true}));
+    area.appendChild(compactReminderRow(item,{meta,actionable,onComplete,clickable:true}));
   });
 }
 
@@ -919,8 +924,16 @@ function renderWeekly() {
   area.innerHTML = "";
   if (!items.length) { area.innerHTML = `<div class="empty-state">Nothing time-sensitive needs attention this week.</div>`; return; }
   items.forEach(item => {
-    const meta = item.annual ? `${item.source} · ${formatDate(item.dueDate, false)}` : `${item.source} · ${getTimingText(item)}`;
-    area.appendChild(compactReminderRow({...item,itemType:item.annual?"annual":item.itemType},{meta,actionable:false,clickable:true}));
+    const displayItem = {...item,itemType:item.annual?"annual":item.itemType};
+    const overdue = !item.annual && dateOnly(item.dueDate) < new Date(new Date().setHours(0,0,0,0));
+    const meta = item.annual ? `${item.source} · ${formatDate(item.dueDate, false)}` : `${item.source} · ${formatDate(item.dueDate)}${overdue ? " · OVERDUE" : ""}`;
+    const actionable = !item.annual;
+    let onComplete = null;
+    if (item.itemType === "cleaning") onComplete = () => completeCleaning(item.id);
+    if (item.itemType === "todo") onComplete = () => toggleTodo(item.id);
+    if (item.itemType === "project") onComplete = () => toggleProject(item.id);
+    if (item.itemType === "step") onComplete = () => toggleStep(item.parentId,item.id);
+    area.appendChild(compactReminderRow(displayItem,{meta,actionable,onComplete,clickable:true}));
   });
 }
 
@@ -1099,6 +1112,7 @@ function updateFormVisibility() {
   const timing=timingType.value;
   const routine = type === "daily" || type === "evening";
   document.getElementById("projectPickerLabel").classList.toggle("hidden",type!=="step");
+  document.getElementById("projectStepsLabel").classList.toggle("hidden",type!=="project");
   document.getElementById("cleaningAreaLabel").classList.toggle("hidden",type!=="cleaning");
   document.getElementById("cleaningFrequencyLabel").classList.toggle("hidden",type!=="cleaning");
   document.getElementById("cleaningStartLabel").classList.toggle("hidden",type!=="cleaning");
@@ -1122,6 +1136,7 @@ function loadCommon(item,type,parentId="") {
   document.getElementById("editingParentId").value=parentId;
   document.getElementById("itemName").value=item.name || "";
   document.getElementById("itemDetails").value=item.details || "";
+  if (type === "project") document.getElementById("projectSteps").value = (item.steps || []).map(step => step.name).join("\n");
   timingType.value=item.timingType || (item.dueDate ? "date" : "none");
   document.getElementById("dueDate").value=item.dueDate || "";
   document.getElementById("leadDays").value=item.leadDays ?? 7;
@@ -1223,10 +1238,19 @@ addForm.addEventListener("submit",event=>{
   }
 
   if(type==="project") {
+    const enteredSteps = document.getElementById("projectSteps").value.split(/\n/).map(x=>x.trim()).filter(Boolean);
     if(id) {
       const old=data.projects.find(x=>x.id===id);
-      data.projects[data.projects.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,steps:old?.steps||[]};
-    } else data.projects.push({...common,steps:[]});
+      const oldSteps = old?.steps || [];
+      const steps = enteredSteps.map((stepName,index) => {
+        const existing = oldSteps[index];
+        return existing ? {...existing,name:stepName} : {id:uid(),name:stepName,details:"",timingType:"date",dueDate:common.dueDate,leadDays:common.leadDays,completed:false};
+      });
+      data.projects[data.projects.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,steps};
+    } else {
+      const steps = enteredSteps.map(stepName => ({id:uid(),name:stepName,details:"",timingType:"date",dueDate:common.dueDate,leadDays:common.leadDays,completed:false}));
+      data.projects.push({...common,steps});
+    }
   }
 
   if(type==="step") {
@@ -1331,7 +1355,7 @@ function applyAppUpdate() {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("./service-worker.js?v=9.3", { updateViaCache: "none" });
+      const registration = await navigator.serviceWorker.register("./service-worker.js?v=9.4", { updateViaCache: "none" });
       if (registration.waiting) {
         waitingServiceWorker = registration.waiting;
         document.getElementById("updateButton")?.classList.remove("hidden");

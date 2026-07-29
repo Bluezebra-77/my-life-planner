@@ -18,12 +18,12 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.3</span></h1>
+        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.4</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
         <button type="button" class="small-button" onclick="openAddDialog()">+ Add</button>
-        <button type="button" class="small-button" onclick="openSettingsDialog()">Menu</button>
+        <button type="button" class="gear-button" onclick="openSettingsDialog()" aria-label="Open settings" title="Settings">⚙</button>
         <button id="installButton" type="button" class="small-button hidden" onclick="installPlanner()">Install app</button>
         <button id="updateButton" type="button" class="small-button hidden" onclick="applyAppUpdate()">Update available</button>
       </div>
@@ -171,7 +171,7 @@
     <dialog id="settingsDialog" class="settings-dialog">
       <div class="dialog-header">
         <div><p class="eyebrow">Personalise and protect</p><h2>Settings</h2></div>
-        <button type="button" class="icon-button" onclick="closeSettingsDialog()">X</button>
+        <button type="button" class="dialog-close" onclick="closeSettingsDialog()" aria-label="Close settings">×</button>
       </div>
       <div class="settings-content">
         <div class="settings-grid">
@@ -197,7 +197,7 @@
         <details class="storage-details"><summary>Where can I find my backups?</summary><p><strong>Automatic daily backups:</strong> stored privately inside this browser on this device.</p><p><strong>Visible backup files:</strong> choose Save backup file or Share backup, then save to iCloud Drive, OneDrive or Files.</p></details>
         <div class="card-actions"><button type="button" onclick="exportPlanner()">Save backup file</button><button type="button" onclick="sharePlannerBackup()">Share backup</button><button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button><input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)"></div>
         <p id="storageStatus" class="storage-status"></p><p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.2</p><p><strong>Updated:</strong> 29 July 2026</p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
+        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.4</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
       </div>
     </dialog>
 
@@ -206,7 +206,7 @@
       <button type="button" class="nav-button" data-tab="tasks" onclick="showAppView('tasks', this)"><span>✅</span><small>Tasks</small></button>
       <button type="button" class="nav-button" data-tab="planner" onclick="showAppView('planner', this)"><span>📅</span><small>Planner</small></button>
       <button type="button" class="nav-button" onclick="openAddDialog()"><span>➕</span><small>Add</small></button>
-      <button type="button" class="nav-button" onclick="openSettingsDialog()"><span>☰</span><small>Menu</small></button>
+      <button type="button" class="nav-button" onclick="openSettingsDialog()"><span>⚙</span><small>Settings</small></button>
     </nav>
   </main>
 
@@ -217,7 +217,7 @@
         <p class="eyebrow">Edit your routine</p>
         <h2 id="routineManagerTitle">Manage list</h2>
       </div>
-      <button type="button" class="icon-button" onclick="closeRoutineManager()">X</button>
+      <button type="button" class="dialog-close" onclick="closeRoutineManager()" aria-label="Close">×</button>
     </div>
     <p class="card-meta">Add, edit or delete items here. The main planner stays uncluttered.</p>
     <div id="routineManagerList" class="manager-list"></div>
@@ -243,7 +243,7 @@
           <p class="eyebrow">Add something</p>
           <h2 id="dialogTitle">New item</h2>
         </div>
-        <button type="button" class="icon-button" onclick="closeAddDialog()">X</button>
+        <button type="button" class="dialog-close" onclick="closeAddDialog()" aria-label="Close">×</button>
       </div>
 
       <label>
@@ -268,6 +268,12 @@
         Details
         <textarea id="itemDetails" rows="3" placeholder="Notes, contact details, what needs doing..."></textarea>
       </label>
+
+      <label id="projectStepsLabel" class="hidden">Project steps (one per line)<textarea id="projectSteps" rows="6" placeholder="Sign up to the exhibition
+Select the images
+Create a folder
+Prepare files
+Submit the entry"></textarea></label>
 
       <label id="projectPickerLabel" class="hidden">
         Choose project

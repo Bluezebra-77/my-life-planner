@@ -1,8 +1,8 @@
 {
-  "name": "My Life Planner v9.3",
+  "name": "My Life Planner v9.4",
   "short_name": "Life Planner",
-  "description": "A private offline personal organiser with clickable weekly reminders, action checklists and protected data migration.",
-  "start_url": "./index.html?v=9.3",
+  "description": "A private offline personal organiser with sequential project steps, overdue alerts, actionable weekly reminders and protected data migration.",
+  "start_url": "./index.html?v=9.4",
   "scope": "./",
   "display": "standalone",
   "background_color": "#eef3ef",

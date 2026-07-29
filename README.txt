@@ -1,7 +1,5 @@
-My Life Planner v9.3
+MY LIFE PLANNER v9.4
 
-Upload all eight files to the root of the GitHub Pages repository, replacing the existing files.
+Upload all eight files in this folder to the root of the GitHub Pages repository.
 
-This update keeps the stable data keys and migrates from earlier versioned keys. It adds a top Menu for Settings, ten colour and font choices with previews, compact Today/This Week rows, a compact Tasks to do today checklist, and three suggestions in the overwhelming section.
-
-This release adds the five-tab bottom navigation: Home, Tasks, Planner, Add and Menu.
+Version 9.4 adds a settings gear, responsive settings screen, compact close buttons, Blue Zebra 77 credit, weekday date formatting, sequential project steps, weekly completion checkboxes, and overdue roll-forward highlighting. Existing planner data remains stored under the stable lifePlannerData key.
