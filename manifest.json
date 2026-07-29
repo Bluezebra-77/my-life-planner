@@ -1,7 +1,7 @@
 {
-  "name": "My Life Planner v9.8",
+  "name": "My Life Planner v10",
   "short_name": "Life Planner",
-  "description": "A private offline personal organiser with sequential project steps, overdue alerts, actionable weekly reminders and protected data migration.",
+  "description": "A calm personal planner with Focus Today, projects, routines, thoughts inbox and Waiting For.",
   "start_url": "./index.html?v=9.8",
   "scope": "./",
   "display": "standalone",

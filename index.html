@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Life Planner</title>
-  <link rel="stylesheet" href="style.css?v=9.7">
-  <link rel="manifest" href="manifest.json?v=9.7">
+  <link rel="stylesheet" href="style.css?v=10.0">
+  <link rel="manifest" href="manifest.json?v=10.0">
   <meta name="theme-color" content="#5f7d68">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -18,7 +18,7 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">My flexible daily planner</p>
-        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v9.8</span></h1>
+        <h1><span id="plannerTitle">My Life Planner</span> <span class="version-badge">v10.0</span></h1>
         <p id="todayDate" class="date-line"></p>
       </div>
       <div class="header-actions">
@@ -38,75 +38,32 @@
       <h2 id="viewTitle">Today at a glance</h2>
     </section>
 
-    <section class="panel due-panel app-view-section" data-view="home">
-      <div class="section-heading">
-        <div>
-          <h2>Today's reminders</h2>
-        </div>
-        <button id="todayToggle" class="small-button" type="button" onclick="togglePanel('todayRemindersArea','todayToggle')">Hide</button>
-      </div>
-      <div id="todayRemindersArea" class="compact-list"></div>
-    </section>
-
-    <section class="panel due-panel app-view-section" data-view="home">
-      <div class="section-heading">
-        <div>
-          <h2>This week</h2>
-        </div>
-        <button id="weekToggle" class="small-button" type="button" onclick="togglePanel('weeklyArea','weekToggle')">Hide</button>
-      </div>
-      <div id="weeklyArea" class="compact-list"></div>
+    <section class="hero-focus app-view-section" data-view="home">
+      <div class="focus-heading"><div><p class="eyebrow">Your calm starting point</p><h2>Focus Today</h2><p>Only the things most worth your attention now.</p></div><button class="icon-button" type="button" onclick="refreshFocusToday()" aria-label="Refresh focus">↻</button></div>
+      <div id="focusTodayArea" class="focus-list"></div>
     </section>
 
     <section class="panel app-view-section" data-view="home">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Action list</p>
-          <h2>Tasks to do today</h2>
-        </div>
-      </div>
-      <div id="cleaningTodayArea" class="compact-list"></div>
+      <div class="section-heading"><div><p class="eyebrow">Capture first, organise later</p><h2>Thoughts Inbox</h2></div><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Capture a thought">+</button></div>
+      <div id="inboxPreviewArea" class="compact-list"></div>
+    </section>
+
+    <section class="dashboard-grid app-view-section" data-view="home">
+      <section class="panel dashboard-card"><div class="section-heading"><div><p class="eyebrow">Time-sensitive</p><h2>Today</h2></div></div><div id="todayRemindersArea" class="compact-list"></div></section>
+      <section class="panel dashboard-card"><div class="section-heading"><div><p class="eyebrow">Coming up</p><h2>This week</h2></div></div><div id="weeklyArea" class="compact-list"></div></section>
     </section>
 
     <section class="panel app-view-section" data-view="home">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">Main area</p>
-          <h2>Daily rhythm</h2>
-        </div>
-        <details class="item-menu rhythm-menu">
-          <summary aria-label="Daily Rhythm options">⋯</summary>
-          <div class="item-menu-popover">
-            <button type="button" class="menu-close-x" onclick="this.closest('details').removeAttribute('open')" aria-label="Close menu">×</button>
-            <button type="button" onclick="openRoutineManager('daily'); this.closest('details').removeAttribute('open')">Manage list</button>
-            <button type="button" onclick="resetDailyTasks(); this.closest('details').removeAttribute('open')">Reset today</button>
-          </div>
-        </details>
-      </div>
+      <div class="section-heading"><div><p class="eyebrow">Keep momentum</p><h2>Projects Moving Forward</h2></div></div>
+      <div id="projectNextActionsArea" class="compact-list"></div>
+    </section>
+
+    <section class="panel app-view-section" data-view="home">
+      <div class="section-heading"><div><p class="eyebrow">Gentle structure</p><h2>Daily Rhythm</h2></div><button class="icon-button" type="button" onclick="openRoutineManager('daily')" aria-label="Manage daily rhythm">⋯</button></div>
       <div id="dailyChecklist" class="checklist"></div>
-      <div class="daily-decider">
-        <div>
-          <strong>Need a useful extra task?</strong>
-          <p class="card-meta">Pick something from an active undated project or to-do.</p>
-        </div>
-        <button type="button" class="small-button" onclick="decideDailyTask()">Decide for me</button>
-      </div>
+      <div class="daily-decider"><div><strong>Need a useful extra task?</strong><p class="card-meta">Let the planner choose something manageable.</p></div><button type="button" class="small-button" onclick="decideDailyTask()">Decide for me</button></div>
       <div id="dailyDecisionResult" class="decision-result hidden"></div>
     </section>
-
-    <section class="panel decision-panel app-view-section" data-view="home">
-      <p class="eyebrow">When it feels overwhelming</p>
-      <h2>Take the decision away</h2>
-      <div class="button-grid">
-        <button type="button" onclick="chooseForMe()">Choose for me</button>
-        <button type="button" onclick="chooseLowEnergy()">Low-energy choice</button>
-        <button type="button" onclick="chooseQuickWin()">Quick win</button>
-      </div>
-      <div id="choiceCard" class="choice-card">
-        Press a button and the app will suggest three manageable tasks.
-      </div>
-    </section>
-
     <section class="panel app-view-section" data-view="tasks">
       <div class="section-heading">
         <div>
@@ -117,6 +74,18 @@
       </div>
       <p class="card-meta">Every saved to-do appears below. You can edit, complete or delete it.</p>
       <div id="todoArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel app-view-section" data-view="tasks">
+      <div class="section-heading"><div><p class="eyebrow">Quick capture</p><h2>Thoughts Inbox</h2></div><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Add thought">+</button></div>
+      <p class="card-meta">Capture anything without deciding where it belongs. Convert it later from the menu.</p>
+      <div id="inboxArea" class="stack-list"></div>
+    </section>
+
+    <section class="panel app-view-section" data-view="tasks">
+      <div class="section-heading"><div><p class="eyebrow">Keep on your radar</p><h2>Waiting For</h2></div><button class="section-plus" type="button" onclick="openCaptureDialog('waiting')" aria-label="Add waiting item">+</button></div>
+      <p class="card-meta">Things that are not yours to do, but still need watching.</p>
+      <div id="waitingArea" class="stack-list"></div>
     </section>
 
     <section class="panel app-view-section" data-view="tasks">
@@ -207,7 +176,7 @@
         <details class="storage-details"><summary>Where can I find my backups?</summary><p><strong>Automatic daily backups:</strong> stored privately inside this browser on this device.</p><p><strong>Visible backup files:</strong> choose Save backup file or Share backup, then save to iCloud Drive, OneDrive or Files.</p></details>
         <div class="card-actions"><button type="button" onclick="exportPlanner()">Save backup file</button><button type="button" onclick="sharePlannerBackup()">Share backup</button><button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button><input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)"></div>
         <p id="storageStatus" class="storage-status"></p><p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 9.8</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
+        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 10.0</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
       </div>
     </dialog>
 
@@ -244,8 +213,8 @@
     </div>
   </dialog>
 
-  <dialog id="addDialog">
-    <form id="addForm" method="dialog">
+  <dialog id="addDialog" class="bottom-sheet">
+    <form id="addForm" method="dialog"><div class="sheet-handle"></div>
       <input id="editingId" type="hidden">
       <input id="editingParentId" type="hidden">
       <div class="dialog-header">
@@ -350,6 +319,19 @@
     </form>
   </dialog>
 
-  <script src="app.js?v=9.7"></script>
+
+  <dialog id="captureDialog" class="bottom-sheet">
+    <form id="captureForm" method="dialog">
+      <input id="captureId" type="hidden"><input id="captureType" type="hidden" value="inbox">
+      <div class="sheet-handle"></div>
+      <div class="dialog-header"><div><p class="eyebrow">Quick capture</p><h2 id="captureTitle">Capture a thought</h2></div><button type="button" class="dialog-close" onclick="closeCaptureDialog()" aria-label="Close">×</button></div>
+      <label>What is on your mind?<input id="captureName" type="text" maxlength="160" required placeholder="Type it here…"></label>
+      <label>Note (optional)<textarea id="captureNote" rows="3" placeholder="Any detail you do not want to forget"></textarea></label>
+      <label id="waitingDateLabel" class="hidden">Review date<input id="captureDate" type="date"></label>
+      <div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeCaptureDialog()">Cancel</button><button type="submit">Save</button></div>
+    </form>
+  </dialog>
+
+  <script src="app.js?v=10.0"></script>
 </body>
 </html>
