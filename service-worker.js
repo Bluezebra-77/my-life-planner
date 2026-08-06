@@ -1,16 +1,17 @@
-const CACHE = 'my-life-planner-v54cR-update-recovery';
+const CACHE = 'my-life-planner-v54cR22-update-recovery';
 const APP_SHELL = [
   './',
-  './index.html?v=54cR',
-  './style.css?v=54cR',
-  './app.js?v=54cR',
-  './manifest.json?v=54cR',
+  './index.html?v=54cR2',
+  './style.css?v=54cR2',
+  './app.js?v=54cR2',
+  './manifest.json?v=54cR2',
   './icon-192.png',
   './icon-512.png',
   './HELP_GUIDE.html',
   './QUICK_START_GUIDE.pdf',
   './INSTALLATION_GUIDE.md',
-  './DEVELOPER_HANDBOOK.pdf'
+  './DEVELOPER_HANDBOOK.pdf',
+  './recover-v54cR2.html'
 ];
 
 self.addEventListener('install', event => {
@@ -30,7 +31,7 @@ self.addEventListener('activate', event => {
     );
     await self.clients.claim();
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const client of clients) client.postMessage({ type: 'UPDATE_RECOVERY_ACTIVE', version: '54cR' });
+    for (const client of clients) client.postMessage({ type: 'UPDATE_RECOVERY_ACTIVE', version: '54cR2' });
   })());
 });
 
@@ -54,7 +55,7 @@ self.addEventListener('fetch', event => {
       const cached = await caches.match(request);
       if (cached) return cached;
       if (isNavigation) {
-        return (await caches.match('./index.html?v=54cR')) || (await caches.match('./index.html'));
+        return (await caches.match('./index.html?v=54cR2')) || (await caches.match('./index.html'));
       }
       throw error;
     }
