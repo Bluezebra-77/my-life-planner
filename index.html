@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Life Planner</title>
-  <link rel="stylesheet" href="style.css?v=10.1">
-  <link rel="manifest" href="manifest.json?v=10.1">
+  <link rel="stylesheet" href="style.css?v=54c">
+  <link rel="manifest" href="manifest.json?v=54c">
   <meta name="theme-color" content="#1769c2">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -13,21 +13,20 @@
   <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
+  <a class="skip-link" href="#viewHeading">Skip to planner content</a>
   <main class="app-shell">
 
     <header class="app-header">
-      <div>
-        <p class="eyebrow">My flexible daily planner</p>
-        <h1 class="brand-title"><img src="icon-192.png" class="header-zebra" alt=""><span id="plannerTitle">My Life Planner</span> <span class="brand-77">77</span> <span class="version-badge">v10.1</span></h1>
+      <div class="header-branding">
+        <div class="brand-title-row">
+          <img src="icon-192.png" class="header-zebra" alt="" aria-hidden="true">
+          <h1 id="plannerTitle" class="brand-title">My Life Planner</h1>
+          <img src="icon-192.png" class="header-zebra" alt="" aria-hidden="true">
+        </div>
+        <p class="header-version">v54c</p>
         <p id="todayDate" class="date-line"></p>
       </div>
-      <div class="header-actions">
-        <button type="button" class="small-button" onclick="openAddDialog()">+ Add</button>
-        <button type="button" class="gear-button" onclick="openSettingsDialog()" aria-label="Open settings" title="Settings">⚙</button>
-        <button id="installButton" type="button" class="small-button hidden" onclick="installPlanner()">Install app</button>
-        <button id="updateButton" type="button" class="small-button hidden" onclick="applyAppUpdate()">Update available</button>
-      </div>
-      <div class="compact-progress" aria-label="Daily progress">
+      <div class="compact-progress hidden" aria-label="Daily progress">
         <span id="progressText">0 of 0</span>
         <div class="progress-wrap"><div id="progressBar" class="progress-bar"></div></div>
       </div>
@@ -38,8 +37,49 @@
       <h2 id="viewTitle">Your day</h2>
     </section>
 
-    <section class="panel focus-panel app-view-section" data-view="home">
-      <div class="focus-heading"><div><p class="eyebrow">Your calm starting point</p><h2>Focus Today</h2><p>Only the things most worth your attention now.</p></div><button class="icon-button" type="button" onclick="refreshFocusToday()" aria-label="Refresh focus">↻</button></div>
+    <section class="home-quick-actions app-view-section" data-view="home" aria-label="Quick actions">
+      <button type="button" class="home-quick-button" onclick="openCaptureDialog('inbox')"><span aria-hidden="true">💡</span><strong>Brain Inbox</strong></button>
+      <button type="button" class="home-quick-button" onclick="openTimelineShortcut()"><span aria-hidden="true">📅</span><strong>Timeline</strong></button>
+    </section>
+
+    <section id="morningBriefPanel" class="panel daily-companion-panel app-view-section" data-view="home" aria-live="polite">
+      <div class="daily-companion-heading">
+        <div><p id="daypartEyebrow" class="eyebrow">Your morning</p><h2 id="dailyCompanionGreeting">Good morning</h2></div>
+        <div class="daily-companion-heading-actions"><span id="dailyCompanionDate" class="daily-companion-date"></span><button id="dailyCompanionToggle" type="button" class="small-button secondary-button daily-companion-toggle" onclick="toggleDailyCompanion()" aria-expanded="false" hidden>More</button></div>
+      </div>
+      <p id="dailyCompanionMessage" class="daily-companion-message"></p>
+      <div id="dailyCompanionSummary" class="daily-companion-summary"></div>
+      <div id="companionDashboardCards" class="companion-dashboard-cards"></div>
+    </section>
+
+    <section id="eveningReflectionPanel" class="panel reflection-panel app-view-section hidden" data-view="home" aria-live="polite">
+      <div class="reflection-heading"><div><p class="eyebrow">A gentle look back</p><h2>Evening Reflection</h2></div><button type="button" class="small-button secondary-button" onclick="dismissEveningReflection()">Hide tonight</button></div>
+      <div id="eveningReflectionArea"></div>
+    </section>
+
+    <section id="weeklyReflectionPanel" class="panel reflection-panel app-view-section hidden" data-view="home" aria-live="polite">
+      <div class="reflection-heading"><div><p class="eyebrow">The week in perspective</p><h2>Weekly Reflection</h2></div><button type="button" class="small-button secondary-button" onclick="dismissWeeklyReflection()">Hide this week</button></div>
+      <div id="weeklyReflectionArea"></div>
+    </section>
+
+    <section id="plannerHealthPanel" class="panel planner-health-panel app-view-section home-collapsible" data-view="home" data-home-section="plannerHealth">
+      <div class="section-heading"><div><p class="eyebrow">One helpful thought</p><h2>Planner Health</h2></div></div>
+      <div id="plannerHealthArea" aria-live="polite"></div>
+    </section>
+
+
+
+    <section id="todayFocusPanel" class="panel today-focus-panel app-view-section home-collapsible" data-view="home" data-home-section="todayFocus">
+      <div class="section-heading"><div><p class="eyebrow">Your intentions for today</p><h2>Today's Focus</h2><p class="card-meta">Your working desk for today. Type an item and press Return; add detail only when useful.</p></div></div>
+      <form class="today-focus-entry" onsubmit="addTodayFocusItem(event)">
+        <input id="todayFocusInput" type="text" maxlength="160" placeholder="For example: Empty the dishwasher" autocomplete="off">
+        <button type="submit" class="section-plus" aria-label="Add to Today's Focus">+</button>
+      </form>
+      <div id="todayFocusArea" class="focus-list"></div>
+    </section>
+
+    <section id="needsAttentionPanel" class="panel focus-panel app-view-section home-collapsible" data-view="home" data-home-section="needsAttention">
+      <div class="focus-heading"><div><p class="eyebrow">Dated and important</p><h2>Needs Attention</h2><p>Tasks already saved elsewhere that need attention now.</p></div><button class="icon-button" type="button" onclick="refreshFocusToday()" aria-label="Refresh needs attention">↻</button></div>
       <div id="focusTodayArea" class="focus-list"></div>
       <div class="focus-tools" aria-label="Helpful task choices">
         <button type="button" class="choice-tool" onclick="chooseHelpfulTask('random')"><span>🎲</span>Random task</button>
@@ -49,28 +89,65 @@
       <div id="helpfulChoiceResult" class="decision-result hidden"></div>
     </section>
 
-    <section class="panel app-view-section" data-view="home">
-      <div class="section-heading"><div><p class="eyebrow">Capture first, organise later</p><h2>Thoughts Inbox</h2></div><div class="section-actions"><button class="voice-button" type="button" onclick="startVoiceCapture('inbox')" aria-label="Dictate a thought" title="Dictate a thought">🎤</button><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Capture a thought">+</button></div></div>
+    <section id="homeRecurringPanel" class="panel app-view-section home-collapsible" data-view="home" data-home-section="recurringTasks">
+      <div class="section-heading"><div><p class="eyebrow">Due until completed</p><h2>Recurring Tasks</h2><p class="card-meta">Repeating responsibilities stay visible when overdue.</p></div><button class="section-plus" type="button" onclick="openRecurringTaskDialog()" aria-label="Add recurring task">+</button></div>
+      <div id="homeRecurringArea" class="compact-list"></div>
+    </section>
+
+    <section id="homeBrainInboxPanel" class="panel app-view-section home-collapsible" data-view="home" data-home-section="brainInbox">
+      <div class="section-heading"><div><p class="eyebrow">Capture first, organise later</p><h2>Brain Inbox</h2></div><div class="section-actions"><button class="voice-button" type="button" onclick="startVoiceCapture('inbox')" aria-label="Dictate a thought" title="Dictate a thought">🎤</button><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Capture a thought">+</button></div></div>
       <div id="inboxPreviewArea" class="compact-list"></div>
     </section>
 
     <section class="dashboard-grid app-view-section" data-view="home">
-      <section class="panel dashboard-card"><div class="section-heading"><div><p class="eyebrow">Time-sensitive</p><h2>Today</h2></div></div><div id="todayRemindersArea" class="compact-list"></div></section>
-      <section class="panel dashboard-card"><div class="section-heading"><div><p class="eyebrow">Coming up</p><h2>This week</h2></div></div><div id="weeklyArea" class="compact-list"></div></section>
+      <section id="homeTodayPanel" class="panel dashboard-card home-collapsible" data-home-section="timeSensitive"><div class="section-heading"><div><p class="eyebrow">Time-sensitive</p><h2>Today</h2></div></div><div id="todayRemindersArea" class="compact-list"></div></section>
+      <section id="homeWeekPanel" class="panel dashboard-card home-collapsible" data-home-section="thisWeek"><div class="section-heading"><div><p class="eyebrow">Coming up</p><h2>This week</h2></div></div><div id="weeklyArea" class="compact-list"></div></section>
     </section>
 
-    <section class="panel app-view-section" data-view="home">
-      <div class="section-heading"><div><p class="eyebrow">Keep momentum</p><h2>Projects Moving Forward</h2></div></div>
-      <div id="projectNextActionsArea" class="compact-list"></div>
+    <section id="homeProjectsPanel" class="panel app-view-section home-collapsible" data-view="home" data-home-section="projects"><div class="section-heading"><div><p class="eyebrow">Keep momentum</p><h2>Projects</h2></div></div>
+      <div id="projectNextActionsArea" class="home-project-list"></div>
     </section>
 
-    <section class="panel app-view-section" data-view="home">
-      <div class="section-heading"><div><p class="eyebrow">Gentle structure</p><h2>Daily Rhythm</h2></div><button class="icon-button" type="button" onclick="openRoutineManager('daily')" aria-label="Manage daily rhythm">⋯</button></div>
+    <section id="homeWaitingPanel" class="panel app-view-section home-collapsible" data-view="home" data-home-section="waitingFor">
+      <div class="section-heading"><div><p class="eyebrow">Keep on your radar</p><h2>Waiting For</h2><p class="card-meta">Active items you are waiting on, without leaving Home.</p></div><button type="button" class="small-button secondary-button" onclick="openWaitingForList()">View all</button></div>
+      <div id="homeWaitingArea" class="compact-list"></div>
+    </section>
+
+    <section id="homeDailyRhythmPanel" class="panel app-view-section home-collapsible" data-view="home" data-home-section="dailyRhythm"><div class="section-heading"><div><p class="eyebrow">Gentle structure</p><h2>Daily Rhythm</h2></div><div class="section-actions"><button class="small-button secondary-button routine-reset-button" type="button" onclick="resetRoutineGroup('daily')">Reset</button><button class="icon-button" type="button" onclick="openRoutineManager('daily')" aria-label="Manage daily rhythm">⋯</button></div></div>
       <div id="dailyChecklist" class="checklist"></div>
-      <div class="daily-decider"><div><strong>Need a useful extra task?</strong><p class="card-meta">Let the planner choose something manageable.</p></div><button type="button" class="small-button" onclick="decideDailyTask()">Decide for me</button></div>
-      <div id="dailyDecisionResult" class="decision-result hidden"></div>
     </section>
-    <section class="panel app-view-section" data-view="tasks">
+
+    <section id="homeEveningPanel" class="panel app-view-section home-collapsible" data-view="home" data-home-section="eveningRoutine"><div class="section-heading"><div><p class="eyebrow">End of day</p><h2>Evening Routine</h2></div><div class="section-actions"><button class="small-button secondary-button routine-reset-button" type="button" onclick="resetRoutineGroup('evening')">Reset</button><button class="icon-button" type="button" onclick="openRoutineManager('evening')" aria-label="Manage Evening Routine">⋯</button></div></div>
+      <div id="homeEveningChecklist" class="checklist"></div>
+    </section>
+    <div class="lists-floating-wrap app-view-section" data-view="tasks">
+      <button class="lists-rail-toggle" type="button" aria-expanded="false" aria-controls="listsSideNav" onclick="toggleListsSideNav()"><span aria-hidden="true">☰</span><span>Lists</span></button>
+      <div id="listsSideNav" class="lists-side-panel">
+      <button class="lists-panel-close" type="button" onclick="toggleListsSideNav(false)" aria-label="Close Lists navigation">×</button>
+      <div class="lists-nav-hint" aria-hidden="true">Choose a list</div>
+      <nav class="lists-floating-nav" aria-label="Move between lists">
+        <button type="button" onclick="jumpToList('todoListSection')">To-dos</button>
+        <button type="button" onclick="jumpToList('appointmentsListSection')">Appointments</button><button type="button" onclick="jumpToList('recurringTasksListSection')">Recurring</button>
+        <button type="button" onclick="jumpToList('inboxListSection')">Brain Inbox</button>
+        <button type="button" onclick="jumpToList('waitingListSection')">Waiting</button>
+        <button type="button" onclick="jumpToList('annualListSection')">Birthdays</button>
+        <button type="button" onclick="jumpToList('projectsListSection')">Projects</button>
+        <button type="button" onclick="jumpToList('cleaningListSection')">Cleaning</button>
+        <button type="button" onclick="jumpToList('customListsSection')">Custom</button>
+      </nav>
+      <div class="lists-scroll-cue" aria-hidden="true">▼ More Lists</div>
+      </div>
+    </div>
+
+    <section class="panel app-view-section lists-hub" data-view="tasks">
+      <div class="section-heading"><div><p class="eyebrow">Control centre</p><h2>My Lists</h2></div></div>
+      <p class="card-meta">Every task you enter is shown below under its category. Completed items remain visible until you delete them. Search across all lists or jump straight to one collection.</p>
+      <label class="list-search-label">Search all lists<input id="globalListSearch" type="search" placeholder="Search tasks, projects, appointments, rooms…" aria-describedby="listSearchStatus" autocomplete="off"></label><p id="listSearchStatus" class="list-search-status" aria-live="polite"></p>
+
+    </section>
+
+
+    <section id="todoListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="To-dos">
       <div class="section-heading">
         <div>
           <p class="eyebrow">My list</p>
@@ -82,19 +159,31 @@
       <div id="todoArea" class="stack-list"></div>
     </section>
 
-    <section class="panel app-view-section" data-view="tasks">
-      <div class="section-heading"><div><p class="eyebrow">Quick capture</p><h2>Thoughts Inbox</h2></div><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Add thought">+</button></div>
+    <section id="appointmentsListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Appointments">
+      <div class="section-heading"><div><p class="eyebrow">Calendar commitments</p><h2>Appointments and events</h2></div><button class="section-plus" type="button" onclick="openAppointmentDialog()" aria-label="Add appointment">+</button></div>
+      <p class="card-meta">Every appointment appears here. Select an item to edit it.</p>
+      <div id="appointmentsArea" class="stack-list"></div>
+    </section>
+
+    <section id="recurringTasksListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Recurring Tasks">
+      <div class="section-heading"><div><p class="eyebrow">Repeating responsibilities</p><h2>Recurring tasks</h2></div><button class="section-plus" type="button" onclick="openRecurringTaskDialog()" aria-label="Add recurring task">+</button></div>
+      <p class="card-meta">These remain due or overdue until you mark them complete. Paused tasks stay saved but do not appear on Home.</p>
+      <div id="recurringTasksArea" class="stack-list"></div>
+    </section>
+
+    <section id="inboxListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Brain Inbox">
+      <div class="section-heading"><div><p class="eyebrow">Quick capture</p><h2>Brain Inbox</h2></div><button class="section-plus" type="button" onclick="openCaptureDialog('inbox')" aria-label="Add Brain Inbox item">+</button></div>
       <p class="card-meta">Capture anything without deciding where it belongs. Convert it later from the menu.</p>
       <div id="inboxArea" class="stack-list"></div>
     </section>
 
-    <section class="panel app-view-section" data-view="tasks">
+    <section id="waitingListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Waiting For">
       <div class="section-heading"><div><p class="eyebrow">Keep on your radar</p><h2>Waiting For</h2></div><button class="section-plus" type="button" onclick="openCaptureDialog('waiting')" aria-label="Add waiting item">+</button></div>
       <p class="card-meta">Things that are not yours to do, but still need watching.</p>
       <div id="waitingArea" class="stack-list"></div>
     </section>
 
-    <section class="panel app-view-section" data-view="tasks">
+    <section id="annualListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Birthdays">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Annual reminders</p>
@@ -106,19 +195,19 @@
       <div id="annualArea" class="stack-list"></div>
     </section>
 
-    <section class="panel app-view-section" data-view="tasks">
+    <section id="projectsListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Projects">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Flexible work</p>
           <h2>Projects list</h2>
         </div>
-        <button class="section-plus" type="button" onclick="openAddDialog('project')" aria-label="Add project" title="Add project">+</button>
+        <div class="section-actions project-section-actions"><button type="button" class="small-button secondary-button" onclick="openProjectTemplates()">Templates</button><button class="section-plus" type="button" onclick="openAddDialog('project')" aria-label="Add project" title="Add project">+</button></div>
       </div>
       <p class="card-meta">Every project and all its steps appear below. Projects and steps can be edited or deleted.</p>
       <div id="projectsArea" class="stack-list"></div>
     </section>
 
-    <section class="panel app-view-section" data-view="tasks">
+    <section id="cleaningListSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Cleaning">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Home care</p>
@@ -128,9 +217,38 @@
       </div>
       <p class="card-meta">Add daily, weekly, fortnightly or monthly cleaning jobs. Completing a job automatically sets its next due date.</p>
       <p class="card-meta">Every cleaning task appears below. You can edit, complete or delete it.</p>
+      <div class="cleaning-area-tools" aria-label="Filter cleaning tasks by room or area">
+        <label class="cleaning-area-filter-label">Room or area
+          <select id="cleaningAreaFilter" onchange="setCleaningAreaFilter(this.value)"><option value="all">All areas</option></select>
+        </label>
+        <label class="cleaning-group-toggle"><input id="cleaningGroupByArea" type="checkbox" onchange="setCleaningGroupByArea(this.checked)"> Group by room</label>
+      </div>
+      <div id="cleaningAreaChips" class="cleaning-area-chips" aria-label="Cleaning room shortcuts"></div>
+      <p id="cleaningAreaSummary" class="list-search-status" aria-live="polite"></p>
       <div id="cleaningArea" class="stack-list"></div>
     </section>
 
+
+
+    <section id="customListsSection" class="panel app-view-section managed-list-section" data-view="tasks" data-list-name="Custom Lists">
+      <div class="section-heading"><div><p class="eyebrow">Make it yours</p><h2>Custom lists</h2></div><button class="section-plus" type="button" onclick="openCustomListManager()" aria-label="Create custom list">+</button></div>
+      <p class="card-meta">Create lists for shopping, packing, ideas, places to visit or anything else.</p>
+      <div id="customListsArea" class="custom-lists-grid"></div>
+    </section>
+
+    <section class="panel app-view-section timeline-panel" data-view="planner">
+      <div class="section-heading"><div><p class="eyebrow">Everything in date order</p><h2>Timeline</h2></div><button class="section-plus" type="button" onclick="openAppointmentDialog()" aria-label="Add appointment">+</button></div>
+      <p class="card-meta">Appointments, dated to-dos, projects, cleaning, birthdays and Waiting For reviews in one place.</p>
+      <div class="timeline-filters" role="group" aria-label="Timeline period">
+        <button type="button" class="timeline-filter active" data-range="today" onclick="setTimelineRange('today',this)">Today</button>
+        <button type="button" class="timeline-filter" data-range="tomorrow" onclick="setTimelineRange('tomorrow',this)">Tomorrow</button>
+        <button type="button" class="timeline-filter" data-range="week" onclick="setTimelineRange('week',this)">Next 7 days</button>
+        <button type="button" class="timeline-filter" data-range="month" onclick="setTimelineRange('month',this)">This month</button>
+        <button type="button" class="timeline-filter" data-range="all" onclick="setTimelineRange('all',this)">All upcoming</button>
+      </div>
+      <p id="timelineSummary" class="timeline-summary" aria-live="polite"></p>
+      <div id="timelineArea" class="timeline-list"></div>
+    </section>
 
     <section class="panel app-view-section" data-view="planner">
       <div class="section-heading">
@@ -146,9 +264,9 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">End of day</p>
-          <h2>Gentle close-down</h2>
+          <h2>Evening Routine</h2>
         </div>
-        <button class="small-button" type="button" onclick="openRoutineManager('evening')">Manage list</button>
+        <div class="section-actions"><button class="small-button secondary-button routine-reset-button" type="button" onclick="resetRoutineGroup('evening')">Reset</button><button class="small-button" type="button" onclick="openRoutineManager('evening')">Manage list</button></div>
       </div>
       <div id="eveningChecklist" class="checklist"></div>
     </section>
@@ -159,42 +277,235 @@
         <button type="button" class="dialog-close" onclick="closeSettingsDialog()" aria-label="Close settings">×</button>
       </div>
       <div class="settings-content">
-        <div class="settings-grid">
-          <label>Your name (optional)<input id="ownerName" type="text" maxlength="40" placeholder="For example: Mary"></label>
-          <label>Box colour
-            <select id="themeChoice" onchange="previewSettings()">
-              <option value="sage">Sage green</option><option value="blue">Soft blue</option><option value="rose">Warm rose</option><option value="lavender">Lavender</option><option value="sand">Soft sand</option><option value="mint">Fresh mint</option><option value="peach">Soft peach</option><option value="teal">Calm teal</option><option value="grey">Soft grey</option><option value="berry">Muted berry</option>
-            </select>
-          </label>
-          <div id="themePreview" class="setting-preview">Example box</div>
-          <label>Font
-            <select id="fontChoice" onchange="previewSettings()">
-              <option value="clear">Clear and simple</option><option value="rounded">Soft and rounded</option><option value="classic">Classic serif</option><option value="modern">Modern</option><option value="large">Easy-read large</option><option value="friendly">Friendly</option><option value="book">Book style</option><option value="compact">Compact</option><option value="softserif">Soft serif</option><option value="spacious">Spacious</option>
-            </select>
-          </label>
-          <div id="fontPreview" class="setting-preview font-preview">This is how your planner text will look.</div>
-        </div>
-        <div class="card-actions"><button type="button" onclick="saveSettings()">Save customisation</button></div>
-        <hr class="settings-divider">
-        <h3>Five daily backups</h3>
-        <p class="card-meta">One dated copy is kept for each of the latest five days. A safety copy is also made before data migration or restore.</p>
-        <div id="dailyBackupsArea" class="stack-list"></div>
-        <details class="storage-details"><summary>Where can I find my backups?</summary><p><strong>Automatic daily backups:</strong> stored privately inside this browser on this device.</p><p><strong>Visible backup files:</strong> choose Save backup file or Share backup, then save to iCloud Drive, OneDrive or Files.</p></details>
-        <div class="card-actions"><button type="button" onclick="exportPlanner()">Save backup file</button><button type="button" onclick="sharePlannerBackup()">Share backup</button><button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button><input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)"></div>
-        <p id="storageStatus" class="storage-status"></p><p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
-        <details class="storage-details"><summary>About My Life Planner</summary><p><strong>Version:</strong> 10.0</p><p><strong>Updated:</strong> 29 July 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p></details>
+        <details class="storage-details settings-section-details" data-settings-section="maintenance">
+          <summary>App maintenance</summary>
+          <div class="settings-section-body">
+            <p class="card-meta">Install the planner on this device or ask the browser to check for a newer release.</p>
+            <div class="card-actions app-maintenance-actions">
+              <button id="installButton" type="button" onclick="installPlanner()">Install app</button>
+              <button id="updateButton" type="button" class="secondary-button" onclick="checkForAppUpdates()">Check for updates</button>
+            </div>
+          </div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="quickActions">
+          <summary>Quick Actions</summary>
+          <div class="settings-section-body">
+            <p class="card-meta">Use a special address to open the planner directly in Brain Inbox. You do not change anything in GitHub.</p>
+            <label>Brain Inbox shortcut address<input id="brainShortcutUrl" type="text" readonly></label>
+            <div class="card-actions app-maintenance-actions">
+              <button type="button" onclick="openBrainInboxShortcut()">Open Brain Inbox now</button>
+              <button type="button" class="secondary-button" onclick="copyBrainInboxShortcut()">Copy address</button>
+            </div>
+            <details class="storage-details"><summary>How do I use this on iPhone?</summary><ol class="quick-instructions"><li>Tap <strong>Copy address</strong>.</li><li>Open the Shortcuts app and create a new shortcut.</li><li>Add the action <strong>Open URLs</strong> and paste the copied address.</li><li>Name the shortcut <strong>Brain Inbox</strong>. Siri can then run it by name.</li></ol><p class="card-meta">You can also paste the copied address into Safari and bookmark it or add it to the Home Screen.</p></details>
+          </div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="appearance">
+          <summary>Appearance and personalisation</summary>
+          <div class="settings-section-body">
+            <div class="settings-grid">
+              <label>Your name (optional)<input id="ownerName" type="text" maxlength="40" placeholder="For example: Mary"></label>
+              <label>Box colour
+                <select id="themeChoice" onchange="previewSettings()">
+                  <option value="sage">Sage green</option><option value="blue">Soft blue</option><option value="rose">Warm rose</option><option value="lavender">Lavender</option><option value="sand">Soft sand</option><option value="mint">Fresh mint</option><option value="peach">Soft peach</option><option value="teal">Calm teal</option><option value="grey">Soft grey</option><option value="berry">Muted berry</option>
+                </select>
+              </label>
+              <div id="themePreview" class="setting-preview">Example box</div>
+              <label>Font
+                <select id="fontChoice" onchange="previewSettings()">
+                  <option value="clear">System sans-serif</option><option value="rounded">Trebuchet rounded</option><option value="classic">Georgia serif</option><option value="modern">Courier typewriter</option><option value="large">Verdana large print</option><option value="friendly">Handwritten style</option><option value="book">Times book style</option><option value="compact">Condensed sans-serif</option><option value="softserif">Palatino soft serif</option><option value="spacious">Wide-spaced sans-serif</option>
+                </select>
+              </label>
+              <div id="fontPreview" class="setting-preview font-preview">This is how your planner text will look.</div>
+            </div>
+            <div class="card-actions"><button type="button" onclick="saveSettings()">Save customisation</button></div>
+          </div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="backupRestore">
+          <summary>Backup and restore</summary>
+          <div class="settings-section-body">
+            <h3>Five daily backups</h3>
+            <p class="card-meta">One dated copy is kept for each of the latest five days. A safety copy is also made before data migration or restore.</p>
+            <div id="dailyBackupsArea" class="stack-list"></div>
+            <details class="storage-details"><summary>Where can I find my backups?</summary><p><strong>Automatic daily backups:</strong> stored privately inside this browser on this device.</p><p><strong>Visible backup files:</strong> choose Save backup file or Share backup, then save to iCloud Drive, OneDrive or Files.</p></details>
+            <div class="card-actions"><button type="button" onclick="exportPlanner()">Save backup file</button><button type="button" onclick="sharePlannerBackup()">Share backup</button><button type="button" class="secondary-button" onclick="document.getElementById('importFile').click()">Import backup</button><input id="importFile" class="hidden" type="file" accept=".json,application/json" onchange="importPlanner(event)"></div>
+          </div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="dailyCompanion">
+          <summary>Daily Companion and reflections</summary>
+          <div class="settings-section-body">
+            <p class="card-meta">Choose when the weekly reflection appears. Evening Reflection appears after 6pm and remains optional.</p>
+            <div class="settings-grid">
+              <label>Weekly reflection timing
+                <select id="weeklyReflectionTiming" onchange="saveCompanionPreferences()">
+                  <option value="sunday">Sunday evening</option>
+                  <option value="monday">Monday morning</option>
+                </select>
+              </label>
+              <label>Hidden statistics period
+                <select id="statisticsPeriod" onchange="renderHiddenStatistics()">
+                  <option value="week">This week</option>
+                  <option value="month">This month</option>
+                  <option value="all">All recorded activity</option>
+                </select>
+              </label>
+            </div>
+            <p class="card-meta">Reflections are supportive summaries, not scores. They use activity recorded from v52e onward.</p>
+          </div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="statistics" ontoggle="if(this.open) renderHiddenStatistics()">
+          <summary>Hidden statistics</summary>
+          <div class="settings-section-body">
+            <p class="card-meta">These figures stay out of Home unless you choose to look.</p>
+            <div id="hiddenStatisticsArea" class="statistics-grid"></div>
+          </div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="dataStorage">
+          <summary>Data and storage information</summary>
+          <div class="settings-section-body">
+            <p id="storageStatus" class="storage-status"></p><p id="saveIndicator" class="save-indicator" aria-live="polite">Ready</p>
+          </div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="helpGuides">
+          <summary>Help &amp; Guides</summary>
+          <div class="settings-section-body">
+            <p class="card-meta">Open concise help without leaving your saved planner data.</p>
+            <div class="help-guide-grid">
+              <a class="help-guide-link" href="HELP_GUIDE.html" target="_blank" rel="noopener"><strong>Help Centre</strong><span>How the main areas work</span></a>
+              <a class="help-guide-link" href="QUICK_START_GUIDE.pdf" target="_blank" rel="noopener"><strong>Quick Start Guide</strong><span>Start using the planner quickly</span></a>
+              <a class="help-guide-link" href="INSTALLATION_GUIDE.md" target="_blank" rel="noopener"><strong>Update &amp; Backup Guide</strong><span>Install, update and protect data</span></a>
+            </div>
+          </div>
+        </details>
+        <details class="storage-details developer-dashboard settings-section-details" data-settings-section="developer" ontoggle="if(this.open) refreshDeveloperDashboard()">
+          <summary>Developer Dashboard</summary>
+          <p class="card-meta">Use this during testing to confirm that the installed files and saved data are the expected release.</p>
+          <div class="developer-grid">
+            <p><strong>Planner version</strong><span id="devPlannerVersion">—</span></p>
+            <p><strong>Service-worker cache</strong><span id="devCacheVersion">—</span></p>
+            <p><strong>Manifest version</strong><span id="devManifestVersion">—</span></p>
+            <p><strong>Database format</strong><span id="devDatabaseVersion">1</span></p>
+            <p><strong>Brain Capture</strong><span id="devBrainModule">2.1</span></p>
+            <p><strong>Attachment Module</strong><span id="devAttachmentModule">1.1</span></p>
+            <p><strong>Appointment Engine</strong><span id="devAppointmentModule">2.0</span></p>
+            <p><strong>Quick Actions</strong><span id="devQuickModule">1.0</span></p>
+            <p><strong>Appointments</strong><span id="devAppointmentsCount">0</span></p>
+            <p><strong>To-dos</strong><span id="devTodosCount">0</span></p>
+            <p><strong>Brain Inbox items</strong><span id="devInboxCount">0</span></p>
+            <p><strong>Stored data</strong><span id="devStorageUsed">—</span></p>
+            <p><strong>Browser allowance</strong><span id="devStorageQuota">—</span></p>
+            <p><strong>Last backup</strong><span id="devLastBackup">—</span></p>
+          </div>
+          <div class="card-actions"><a class="secondary-button guide-action-link" href="DEVELOPER_HANDBOOK.pdf" target="_blank" rel="noopener">Developer Handbook</a><button type="button" class="secondary-button" onclick="refreshDeveloperDashboard()">Refresh dashboard</button></div>
+        </details>
+        <details class="storage-details settings-section-details" data-settings-section="about"><summary>About My Life Planner</summary><p><strong>Version:</strong> 54c</p><p><strong>Updated:</strong> 5 August 2026</p><p><strong>Designed by Blue Zebra 77</strong></p><p>Updates change the app layout but do not intentionally replace your personal information. Your data stays in this browser unless you export it.</p><h3>Recent changes</h3><ul class="change-log"><li><strong>v54c</strong> — adds optional recurring-task end rules, expandable Home previews and immediate Home/Timeline refresh after recurrence advances.</li><li><strong>v54b</strong> — Smart Projects: dated to-do and project steps appear on Timeline, project deadlines remain milestones, and project management menus stay accessible on iPhone portrait.</li><li><strong>v54b</strong> — adds reusable Project Templates and creates independent projects from a saved workflow with optional step-date offsets.</li><li><strong>v53a Final Polish Patch</strong> — gives iPhone Home titles their own row, moves controls to a consistent second row and makes clearing Lists search immediately restore every list.</li><li><strong>v53a Patch</strong> — restores advanced monthly appointment recurrence, adds both routine Reset controls, renames Evening Routine and completes iPhone heading refinements.</li><li><strong>v53a</strong> — Workflow &amp; Stability: restores accepted Home behaviour, recurrence and Cleaning by Area controls, fixes editing workflows, recurring visibility, reflection counts and daily routine reset.</li><li><strong>v53</strong> — Corrected Workflow Edition: preserves the accepted v52f Home order, collapsible sections, menus and forms while making Today’s Focus Convert move the original only after a successful save.</li><li><strong>v52f</strong> — Polish release: consistent controls and wording, smarter form defaults, improved search shortcuts, friendlier empty states, accessibility and mobile refinements.</li><li><strong>v52e</strong> — Added evening and weekly reflections, gentle encouragement, planner memory patterns and optional hidden statistics.</li><li><strong>v52c</strong> — Added a time-aware Morning Brief and calm Home summary cards for Planner Health, backup recency, Brain Inbox, Waiting For and recurring responsibilities.</li><li><strong>v52b</strong> — Planner Health 2.0, considerate habit suggestions and an in-app Help &amp; Guides centre.</li><li><strong>v52a</strong> — Calm Interface corrected build: information buttons across Lists and Planner, improved Home order and compact headings, and duplicate suppression between Today and Needs Attention.</li><li><strong>v51</strong> — Production release consolidating safe migrations, advanced recurrence, tags, Today’s Focus workspace, focus timer, Convert, Quick Add, Planner Health, calmer Home ordering and collapsible Settings.</li><li><strong>v50</strong> — Added recurring tasks that remain overdue until completed, with daily, weekly, monthly and yearly schedules.</li><li><strong>v49</strong> — Added Today's Focus, collapsible Home sections, collapsible project steps, improved Lists search/reset and better completed custom-list behaviour.</li><li><strong>v47</strong> — Restored reliable Lists search and retained the v46 stability fixes.</li><li><strong>v46</strong> — Consolidated automatic image handling, attachment previews, Quick Actions, flexible appointment repeats, version verification and the Developer Dashboard.</li><li><strong>v43</strong> — Added automatic image resizing, in-app attachment previews and a Quick Actions helper for opening Brain Inbox directly.</li><li><strong>v42</strong> — Expanded the Lists drawer so its choices are clearly visible, added a More Lists scroll cue when needed, and anchored the control to the planner edge on wide screens.</li><li><strong>v40</strong> — Rebuilt Lists navigation as a closed-by-default right-side drawer that resets correctly on rotation and resizing, with a close button on iPhone and MacBook.</li><li><strong>v39</strong> — Added a close control and improved iPhone landscape Lists navigation scrolling and placement.</li><li><strong>v38</strong> — Added responsive side-mounted Lists navigation, corrected section scroll positioning and made Custom List Save close the editor.</li><li><strong>v37</strong> — Moved Lists navigation to a sticky top position and reduced the Planner header and progress area.</li><li><strong>v36</strong> — Compact Home shortcuts, permanently anchored Lists navigation and clearer mobile access to every list.</li><li><strong>v36</strong> — Improved iPhone Timeline controls, added Home shortcuts, floating Lists navigation and polished custom-list editing.</li><li><strong>v34</strong> — Corrected first-load Timeline rendering, added custom lists and aligned section headings consistently.</li><li><strong>v33</strong> — Earlier Timeline initial-load correction.</li><li><strong>v32</strong> — Unified Timeline with Today, Tomorrow, Next 7 Days, This Month and All Upcoming filters.</li><li><strong>v30</strong> — Brain Inbox core: timestamped capture, categories and status, editing, processing, and safe conversion to To-do, Project, Appointment or Waiting For.</li><li><strong>v29</strong> — Rebuilt the Lists shortcuts with permanent visible text labels.</li><li><strong>v28</strong> — Added distinct font choices and Home-on-return behaviour.</li><li><strong>v27</strong> — Fixed Lists-menu opening, made font changes immediate and distinctive, and restored Home as the opening page.</li><li><strong>v26</strong> — Collapsible Lists, named section controls, centred headings and clearer font choices.</li><li><strong>v25</strong> — Corrected header version, optional appointment end time and simplified bottom navigation.</li><li><strong>v24</strong> — Appointment meeting links, improved editor and clearer appointment cards.</li><li><strong>v23</strong> — Settings controls and customisation persistence.</li><li><strong>v22</strong> — Compact three-dot menus for Lists.</li><li><strong>v21</strong> — Centred personalised header.</li><li><strong>v20</strong> — Code-quality cleanup.</li><li><strong>v19</strong> — Stable rendering fix.</li></ul></details>
       </div>
+    </dialog>
+
+    <button id="quickAddButton" type="button" class="quick-add-fab" onclick="openQuickAdd()" aria-label="Quick Add" title="Quick Add">+</button>
+
+    <dialog id="quickAddDialog" class="quick-add-dialog">
+      <div class="dialog-header"><div><p class="eyebrow">Add from anywhere</p><h2>Quick Add</h2><p class="card-meta">Choose what you want to add. Your last choice is highlighted.</p></div><button type="button" class="dialog-close" onclick="closeQuickAdd()" aria-label="Close Quick Add">×</button></div>
+      <div id="quickAddChoices" class="quick-add-grid">
+        <button type="button" data-quick-add="focus" onclick="chooseQuickAdd('focus')"><span>☀️</span><strong>Today’s Focus</strong></button>
+        <button type="button" data-quick-add="todo" onclick="chooseQuickAdd('todo')"><span>✅</span><strong>To-do</strong></button>
+        <button type="button" data-quick-add="appointment" onclick="chooseQuickAdd('appointment')"><span>📅</span><strong>Appointment</strong></button>
+        <button type="button" data-quick-add="recurring" onclick="chooseQuickAdd('recurring')"><span>🔁</span><strong>Recurring Task</strong></button>
+        <button type="button" data-quick-add="project" onclick="chooseQuickAdd('project')"><span>📁</span><strong>Project</strong></button>
+        <button type="button" data-quick-add="cleaning" onclick="chooseQuickAdd('cleaning')"><span>🧽</span><strong>Cleaning Task</strong></button>
+        <button type="button" data-quick-add="waiting" onclick="chooseQuickAdd('waiting')"><span>⏳</span><strong>Waiting For</strong></button>
+        <button type="button" data-quick-add="inbox" onclick="chooseQuickAdd('inbox')"><span>💡</span><strong>Brain Inbox</strong></button>
+      </div>
+      <div class="quick-add-footer"><button type="button" class="secondary-button quick-add-voice" onclick="closeQuickAdd();startVoiceCapture('inbox')">🎤 Dictate to Brain Inbox</button></div>
     </dialog>
 
     <nav class="bottom-nav" aria-label="Main navigation">
       <button type="button" class="nav-button active" data-tab="home" onclick="showAppView('home', this)"><span>🏠</span><small>Home</small></button>
       <button type="button" class="nav-button" data-tab="tasks" onclick="showAppView('tasks', this)"><span>✅</span><small>Lists</small></button>
       <button type="button" class="nav-button" data-tab="planner" onclick="showAppView('planner', this)"><span>📅</span><small>Planner</small></button>
-      <button type="button" class="nav-button" onclick="openAddDialog()"><span>➕</span><small>Add</small></button>
       <button type="button" class="nav-button" onclick="openSettingsDialog()"><span>⚙</span><small>Settings</small></button>
     </nav>
   </main>
 
+
+  <dialog id="appointmentDialog" class="manager-dialog">
+    <form id="appointmentForm" onsubmit="event.preventDefault(); saveAppointment();">
+      <div class="dialog-header"><div><p class="eyebrow">Calendar</p><h2 id="appointmentDialogTitle">Add appointment</h2></div><button type="button" class="dialog-close" onclick="closeAppointmentDialog()" aria-label="Close">×</button></div>
+      <input id="appointmentId" type="hidden">
+      <div class="dialog-content appointment-form-layout">
+        <fieldset class="appointment-fieldset">
+          <legend>Appointment</legend>
+          <div class="settings-grid appointment-core-grid">
+            <label class="full-width">Title<input id="appointmentName" required maxlength="120"></label>
+            <label>Date<input id="appointmentDate" type="date" required></label>
+            <label>Repeat<select id="appointmentRepeat" onchange="updateAppointmentRepeatControls()"><option value="none">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="yearly">Yearly</option></select></label>
+            <div id="appointmentRepeatOptions" class="appointment-repeat-options full-width" hidden>
+              <div class="appointment-repeat-grid">
+                <label>Repeat every<input id="appointmentRepeatInterval" type="number" oninput="updateAppointmentRepeatControls()" min="1" max="999" inputmode="numeric" value="1"></label>
+                <label>Period<select id="appointmentRepeatUnit" onchange="this.dataset.userChanged='true';updateAppointmentRepeatControls()"><option value="day">day(s)</option><option value="week">week(s)</option><option value="month">month(s)</option><option value="year">year(s)</option></select></label>
+                <label id="appointmentMonthlyModeLabel" hidden>Monthly rule<select id="appointmentMonthlyMode" onchange="updateAppointmentRepeatControls()"><option value="date">Same calendar date</option><option value="nthWeekday">Weekday position</option></select></label>
+                <label id="appointmentOrdinalLabel" hidden>Occurrence<select id="appointmentOrdinal" onchange="updateAppointmentRepeatControls()"><option value="1">First</option><option value="2">Second</option><option value="3">Third</option><option value="4">Fourth</option><option value="-1">Last</option></select></label>
+                <label id="appointmentWeekdayLabel" hidden>Weekday<select id="appointmentWeekday" onchange="updateAppointmentRepeatControls()"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label>
+                <label>Ends<select id="appointmentRepeatEnd" onchange="updateAppointmentRepeatControls()"><option value="never">Never</option><option value="count">After a number of appointments</option><option value="date">On a date</option></select></label>
+                <label id="appointmentRepeatCountLabel" hidden>Number of appointments<input id="appointmentRepeatCount" type="number" oninput="updateAppointmentRepeatControls()" min="1" max="999" inputmode="numeric" value="10"></label>
+                <label id="appointmentRepeatEndDateLabel" hidden>Last possible date<input id="appointmentRepeatEndDate" type="date" onchange="updateAppointmentRepeatControls()"></label>
+              </div>
+              <p id="appointmentRepeatSummary" class="card-meta appointment-repeat-summary"></p>
+            </div>
+            <label>Start time<input id="appointmentTime" type="time"></label>
+            <label>End time (optional)<input id="appointmentEndTime" type="time"></label>
+          </div>
+        </fieldset>
+        <fieldset class="appointment-fieldset">
+          <legend>Optional details</legend>
+          <div class="settings-grid">
+            <label class="full-width">Location<input id="appointmentLocation" maxlength="160" placeholder="Address or place"></label>
+            <label class="full-width">Meeting or web link<input id="appointmentLink" type="url" inputmode="url" maxlength="500" placeholder="https://zoom.us/... or another web address"></label>
+            <label class="full-width">Notes<textarea id="appointmentNotes" rows="4" placeholder="Anything useful to remember"></textarea></label>
+            <label class="full-width">Tags (optional)<input id="appointmentTags" maxlength="240" placeholder="Camera Club, Family"><span class="field-help">Separate tags with commas.</span></label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeAppointmentDialog()">Cancel</button><button type="submit">Save appointment</button></div>
+    </form>
+  </dialog>
+
+
+  <dialog id="recurringTaskDialog" class="manager-dialog">
+    <form id="recurringTaskForm" onsubmit="saveRecurringTask(event)">
+      <div class="dialog-header"><div><p class="eyebrow">Due until completed</p><h2 id="recurringTaskDialogTitle">New recurring task</h2></div><button type="button" class="dialog-close" onclick="closeRecurringTaskDialog()" aria-label="Close">×</button></div>
+      <input id="recurringTaskId" type="hidden">
+      <label>Task name<input id="recurringTaskName" type="text" maxlength="120" required placeholder="For example: Weekly injection"></label>
+      <label>Notes (optional)<textarea id="recurringTaskNotes" rows="3" placeholder="Anything useful to remember"></textarea></label>
+      <div class="settings-grid">
+        <label>First due date<input id="recurringTaskDueDate" type="date" required onchange="updateRecurringRuleControls()"></label>
+        <label>Repeat every<input id="recurringTaskInterval" type="number" min="1" max="999" value="1" required oninput="updateRecurringRuleControls()"></label>
+        <label>Period<select id="recurringTaskUnit" onchange="updateRecurringRuleControls()"><option value="day">day(s)</option><option value="week" selected>week(s)</option><option value="month">month(s)</option><option value="year">year(s)</option></select></label>
+        <label id="recurringMonthlyModeLabel" hidden>Monthly rule<select id="recurringMonthlyMode" onchange="updateRecurringRuleControls()"><option value="date">Same calendar date</option><option value="nthWeekday">Weekday position</option></select></label>
+        <label id="recurringOrdinalLabel" hidden>Occurrence<select id="recurringOrdinal" onchange="updateRecurringRuleControls()"><option value="1">First</option><option value="2">Second</option><option value="3">Third</option><option value="4">Fourth</option><option value="-1">Last</option></select></label>
+        <label id="recurringWeekdayLabel" hidden>Weekday<select id="recurringWeekday" onchange="updateRecurringRuleControls()"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select></label>
+        <label>Status<select id="recurringTaskStatus"><option value="active">Active</option><option value="paused">Paused</option><option value="completed">Finished</option></select></label>
+        <label>Ends<select id="recurringTaskEndMode" onchange="updateRecurringRuleControls()"><option value="never">Continues indefinitely</option><option value="date">End on date</option><option value="count">End after occurrences</option></select></label>
+        <label id="recurringEndDateLabel" hidden>End date<input id="recurringTaskEndDate" type="date" onchange="updateRecurringRuleControls()"></label>
+        <label id="recurringEndCountLabel" hidden>Occurrences<input id="recurringTaskEndCount" type="number" min="1" max="999" value="3" oninput="updateRecurringRuleControls()"><span class="field-help">Includes the first occurrence.</span></label>
+      </div>
+      <label>Tags (optional)<input id="recurringTaskTags" type="text" maxlength="240" placeholder="Health, Medication"><span class="field-help">Separate tags with commas.</span></label>
+      <p class="field-help recurring-monthly-help">For “every second Thursday of the month”, choose Month(s), Weekday position, Second and Thursday.</p><p id="recurringRuleSummary" class="recurring-rule-summary" aria-live="polite"></p><p class="card-meta">The schedule stays anchored to its rule. Completing an overdue task moves it to the next scheduled occurrence after today.</p>
+      <div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeRecurringTaskDialog()">Cancel</button><button type="submit">Save recurring task</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="customListDialog" class="manager-dialog custom-list-dialog">
+    <div class="dialog-header"><div><p class="eyebrow">Your own collection</p><h2 id="customListDialogTitle">Create custom list</h2></div><button type="button" class="dialog-close" onclick="closeCustomListManager()" aria-label="Close">×</button></div>
+    <div class="custom-list-form">
+      <label class="full-width">List name<input id="customListName" type="text" maxlength="80" placeholder="For example: Shopping list"></label>
+      <div class="custom-list-name-actions"><button type="button" onclick="saveCustomListName()">Save list</button><button id="deleteCustomListButton" type="button" class="secondary-button danger-text" onclick="deleteActiveCustomList()" hidden>Delete list</button></div>
+      <hr class="settings-divider">
+      <label class="full-width">New item</label>
+      <div class="custom-list-add-row"><input id="customListNewItem" type="text" maxlength="160" placeholder="What do you need?" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomListItem()}"><button type="button" onclick="addCustomListItem()">Add item</button></div>
+      <div id="customListDialogItems" class="stack-list custom-list-dialog-items"></div>
+    </div>
+    <div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeCustomListManager()">Done</button></div>
+  </dialog>
 
   <dialog id="routineManagerDialog" class="manager-dialog">
     <div class="dialog-header">
@@ -204,19 +515,52 @@
       </div>
       <button type="button" class="dialog-close" onclick="closeRoutineManager()" aria-label="Close">×</button>
     </div>
-    <p class="card-meta">Add, edit or delete items here. The main planner stays uncluttered.</p>
+    <p class="card-meta">Add, edit, remove or reorder your own routine items. Changes are saved on this device and retained through upgrades.</p>
     <div id="routineManagerList" class="manager-list"></div>
     <div class="manager-add">
       <label>
         New item
-        <input id="routineNewName" type="text" placeholder="Type a new routine item">
+        <input id="routineNewName" type="text" placeholder="Type a new routine item" onkeydown="if(event.key==='Enter'){event.preventDefault();addRoutineFromManager()}">
       </label>
       <label>
         Note or time (optional)
-        <input id="routineNewTime" type="text" placeholder="For example: after breakfast">
+        <input id="routineNewTime" type="text" placeholder="For example: after breakfast" onkeydown="if(event.key==='Enter'){event.preventDefault();addRoutineFromManager()}">
       </label>
       <button type="button" onclick="addRoutineFromManager()">Add to list</button>
     </div>
+  </dialog>
+
+  <dialog id="projectTemplatesDialog" class="manager-dialog project-templates-dialog">
+    <div class="dialog-header"><div><p class="eyebrow">Reusable workflows</p><h2>Project Templates</h2></div><button type="button" class="dialog-close" onclick="closeProjectTemplates()" aria-label="Close">×</button></div>
+    <p class="card-meta">Create a workflow once, then reuse it for exhibitions, competitions, holidays or any repeated project.</p>
+    <div id="projectTemplatesList" class="manager-list"></div>
+    <details class="storage-details template-editor-details" open>
+      <summary id="projectTemplateEditorSummary">Create a template</summary>
+      <form id="projectTemplateForm" class="template-form" onsubmit="saveProjectTemplate(event)">
+        <input id="projectTemplateId" type="hidden">
+        <label>Template name<input id="projectTemplateName" required maxlength="120" placeholder="For example: BPE Exhibition"></label>
+        <label>Notes (optional)<textarea id="projectTemplateDetails" rows="2" placeholder="What this workflow is for"></textarea></label>
+        <label>Template steps<textarea id="projectTemplateSteps" rows="8" required placeholder="28 | Take photographs
+21 | Edit or create images
+14 | Save to exhibition specification
+7 | Upload images
+0 | Enter before closing date
+Record results"></textarea><span class="field-help">Put optional days before the project due date, then a | and the step name. A step without a number is created without a date.</span></label>
+        <div class="dialog-actions"><button type="button" class="secondary-button" onclick="clearProjectTemplateForm()">Clear</button><button type="submit">Save template</button></div>
+      </form>
+    </details>
+  </dialog>
+
+  <dialog id="projectTemplateUseDialog" class="manager-dialog project-template-use-dialog">
+    <form id="projectTemplateUseForm" onsubmit="createProjectFromTemplate(event)">
+      <input id="projectTemplateUseId" type="hidden">
+      <div class="dialog-header"><div><p class="eyebrow">New from template</p><h2 id="projectTemplateUseTitle">Create project</h2></div><button type="button" class="dialog-close" onclick="closeProjectTemplateUse()" aria-label="Close">×</button></div>
+      <label>Project name<input id="projectTemplateProjectName" required maxlength="160" placeholder="For example: Southampton BPE 2026"></label>
+      <label>Project due date<input id="projectTemplateDueDate" type="date"><span class="field-help">Steps with an offset are dated backwards from this date.</span></label>
+      <label>Project notes (optional)<textarea id="projectTemplateProjectDetails" rows="3"></textarea></label>
+      <div id="projectTemplatePreview" class="template-preview"></div>
+      <div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeProjectTemplateUse()">Cancel</button><button type="submit">Create project</button></div>
+    </form>
   </dialog>
 
   <dialog id="addDialog" class="bottom-sheet">
@@ -253,6 +597,7 @@
         Details
         <textarea id="itemDetails" rows="3" placeholder="Notes, contact details, what needs doing..."></textarea>
       </label>
+      <label id="itemTagsLabel">Tags (optional)<input id="itemTags" type="text" maxlength="240" placeholder="Health, Camera Club, Home"><span class="field-help">Separate tags with commas.</span></label>
 
       <div id="projectStepsLabel" class="hidden step-builder-section"><div class="step-builder-heading"><strong>Steps</strong><button type="button" class="small-button" onclick="addStepBuilderRow('projectStepsBuilder')">+ Add step</button></div><div id="projectStepsBuilder" class="step-builder"></div><textarea id="projectSteps" class="hidden" aria-hidden="true"></textarea><span class="field-help">Choose a date for each step, or set it a number of days before the project date.</span></div>
       <div id="itemStepsLabel" class="hidden step-builder-section"><div class="step-builder-heading"><strong>Steps</strong><button type="button" class="small-button" onclick="addStepBuilderRow('itemStepsBuilder')">+ Add step</button></div><div id="itemStepsBuilder" class="step-builder"></div><textarea id="itemSteps" class="hidden" aria-hidden="true"></textarea><span class="field-help">Choose a date for each step, or set it a number of days before the main item date.</span></div>
@@ -285,7 +630,7 @@
 
       <label id="cleaningAreaLabel" class="hidden">
         Room or area
-        <input id="cleaningRoom" type="text" placeholder="For example: Bedroom, kitchen or bathroom">
+        <input id="cleaningRoom" type="text" list="cleaningRoomSuggestions" placeholder="Choose or type a room"><datalist id="cleaningRoomSuggestions"></datalist><span class="field-help">Previously used rooms appear as suggestions.</span>
       </label>
 
       <label id="cleaningFrequencyLabel" class="hidden">
@@ -333,11 +678,73 @@
       <div class="dialog-header"><div><p class="eyebrow">Quick capture</p><h2 id="captureTitle">Capture a thought</h2></div><button type="button" class="dialog-close" onclick="closeCaptureDialog()" aria-label="Close">×</button></div>
       <label>What is on your mind?<div class="capture-input-row"><input id="captureName" type="text" maxlength="160" required placeholder="Type it here…"><button type="button" class="voice-button capture-mic" onclick="startVoiceCapture()" aria-label="Dictate" title="Dictate">🎤</button></div></label>
       <label>Note (optional)<textarea id="captureNote" rows="3" placeholder="Any detail you do not want to forget"></textarea></label>
+      <label>Tags (optional)<input id="captureTags" maxlength="240" placeholder="Idea, Home"><span class="field-help">Separate tags with commas.</span></label>
+      <div id="brainCaptureHub" class="brain-capture-hub">
+        <p class="capture-hub-heading">Add something useful</p>
+        <div class="capture-hub-buttons">
+          <button type="button" onclick="focusWebsiteCapture()"><span aria-hidden="true">🔗</span> Website link</button>
+          <button type="button" onclick="chooseBrainAttachment('image/*')"><span aria-hidden="true">🖼️</span> Photo or image</button>
+          <button type="button" onclick="chooseBrainAttachment('*/*')"><span aria-hidden="true">📄</span> Document</button>
+        </div>
+        <label id="captureUrlLabel">Website address (optional)<input id="captureUrl" type="url" inputmode="url" placeholder="https://example.com"></label>
+        <input id="brainAttachmentInput" type="file" class="visually-hidden" onchange="handleBrainAttachment(event)">
+        <div id="brainAttachmentPreview" class="attachment-preview hidden"></div>
+        <p class="capture-storage-note">Images are automatically resized for the planner. Documents are stored on this device and must be under 1.5 MB.</p>
+      </div>
+      <div id="inboxCaptureOptions" class="capture-options">
+        <label>Category (optional)<input id="captureCategory" type="text" maxlength="40" placeholder="Idea, photography, admin…"></label>
+        <label>Status<select id="captureStatus"><option value="new">New</option><option value="progress">In progress</option><option value="processed">Processed</option></select></label>
+      </div>
       <label id="waitingDateLabel" class="hidden">Review date<input id="captureDate" type="date"></label>
-      <div id="captureConvertActions" class="convert-actions hidden"><button type="button" onclick="saveCaptureAs('todo')">Save as to-do</button><button type="button" onclick="saveCaptureAs('project')">Save as project</button><button type="button" onclick="saveCaptureAs('waiting')">Save as Waiting For</button></div><div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeCaptureDialog()">Cancel</button><button type="button" onclick="saveCapture()">Save thought</button></div>
+      <div id="captureConvertActions" class="convert-actions hidden"><p class="convert-heading">Organise this item now</p><button type="button" onclick="saveCaptureAs('todo')">Save as to-do</button><button type="button" onclick="saveCaptureAs('project')">Save as project</button><button type="button" onclick="saveCaptureAs('appointment')">Save as appointment</button><button type="button" onclick="saveCaptureAs('waiting')">Save as Waiting For</button></div><div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeCaptureDialog()">Cancel</button><button type="button" onclick="saveCapture()">Save thought</button></div>
     </form>
   </dialog>
 
-  <script src="app.js?v=10.1"></script>
+
+
+  <dialog id="todayFocusEditDialog" class="manager-dialog">
+    <form id="todayFocusEditForm" onsubmit="saveTodayFocusEdit(event)">
+      <input id="todayFocusEditId" type="hidden">
+      <div class="dialog-header"><div><p class="eyebrow">Today workspace</p><h2>Edit Focus item</h2></div><button type="button" class="dialog-close" onclick="closeTodayFocusEdit()" aria-label="Close">×</button></div>
+      <label>Item<input id="todayFocusEditName" type="text" maxlength="160" required></label>
+      <label>Notes (optional)<textarea id="todayFocusEditNotes" rows="3" placeholder="Anything useful while doing this"></textarea></label>
+      <label>Estimated minutes (optional)<input id="todayFocusEditMinutes" type="number" min="1" max="480" placeholder="15"></label>
+      <label class="inline-check"><input id="todayFocusEditPinned" type="checkbox"> Pin this item to the top</label>
+      <div class="focus-reorder-controls" aria-label="Reorder this Focus item">
+        <button type="button" class="secondary-button" onclick="moveEditedFocusItem('top')">Move to top</button>
+        <button type="button" class="secondary-button" onclick="moveEditedFocusItem(-1)">Move up</button>
+        <button type="button" class="secondary-button" onclick="moveEditedFocusItem(1)">Move down</button>
+        <button type="button" class="secondary-button" onclick="moveEditedFocusItem('bottom')">Move to bottom</button>
+      </div>
+      <div class="dialog-actions"><button type="button" class="secondary-button" onclick="closeTodayFocusEdit()">Cancel</button><button type="submit">Save</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="focusTimerDialog" class="manager-dialog focus-timer-dialog">
+    <div class="dialog-header"><div><p class="eyebrow">Focus timer</p><h2 id="focusTimerTitle">Focus</h2></div><button type="button" class="dialog-close" onclick="minimiseFocusTimer()" aria-label="Minimise timer">−</button></div>
+    <div class="focus-timer-body">
+      <div id="focusTimerDisplay" class="focus-timer-display">15:00</div>
+      <div id="focusTimerChoices" class="timer-choice-grid">
+        <button type="button" onclick="startFocusTimer(10)">10 min</button><button type="button" onclick="startFocusTimer(15)">15 min</button><button type="button" onclick="startFocusTimer(20)">20 min</button><button type="button" onclick="startFocusTimer(30)">30 min</button><button type="button" onclick="startFocusTimer(45)">45 min</button><button type="button" onclick="startFocusTimer(60)">60 min</button>
+      </div>
+      <div id="focusTimerRunningActions" class="dialog-actions hidden"><button type="button" class="secondary-button" onclick="pauseResumeFocusTimer()" id="focusTimerPauseButton">Pause</button><button type="button" class="secondary-button" onclick="minimiseFocusTimer()">Minimise</button><button type="button" onclick="completeFocusFromTimer()">Mark complete</button><button type="button" class="danger-button" onclick="cancelFocusTimer()">Cancel timer</button></div>
+      <p id="focusTimerMessage" class="card-meta"></p>
+    </div>
+  </dialog>
+
+
+  <aside id="focusTimerMini" class="focus-timer-mini hidden" aria-live="polite">
+    <button type="button" class="focus-timer-mini-main" onclick="restoreFocusTimerDialog()"><strong id="focusTimerMiniTitle">Focus timer</strong><span id="focusTimerMiniDisplay">00:00</span></button>
+    <button type="button" class="focus-timer-mini-pause" onclick="pauseResumeFocusTimer()" id="focusTimerMiniPause">Pause</button>
+    <button type="button" class="focus-timer-mini-close" onclick="cancelFocusTimer()" aria-label="Cancel timer">×</button>
+  </aside>
+
+  <dialog id="attachmentViewerDialog" class="attachment-viewer-dialog">
+    <div class="dialog-header attachment-viewer-header"><div><p class="eyebrow">Brain Inbox attachment</p><h2 id="attachmentViewerTitle">Preview</h2></div><button type="button" class="dialog-close" onclick="closeAttachmentViewer()" aria-label="Close preview">×</button></div>
+    <div id="attachmentViewerBody" class="attachment-viewer-body"></div>
+    <div class="dialog-actions"><button type="button" class="secondary-button" onclick="downloadCurrentAttachment()">Download copy</button><button type="button" onclick="closeAttachmentViewer()">Close</button></div>
+  </dialog>
+
+  <script src="app.js?v=54c"></script>
 </body>
 </html>
