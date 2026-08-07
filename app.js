@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54k";
+const APP_VERSION="54l";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4480,3 +4480,83 @@ renderTodayReminders=function(){
 
 try{v54jNormaliseRecurringRecords();}catch(_){}
 setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();renderWeekly();renderTimeline();}catch(error){console.error('v54j recurring interaction refresh failed',error);}},200);
+
+/* ===== v54l canonical recurring advance fix =====
+   Protected workflow: completing a recurring occurrence MUST either finish the
+   recurrence or move nextDue strictly beyond today's date. Legacy unit labels
+   from restored backups are normalised here so an unrecognised unit can never
+   leave nextDue unchanged and strand the task in Today.
+*/
+function v54lRecurringUnit(value){
+  const raw=String(value||'week').trim().toLowerCase();
+  const map={day:'day',days:'day',daily:'day',week:'week',weeks:'week',weekly:'week',month:'month',months:'month',monthly:'month',year:'year',years:'year',yearly:'year',annually:'year',annual:'year'};
+  return map[raw]||'week';
+}
+function v54lNextRecurringDate(task,fromDate){
+  const unit=v54lRecurringUnit(task?.unit);
+  const interval=Math.max(1,Number(task?.interval)||1);
+  let next=addRecurringInterval(new Date(fromDate),unit,interval,task||{});
+  // Hard safety: the next date must move forwards. If legacy data causes the
+  // shared helper to return the same date, use a deterministic fallback.
+  if(!(next instanceof Date)||Number.isNaN(next.getTime())||next<=fromDate){
+    next=new Date(fromDate);
+    if(unit==='day') next.setDate(next.getDate()+interval);
+    else if(unit==='week') next.setDate(next.getDate()+(7*interval));
+    else if(unit==='month') next.setMonth(next.getMonth()+interval);
+    else next.setFullYear(next.getFullYear()+interval);
+  }
+  return next;
+}
+function v54lAdvanceRecurringOccurrence(id){
+  const task=(data.recurringTasks||[]).find(x=>String(x.id)===String(id));
+  if(!task||task.status==='paused'||task.status==='completed')return {ok:false,reason:'inactive'};
+  task.status='active';
+  task.unit=v54lRecurringUnit(task.unit);
+  const completedName=task.name||'Recurring task';
+  const completedAt=new Date();
+  const completedDue=task.nextDue||localDateKey();
+  task.lastCompleted=completedAt.toISOString();
+  task.completedOccurrences=(Number(task.completedOccurrences)||0)+1;
+  if(typeof v53aLogOnce==='function')v53aLogOnce('recurring',completedName,{itemId:id,dueDate:completedDue});
+  else if(typeof v52dLog==='function')v52dLog('recurring',completedName,{itemId:id,dueDate:completedDue});
+
+  let finished=false;
+  const endMode=typeof v54cR22EndMode==='function'?v54cR22EndMode(task):(task.endMode||'never');
+  if(endMode==='count'&&task.completedOccurrences>=Math.max(1,Number(task.endCount)||1)){
+    task.status='completed';task.completedAt=completedAt.toISOString();finished=true;
+  }else{
+    let next=recurringDate(task.nextDue)||recurringDate(localDateKey());
+    const today=recurringDate(localDateKey());
+    let guard=0;
+    do{
+      const before=new Date(next);
+      next=v54lNextRecurringDate(task,before);
+      guard++;
+      if(guard>400)throw new Error('Recurring date failed to advance');
+    }while(next<=today);
+    const nextKey=recurringDateKey(next);
+    if(endMode==='date'&&task.endDate&&dateOnly(nextKey)>dateOnly(task.endDate)){
+      task.status='completed';task.completedAt=completedAt.toISOString();finished=true;
+    }else{
+      task.nextDue=nextKey;task.status='active';delete task.completedAt;
+    }
+  }
+  saveData();
+  // Refresh only after persisted nextDue/status is final.
+  renderAll();
+  try{renderTodayReminders();}catch(error){console.error('v54l Today refresh',error);}
+  try{renderRecurringHome();}catch(error){console.error('v54l recurring Home refresh',error);}
+  try{renderRecurringTasks();}catch(error){console.error('v54l recurring Lists refresh',error);}
+  try{renderWeekly();}catch(error){console.error('v54l This Week refresh',error);}
+  try{renderTimeline();}catch(error){console.error('v54l Timeline refresh',error);}
+  if(typeof showSaved==='function')showSaved(finished?`${completedName} complete · recurrence finished`:`${completedName} complete · next due ${formatDate(task.nextDue)}`);
+  return {ok:true,finished,nextDue:finished?'':task.nextDue,name:completedName};
+}
+v54jAdvanceRecurringOccurrence=v54lAdvanceRecurringOccurrence;
+completeRecurringTask=v54lAdvanceRecurringOccurrence;
+// Normalise legacy unit names once at startup without changing valid schedules.
+try{
+  let changed=false;
+  (data.recurringTasks||[]).forEach(task=>{const unit=v54lRecurringUnit(task.unit);if(task.unit!==unit){task.unit=unit;changed=true;}});
+  if(changed)saveData();
+}catch(error){console.error('v54l recurrence normalisation',error);}

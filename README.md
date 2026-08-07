@@ -1,4 +1,4 @@
-> Current hardening baseline: **v54k**
+> Current hardening baseline: **v54l**
 
 # My Life Planner v54a — Workflow & Stability
 
@@ -16,4 +16,4 @@ Use Lists → Projects → Templates to create reusable workflows.
 
 
 ## Protected Regression Gate
-From v54k onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54i.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.
+From v54l onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54i.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.

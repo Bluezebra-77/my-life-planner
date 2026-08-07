@@ -1,5 +1,5 @@
 ## v54j
-## v54k — Protected Render Fix
+## v54l — Protected Render Fix
 - Fixed stale renderer symbol references in v54j that could clear Today and stop Home redraws.
 - Kept recurring completion logic isolated and improved backup import error handling.
 
