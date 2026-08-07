@@ -1,29 +1,38 @@
-const APP_VERSION = '54e';
-const CACHE = `my-life-planner-v${APP_VERSION}-pwa-reliability`;
-const APP_SHELL = [
+const APP_VERSION = '54eR';
+const CACHE = `my-life-planner-v${APP_VERSION}-transition-safe`;
+
+// Keep installation deliberately small. Optional guides/documents are NOT pre-cached:
+// one missing optional file must never prevent a new service worker from activating.
+const CORE_ASSETS = [
   './index.html',
-  './style.css?v=54e',
-  './app.js?v=54e',
-  './manifest.json?v=54e',
+  './style.css?v=54eR',
+  './app.js?v=54eR',
+  './manifest.json?v=54eR',
   './version.json',
   './icon-192.png',
-  './icon-512.png',
-  './HELP_GUIDE.html',
-  './QUICK_START_GUIDE.pdf',
-  './INSTALLATION_GUIDE.md',
-  './DEVELOPER_HANDBOOK.pdf'
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
-  // Activate new releases immediately. The activation handler then refreshes open app clients.
   self.skipWaiting();
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    // Cache each asset independently so a single failed request cannot abort installation.
+    await Promise.allSettled(CORE_ASSETS.map(async asset => {
+      try {
+        const response = await fetch(asset, { cache: 'reload' });
+        if (response && response.ok) await cache.put(asset, response.clone());
+      } catch (_) {}
+    }));
+  })());
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(key => key.startsWith('my-life-planner-') && key !== CACHE).map(key => caches.delete(key)));
+    await Promise.all(keys
+      .filter(key => key.startsWith('my-life-planner-') && key !== CACHE)
+      .map(key => caches.delete(key)));
     await self.clients.claim();
     const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of clients) {
@@ -44,6 +53,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Network first: an online installed app should never stay pinned to an old shell.
   event.respondWith((async () => {
     try {
       const networkRequest = isNavigation ? new Request(request, { cache: 'reload' }) : request;
@@ -54,9 +64,11 @@ self.addEventListener('fetch', event => {
       }
       return response;
     } catch (error) {
-      const cached = await caches.match(request);
+      const cached = await caches.match(request, { ignoreSearch: isNavigation });
       if (cached) return cached;
-      if (isNavigation) return (await caches.match('./index.html')) || Response.error();
+      if (isNavigation) {
+        return (await caches.match('./index.html', { ignoreSearch: true })) || Response.error();
+      }
       throw error;
     }
   })());
@@ -64,5 +76,7 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
-  if (event.data?.type === 'GET_VERSION') event.source?.postMessage({ type: 'PLANNER_WORKER_ACTIVE', version: APP_VERSION });
+  if (event.data?.type === 'GET_VERSION') {
+    event.source?.postMessage({ type: 'PLANNER_WORKER_ACTIVE', version: APP_VERSION });
+  }
 });
