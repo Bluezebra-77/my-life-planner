@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54j";
+const APP_VERSION="54k";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -789,9 +789,12 @@ function importPlanner(event) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const backup = JSON.parse(reader.result);
+      const raw = String(reader.result || "").replace(/^\uFEFF/, "").trim();
+      if (!raw) throw new Error("Backup file is empty");
+      if (raw.startsWith("PK")) throw new Error("ZIP selected instead of planner JSON backup");
+      const backup = JSON.parse(raw);
       const imported = backup.data || backup;
-      if (!imported || typeof imported !== "object") throw new Error("Invalid backup");
+      if (!imported || typeof imported !== "object" || Array.isArray(imported)) throw new Error("Invalid backup structure");
       data = normaliseData(imported);
       Object.entries(backup.checks || {}).forEach(([key, value]) => localStorage.setItem(key, value));
       if (backup.settings) localStorage.setItem(SETTINGS_KEY, JSON.stringify(backup.settings));
@@ -800,7 +803,10 @@ function importPlanner(event) {
       renderAll();
       alert("Planner backup imported successfully.");
     } catch (error) {
-      alert("That file is not a valid My Life Planner backup.");
+      console.error("Backup import failed", error);
+      const message = String(error?.message || "");
+      if (message.includes("ZIP selected")) alert("That is the app ZIP, not a planner backup. Choose the .json file created by Backup / Export.");
+      else alert("That file could not be read as a My Life Planner backup. Please choose the .json backup created by the planner.");
     } finally {
       event.target.value = "";
     }
@@ -4428,7 +4434,7 @@ function v54jRecurringHomeRow(task){
   main.innerHTML=`<span class="v10-row-title">${escapeHtml(task.name||'Recurring task')}</span><span class="v10-row-meta">${escapeHtml(`${recurringPatternLabel(task)} · ${st.label}`)}</span>`;
   main.addEventListener('click',()=>openRecurringTaskDialog(task.id));
   row.append(done,main);
-  row.insertAdjacentHTML('beforeend',compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${task.id}')">Edit</button><button onclick="closeAnchoredMenu();v54jRunRecurringCompletion('${task.id}')">Complete</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${task.id}')">Pause</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteRecurring('${task.id}')">Delete</button>`,task.name||'Recurring task'));
+  row.insertAdjacentHTML('beforeend',compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${task.id}')">Edit</button><button onclick="closeAnchoredMenu();v54jRunRecurringCompletion('${task.id}')">Complete</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${task.id}')">Pause</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteRecurring('${task.id}')">Delete</button>`,task.name||'Recurring task'));
   return row;
 }
 renderRecurringHome=function(){
@@ -4453,7 +4459,7 @@ function v54jTodayRecurringRow(item,meta){
   done.classList.add('compact-complete-dot');
   const copy=document.createElement('div');copy.className='compact-copy';copy.innerHTML=`<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(meta||'')}</span>`;
   row.append(done,copy);
-  const menu=v54iReminderMenu({...item,itemType:'recurring'});
+  const menu=v54jReminderMenu({...item,itemType:'recurring'});
   if(menu) row.insertAdjacentHTML('beforeend',menu.replace('>Pause<','>Pause<').replace('</button><button class="danger-text"',`</button><button onclick="closeAnchoredMenu();v54jRunRecurringCompletion('${item.id}')">Complete</button><button class="danger-text"`));
   row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label',`Open ${item.name}`);
   row.addEventListener('click',event=>{if(event.target.closest('button,input,summary'))return;openRecurringTaskDialog(item.id);});
@@ -4468,9 +4474,9 @@ renderTodayReminders=function(){
     const overdue=item.itemType!=='annual'&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
     const meta=`${item.source} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
     if(item.itemType==='recurring') area.appendChild(v54jTodayRecurringRow(item,meta));
-    else area.appendChild(v54iReminderRow(item,meta));
+    else area.appendChild(v54jReminderRow(item,meta));
   });
 };
 
-try{v54iNormaliseRecurringRecords();}catch(_){}
+try{v54jNormaliseRecurringRecords();}catch(_){}
 setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();renderWeekly();renderTimeline();}catch(error){console.error('v54j recurring interaction refresh failed',error);}},200);
