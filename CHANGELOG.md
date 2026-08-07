@@ -1,3 +1,6 @@
+## v54j
+- Dedicated recurring completion controls on Home Today and Recurring Tasks; direct complete-and-advance action independent of generic row controls.
+
 # Changelog
 
 ## v51 - Production release

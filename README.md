@@ -1,3 +1,5 @@
+> Current hardening baseline: **v54j**
+
 # My Life Planner v54a — Workflow & Stability
 
 Upload every file in this folder to the root of the GitHub Pages repository, replacing the previous app files.
@@ -14,4 +16,4 @@ Use Lists → Projects → Templates to create reusable workflows.
 
 
 ## Protected Regression Gate
-From v54i onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54i.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.
+From v54j onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54i.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.

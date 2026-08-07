@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54i";
+const APP_VERSION="54j";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4132,15 +4132,15 @@ renderRecurringHome=function(){
 setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();}catch(e){console.error('v54f recurring refresh failed',e);}},120);
 
 
-/* ===== v54i recurring completion compatibility fix =====
+/* ===== v54j recurring completion compatibility fix =====
    Restored/backed-up recurring records from older releases may not have an
    explicit status="active" field. Treat every non-paused/non-completed task as
    active, normalise legacy records, and use one completion path everywhere.
 */
-function v54iRecurringIsActive(task){
+function v54jRecurringIsActive(task){
   return Boolean(task)&&task.status!=='paused'&&task.status!=='completed';
 }
-function v54iNormaliseRecurringRecords(){
+function v54jNormaliseRecurringRecords(){
   let changed=false;
   (data.recurringTasks||[]).forEach(task=>{
     if(!task||typeof task!=='object')return;
@@ -4151,9 +4151,9 @@ function v54iNormaliseRecurringRecords(){
   });
   if(changed)saveData();
 }
-function v54iAdvanceRecurringOccurrence(id){
+function v54jAdvanceRecurringOccurrence(id){
   const task=(data.recurringTasks||[]).find(x=>String(x.id)===String(id));
-  if(!v54iRecurringIsActive(task))return {ok:false,reason:'inactive'};
+  if(!v54jRecurringIsActive(task))return {ok:false,reason:'inactive'};
   if(task.status!=='active')task.status='active';
   const completedName=task.name||'Recurring task';
   const completedAt=new Date();
@@ -4189,22 +4189,22 @@ function v54iAdvanceRecurringOccurrence(id){
   if(typeof showSaved==='function')showSaved(finished?`${completedName} complete · recurrence finished`:`${completedName} complete · next due ${formatDate(task.nextDue)}`);
   return result;
 }
-completeRecurringTask=function(id){return v54iAdvanceRecurringOccurrence(id);};
+completeRecurringTask=function(id){return v54jAdvanceRecurringOccurrence(id);};
 
 // Include legacy/restored recurring records in time-based views even before the
 // normalisation pass has persisted status="active".
-const v54iTodayBase=getTodayReminderItems;
+const v54jTodayBase=getTodayReminderItems;
 getTodayReminderItems=function(){
-  const items=v54iTodayBase().filter(i=>i.itemType!=='recurring');
+  const items=v54jTodayBase().filter(i=>i.itemType!=='recurring');
   const today=recurringDate(localDateKey());
-  (data.recurringTasks||[]).filter(t=>v54iRecurringIsActive(t)&&t.nextDue&&recurringDate(t.nextDue)<=today).forEach(t=>items.push({id:t.id,name:t.name,details:t.notes||'',source:'Recurring task',dueDate:t.nextDue,itemType:'recurring'}));
+  (data.recurringTasks||[]).filter(t=>v54jRecurringIsActive(t)&&t.nextDue&&recurringDate(t.nextDue)<=today).forEach(t=>items.push({id:t.id,name:t.name,details:t.notes||'',source:'Recurring task',dueDate:t.nextDue,itemType:'recurring'}));
   return items.sort((a,b)=>dateOnly(a.dueDate)-dateOnly(b.dueDate));
 };
-const v54iWeeklyBase=getWeeklyItems;
+const v54jWeeklyBase=getWeeklyItems;
 getWeeklyItems=function(){
-  const items=v54iWeeklyBase().filter(i=>i.itemType!=='recurring');
+  const items=v54jWeeklyBase().filter(i=>i.itemType!=='recurring');
   const today=new Date();today.setHours(12,0,0,0);const end=new Date(today);end.setDate(end.getDate()+7);
-  (data.recurringTasks||[]).filter(t=>v54iRecurringIsActive(t)&&t.nextDue).forEach(t=>{
+  (data.recurringTasks||[]).filter(t=>v54jRecurringIsActive(t)&&t.nextDue).forEach(t=>{
     const due=dateOnly(t.nextDue);if(due>today&&due<=end)items.push({id:t.id,name:t.name,details:t.notes||'',source:'Recurring task',dueDate:t.nextDue,itemType:'recurring',completed:false,leadDays:0});
   });
   return items.sort((a,b)=>dateOnly(a.dueDate)-dateOnly(b.dueDate));
@@ -4212,13 +4212,13 @@ getWeeklyItems=function(){
 renderRecurringHome=function(){
   const area=document.getElementById('homeRecurringArea');if(!area)return;area.innerHTML='';
   const today=recurringDate(localDateKey());
-  const all=(data.recurringTasks||[]).filter(t=>v54iRecurringIsActive(t)&&t.nextDue&&recurringDate(t.nextDue)<=today).sort((a,b)=>String(a.nextDue).localeCompare(String(b.nextDue)));
+  const all=(data.recurringTasks||[]).filter(t=>v54jRecurringIsActive(t)&&t.nextDue&&recurringDate(t.nextDue)<=today).sort((a,b)=>String(a.nextDue).localeCompare(String(b.nextDue)));
   if(!all.length){area.innerHTML='<div class="empty-state">No recurring responsibilities are due.</div>';return;}
   const expanded=typeof v54cR22Bool==='function'?v54cR22Bool(V54C_HOME_RECURRING_EXPANDED):false;
   const tasks=expanded?all:all.slice(0,3);
   tasks.forEach(task=>{
     const st=recurringStatus(task);
-    const row=makeV10Row({name:task.name,meta:`${recurringPatternLabel(task)} · ${st.label}`,dueDate:task.nextDue,action:()=>v54iAdvanceRecurringOccurrence(task.id),open:()=>openRecurringTaskDialog(task.id)},
+    const row=makeV10Row({name:task.name,meta:`${recurringPatternLabel(task)} · ${st.label}`,dueDate:task.nextDue,action:()=>v54jAdvanceRecurringOccurrence(task.id),open:()=>openRecurringTaskDialog(task.id)},
       {menu:compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${task.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${task.id}')">Pause</button>`,task.name)});
     area.appendChild(row);
   });
@@ -4234,17 +4234,17 @@ renderTodayReminders=function(){
   items.forEach(item=>{
     const overdue=item.itemType!=='annual'&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
     const meta=`${item.source} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
-    area.appendChild(compactReminderRow(item,{meta,actionable:item.itemType!=='annual',onComplete:item.itemType==='recurring'?()=>v54iAdvanceRecurringOccurrence(item.id):completionFor(item),clickable:true}));
+    area.appendChild(compactReminderRow(item,{meta,actionable:item.itemType!=='annual',onComplete:item.itemType==='recurring'?()=>v54jAdvanceRecurringOccurrence(item.id):completionFor(item),clickable:true}));
   });
 };
-v54iNormaliseRecurringRecords();
-setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();renderWeekly();renderTimeline();}catch(e){console.error('v54i recurring compatibility refresh failed',e);}},120);
+v54jNormaliseRecurringRecords();
+setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();renderWeekly();renderTimeline();}catch(e){console.error('v54j recurring compatibility refresh failed',e);}},120);
 
-/* ===== v54i hardening: protected Home management + recurring compatibility =====
+/* ===== v54j hardening: protected Home management + recurring compatibility =====
    Scope is deliberately narrow: preserve v54g recurrence compatibility and restore
    Edit/Delete/Manage actions wherever a dated item is surfaced on Home.
 */
-function v54iDeleteTodoStep(todoId,stepId){
+function v54jDeleteTodoStep(todoId,stepId){
   const todo=(data.todos||[]).find(x=>String(x.id)===String(todoId));
   if(!todo)return;
   const step=(todo.steps||[]).find(x=>String(x.id)===String(stepId));
@@ -4254,53 +4254,53 @@ function v54iDeleteTodoStep(todoId,stepId){
   todo.completed=(todo.steps||[]).length>0&&todo.steps.every(s=>s.completed);
   saveData();renderAll();
 }
-function v54iDeleteTodo(id){
+function v54jDeleteTodo(id){
   const item=(data.todos||[]).find(x=>String(x.id)===String(id));
   if(!item)return;
   if(!confirm(`Delete “${item.name||'this to-do'}”?`))return;
   deleteTodo(id);
 }
-function v54iDeleteProjectStep(projectId,stepId){
+function v54jDeleteProjectStep(projectId,stepId){
   const project=(data.projects||[]).find(x=>String(x.id)===String(projectId));
   const step=(project?.steps||[]).find(x=>String(x.id)===String(stepId));
   if(!project||!step)return;
   if(!confirm(`Delete step “${step.name||'Untitled step'}”?`))return;
   deleteStep(projectId,stepId);
 }
-function v54iDeleteCleaning(id){
+function v54jDeleteCleaning(id){
   const item=(data.cleaningTasks||[]).find(x=>String(x.id)===String(id));
   if(!item)return;
   if(!confirm(`Delete cleaning task “${item.name||'this task'}”?`))return;
   deleteCleaning(id);
 }
-function v54iDeleteAnnual(id){
+function v54jDeleteAnnual(id){
   const item=(data.annualDates||[]).find(x=>String(x.id)===String(id));
   if(!item)return;
   if(!confirm(`Delete “${item.name||'this annual date'}”?`))return;
   deleteAnnual(id);
 }
-function v54iDeleteRecurring(id){
+function v54jDeleteRecurring(id){
   const item=(data.recurringTasks||[]).find(x=>String(x.id)===String(id));
   if(!item)return;
   if(!confirm(`Delete recurring task “${item.name||'this task'}”?`))return;
   deleteRecurringTask(id);
 }
-function v54iReminderMenu(item){
+function v54jReminderMenu(item){
   if(!item)return '';
   const label=item.name||'item';
-  if(item.itemType==='todo')return compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteTodo('${item.id}')">Delete</button>`,label);
-  if(item.itemType==='todoStep')return compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.parentId}')">Edit to-do</button><button onclick="closeAnchoredMenu();toggleTodoStep('${item.parentId}','${item.id}')">${item.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteTodoStep('${item.parentId}','${item.id}')">Delete step</button>`,label);
-  if(item.itemType==='step')return compactMenu(`<button onclick="closeAnchoredMenu();editStep('${item.parentId}','${item.id}')">Edit step</button><button onclick="closeAnchoredMenu();toggleStep('${item.parentId}','${item.id}')">${item.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteProjectStep('${item.parentId}','${item.id}')">Delete step</button>`,label);
-  if(item.itemType==='cleaning')return compactMenu(`<button onclick="closeAnchoredMenu();editCleaning('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteCleaning('${item.id}')">Delete</button>`,label);
+  if(item.itemType==='todo')return compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteTodo('${item.id}')">Delete</button>`,label);
+  if(item.itemType==='todoStep')return compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.parentId}')">Edit to-do</button><button onclick="closeAnchoredMenu();toggleTodoStep('${item.parentId}','${item.id}')">${item.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteTodoStep('${item.parentId}','${item.id}')">Delete step</button>`,label);
+  if(item.itemType==='step')return compactMenu(`<button onclick="closeAnchoredMenu();editStep('${item.parentId}','${item.id}')">Edit step</button><button onclick="closeAnchoredMenu();toggleStep('${item.parentId}','${item.id}')">${item.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteProjectStep('${item.parentId}','${item.id}')">Delete step</button>`,label);
+  if(item.itemType==='cleaning')return compactMenu(`<button onclick="closeAnchoredMenu();editCleaning('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteCleaning('${item.id}')">Delete</button>`,label);
   if(item.itemType==='appointment')return compactMenu(`<button onclick="closeAnchoredMenu();openAppointmentDialog('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteAppointment('${item.id}')">Delete</button>`,label);
-  if(item.itemType==='annual'||item.annual)return compactMenu(`<button onclick="closeAnchoredMenu();editAnnual('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteAnnual('${item.id}')">Delete</button>`,label);
-  if(item.itemType==='recurring')return compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${item.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${item.id}')">Pause</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteRecurring('${item.id}')">Delete</button>`,label);
+  if(item.itemType==='annual'||item.annual)return compactMenu(`<button onclick="closeAnchoredMenu();editAnnual('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteAnnual('${item.id}')">Delete</button>`,label);
+  if(item.itemType==='recurring')return compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${item.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${item.id}')">Pause</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteRecurring('${item.id}')">Delete</button>`,label);
   if(item.itemType==='project')return compactMenu(`<button onclick="closeAnchoredMenu();editProject('${item.id}')">Manage</button><button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${item.id}')">Delete project</button>`,label);
   return '';
 }
-function v54iReminderRow(item,meta){
-  const row=compactReminderRow(item,{meta,actionable:item.itemType!=='annual',onComplete:item.itemType==='recurring'?()=>v54iAdvanceRecurringOccurrence(item.id):completionFor(item),clickable:true});
-  const menu=v54iReminderMenu(item);
+function v54jReminderRow(item,meta){
+  const row=compactReminderRow(item,{meta,actionable:item.itemType!=='annual',onComplete:item.itemType==='recurring'?()=>v54jAdvanceRecurringOccurrence(item.id):completionFor(item),clickable:true});
+  const menu=v54jReminderMenu(item);
   if(menu)row.insertAdjacentHTML('beforeend',menu);
   return row;
 }
@@ -4311,7 +4311,7 @@ renderTodayReminders=function(){
   items.forEach(item=>{
     const overdue=item.itemType!=='annual'&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
     const meta=`${item.source} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
-    area.appendChild(v54iReminderRow(item,meta));
+    area.appendChild(v54jReminderRow(item,meta));
   });
 };
 renderWeekly=function(){
@@ -4321,26 +4321,156 @@ renderWeekly=function(){
   items.forEach(item=>{
     const key=String(item.dueDate||'').slice(0,10);
     if(key!==current){current=key;const h=document.createElement('h3');h.className='timeline-date-heading home-week-date-heading';h.textContent=formatDate(key);area.appendChild(h);}
-    area.appendChild(v54iReminderRow(item,item.source||''));
+    area.appendChild(v54jReminderRow(item,item.source||''));
   });
 };
 // Normalize restored/legacy recurring records before any protected Home view is drawn.
-v54iNormaliseRecurringRecords();
-setTimeout(()=>{try{renderTodayReminders();renderWeekly();renderRecurringHome();}catch(e){console.error('v54i hardening refresh failed',e);}},150);
+v54jNormaliseRecurringRecords();
+setTimeout(()=>{try{renderTodayReminders();renderWeekly();renderRecurringHome();}catch(e){console.error('v54j hardening refresh failed',e);}},150);
 
 
-/* ===== v54i hardening correction =====
-   v54i accidentally called two v54g-only symbol names at the end of the file.
+/* ===== v54j hardening correction =====
+   v54j accidentally called two v54g-only symbol names at the end of the file.
    That ReferenceError stopped the final protected Home refresh from running, so
    older Home rows stayed on screen without their management menus/handlers.
 */
 setTimeout(()=>{
   try{
-    v54iNormaliseRecurringRecords();
+    v54jNormaliseRecurringRecords();
     renderTodayReminders();
     renderWeekly();
     renderRecurringHome();
     renderInbox();
     renderWaiting();
-  }catch(error){console.error('v54i protected workflow refresh failed',error);}
+  }catch(error){console.error('v54j protected workflow refresh failed',error);}
 },180);
+
+
+/* ===== v54j recurring interaction fix =====
+   The shared generic row controls have been overridden several times across releases.
+   Recurring completion now uses a dedicated button in both Home surfaces so the
+   tap/click path is explicit and independent of generic checkbox/row behaviour.
+*/
+function v54jRunRecurringCompletion(id, control){
+  if(control && control.dataset.busy==='1') return;
+  if(control){ control.dataset.busy='1'; control.setAttribute('aria-busy','true'); }
+  try{
+    const result=v54jAdvanceRecurringOccurrence(id);
+    if(!result?.ok && typeof showSaved==='function') showSaved('Could not complete recurring task');
+  }catch(error){
+    console.error('v54j recurring completion failed',error);
+    if(typeof showSaved==='function') showSaved('Recurring task could not be completed');
+  }finally{
+    if(control){ control.dataset.busy='0'; control.removeAttribute('aria-busy'); }
+  }
+}
+function v54jAdvanceRecurringOccurrence(id){
+  const task=(data.recurringTasks||[]).find(x=>String(x.id)===String(id));
+  if(!task || task.status==='paused' || task.status==='completed') return {ok:false,reason:'inactive'};
+  if(task.status!=='active') task.status='active';
+  const completedName=task.name||'Recurring task';
+  const completedAt=new Date();
+  const completedDue=task.nextDue||localDateKey();
+  task.lastCompleted=completedAt.toISOString();
+  task.completedOccurrences=(Number(task.completedOccurrences)||0)+1;
+  if(typeof v53aLogOnce==='function') v53aLogOnce('recurring',completedName,{itemId:id,dueDate:completedDue});
+  else if(typeof v52dLog==='function') v52dLog('recurring',completedName,{itemId:id,dueDate:completedDue});
+
+  let finished=false;
+  const endMode=typeof v54cR22EndMode==='function'?v54cR22EndMode(task):(task.endMode||'never');
+  if(endMode==='count' && task.completedOccurrences>=Math.max(1,Number(task.endCount)||1)){
+    task.status='completed'; task.completedAt=completedAt.toISOString(); finished=true;
+  }else{
+    let next=recurringDate(task.nextDue)||recurringDate(localDateKey());
+    const today=recurringDate(localDateKey());
+    let guard=0;
+    do{
+      next=addRecurringInterval(next,task.unit||'week',Math.max(1,Number(task.interval)||1),task);
+      guard++;
+      if(guard>400) throw new Error('Recurring date failed to advance');
+    }while(next<=today);
+    const nextKey=recurringDateKey(next);
+    if(endMode==='date' && task.endDate && dateOnly(nextKey)>dateOnly(task.endDate)){
+      task.status='completed'; task.completedAt=completedAt.toISOString(); finished=true;
+    }else{
+      task.nextDue=nextKey; task.status='active'; delete task.completedAt;
+    }
+  }
+  saveData();
+  // Redraw from saved data. No checked control is left behind.
+  renderAll();
+  try{renderTodayReminders();}catch(error){console.error(error);}
+  try{renderRecurringHome();}catch(error){console.error(error);}
+  try{renderRecurringTasks();}catch(error){console.error(error);}
+  try{renderWeekly();}catch(error){console.error(error);}
+  try{renderTimeline();}catch(error){console.error(error);}
+  if(typeof showSaved==='function') showSaved(finished?`${completedName} complete · recurrence finished`:`${completedName} complete · next due ${formatDate(task.nextDue)}`);
+  return {ok:true,finished,nextDue:finished?'':task.nextDue,name:completedName};
+}
+completeRecurringTask=function(id){ return v54jAdvanceRecurringOccurrence(id); };
+
+function v54jRecurringCompleteButton(task){
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='complete-dot recurring-complete-button v54j-recurring-complete';
+  button.setAttribute('aria-label',`Complete ${task.name||'recurring task'} and advance to next date`);
+  button.title='Complete this occurrence';
+  button.addEventListener('click',event=>{ event.preventDefault(); event.stopPropagation(); v54jRunRecurringCompletion(task.id,button); });
+  return button;
+}
+function v54jRecurringHomeRow(task){
+  const st=recurringStatus(task);
+  const row=document.createElement('div');
+  row.className=`v10-row ${dueClass(task.nextDue)}`;
+  const done=v54jRecurringCompleteButton(task);
+  const main=document.createElement('button');
+  main.type='button'; main.className='v10-row-main';
+  main.innerHTML=`<span class="v10-row-title">${escapeHtml(task.name||'Recurring task')}</span><span class="v10-row-meta">${escapeHtml(`${recurringPatternLabel(task)} · ${st.label}`)}</span>`;
+  main.addEventListener('click',()=>openRecurringTaskDialog(task.id));
+  row.append(done,main);
+  row.insertAdjacentHTML('beforeend',compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${task.id}')">Edit</button><button onclick="closeAnchoredMenu();v54jRunRecurringCompletion('${task.id}')">Complete</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${task.id}')">Pause</button><button class="danger-text" onclick="closeAnchoredMenu();v54iDeleteRecurring('${task.id}')">Delete</button>`,task.name||'Recurring task'));
+  return row;
+}
+renderRecurringHome=function(){
+  const area=document.getElementById('homeRecurringArea'); if(!area)return; area.innerHTML='';
+  const today=recurringDate(localDateKey());
+  const all=(data.recurringTasks||[]).filter(t=>t && t.status!=='paused' && t.status!=='completed' && t.nextDue && recurringDate(t.nextDue)<=today).sort((a,b)=>String(a.nextDue).localeCompare(String(b.nextDue)));
+  if(!all.length){area.innerHTML='<div class="empty-state">No recurring responsibilities are due.</div>';return;}
+  const expanded=typeof v54cR22Bool==='function'?v54cR22Bool(V54C_HOME_RECURRING_EXPANDED):false;
+  const tasks=expanded?all:all.slice(0,3);
+  tasks.forEach(task=>area.appendChild(v54jRecurringHomeRow(task)));
+  if(all.length>3 && typeof v54cR22PreviewButton==='function'){
+    const wrap=document.createElement('div');wrap.className='home-preview-actions';wrap.innerHTML=v54cR22PreviewButton(`Show all ${all.length}`,expanded,'toggleHomeRecurringPreview()');area.appendChild(wrap);
+  }
+};
+
+function v54jTodayRecurringRow(item,meta){
+  const task=(data.recurringTasks||[]).find(x=>String(x.id)===String(item.id))||item;
+  const overdue=item.dueDate && dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
+  const row=document.createElement('div');
+  row.className=`compact-reminder-row clickable-reminder${overdue?' overdue-row':''}`;
+  const done=v54jRecurringCompleteButton(task);
+  done.classList.add('compact-complete-dot');
+  const copy=document.createElement('div');copy.className='compact-copy';copy.innerHTML=`<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(meta||'')}</span>`;
+  row.append(done,copy);
+  const menu=v54iReminderMenu({...item,itemType:'recurring'});
+  if(menu) row.insertAdjacentHTML('beforeend',menu.replace('>Pause<','>Pause<').replace('</button><button class="danger-text"',`</button><button onclick="closeAnchoredMenu();v54jRunRecurringCompletion('${item.id}')">Complete</button><button class="danger-text"`));
+  row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label',`Open ${item.name}`);
+  row.addEventListener('click',event=>{if(event.target.closest('button,input,summary'))return;openRecurringTaskDialog(item.id);});
+  row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openRecurringTaskDialog(item.id);}});
+  return row;
+}
+renderTodayReminders=function(){
+  const area=document.getElementById('todayRemindersArea');if(!area)return;
+  const items=getTodayReminderItems();area.innerHTML='';
+  if(!items.length){area.innerHTML='<div class="empty-state">Nothing time-sensitive needs attention today.</div>';return;}
+  items.forEach(item=>{
+    const overdue=item.itemType!=='annual'&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
+    const meta=`${item.source} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
+    if(item.itemType==='recurring') area.appendChild(v54jTodayRecurringRow(item,meta));
+    else area.appendChild(v54iReminderRow(item,meta));
+  });
+};
+
+try{v54iNormaliseRecurringRecords();}catch(_){}
+setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();renderWeekly();renderTimeline();}catch(error){console.error('v54j recurring interaction refresh failed',error);}},200);

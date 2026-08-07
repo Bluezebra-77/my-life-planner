@@ -1,3 +1,6 @@
+## Corrected in v54j
+- Recurring completion circles rendered but did not respond reliably on iPhone Home views.
+
 # Bug and Usability Register - v51
 
 ## Closed for v51

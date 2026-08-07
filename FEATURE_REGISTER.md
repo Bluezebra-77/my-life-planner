@@ -1,3 +1,6 @@
+## v54j protected recurring interaction
+- Recurring completion uses a dedicated explicit button/action path in both Home surfaces.
+
 # Feature Register - v51
 
 ## Daily working flow
