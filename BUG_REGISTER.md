@@ -90,3 +90,10 @@
 
 ## Corrected in v54f
 - Installed iPhone PWA could remain on v54cR because the replacement worker could fail installation if any pre-cached optional asset was unavailable.
+
+## Corrected in v54g
+- Recurring tasks restored from older backups could be visible but refuse to advance because newer completion code required `status === active`. Legacy/non-paused records are now normalised and treated as active.
+
+## Corrected in v54h
+- Legacy/restored recurring tasks could appear but refuse to advance because status was missing or non-standard.
+- Home Today/This Week could navigate to an item without exposing its normal Edit/Delete management actions.
