@@ -1,4 +1,8 @@
 ## v54j
+## v54n — Birthday rollover
+- Annual dates now calculate and display the real next occurrence instead of using a placeholder year 2000.
+- Reminder remains configurable with a 7-day default; optional birth year is supported.
+
 ## v54m — Protected Render Fix
 - Fixed stale renderer symbol references in v54j that could clear Today and stop Home redraws.
 - Kept recurring completion logic isolated and improved backup import error handling.

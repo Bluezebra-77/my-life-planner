@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54m";
+const APP_VERSION="54n";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1095,7 +1095,10 @@ function editAnnual(id) {
   document.getElementById("itemName").value=item.name || "";
   document.getElementById("itemDetails").value=item.details || "";
   const tagsField=document.getElementById("itemTags"); if(tagsField) tagsField.value=tagsInputValue(item);
-  document.getElementById("annualDate").value=`2000-${item.monthDay}`;
+  const nextBirthday = nextAnnualOccurrence(item.monthDay);
+  document.getElementById("annualDate").value=nextBirthday ? localDateKey(nextBirthday) : "";
+  const birthYearField=document.getElementById("annualBirthYear");
+  if(birthYearField) birthYearField.value=item.birthYear || "";
   document.getElementById("annualReminderDays").value=item.reminderDays ?? 7;
   document.getElementById("dialogTitle").textContent="Edit annual date";
   updateFormVisibility();
@@ -1149,8 +1152,12 @@ addForm.addEventListener("submit",event=>{
     const annualDate=document.getElementById("annualDate").value;
     if(!annualDate)return;
     const monthDay=annualDate.slice(5);
+    const nextOccurrence=nextAnnualOccurrence(monthDay);
+    if(!nextOccurrence){ alert("Please enter a valid birthday or annual date."); return; }
     const oldAnnual=id?data.annualDates.find(x=>x.id===id):null;
-    const payload={id:id||uid(),name,details,tags:normaliseTags(document.getElementById("itemTags")?.value),monthDay,reminderDays:Number(document.getElementById("annualReminderDays").value||7),kind:"Birthday / annual date",steps:mergeEnteredSteps(oldAnnual?.steps||[],parseDatedSteps(document.getElementById("itemSteps")?.value||""),{})};
+    const birthYearRaw=String(document.getElementById("annualBirthYear")?.value||"").trim();
+    const birthYear=birthYearRaw ? Number(birthYearRaw) : null;
+    const payload={id:id||uid(),name,details,tags:normaliseTags(document.getElementById("itemTags")?.value),monthDay,birthYear:Number.isFinite(birthYear)&&birthYear>=1900&&birthYear<=new Date().getFullYear()?birthYear:null,reminderDays:Number(document.getElementById("annualReminderDays").value||7),kind:"Birthday / annual date",steps:mergeEnteredSteps(oldAnnual?.steps||[],parseDatedSteps(document.getElementById("itemSteps")?.value||""),{})};
     if(id) data.annualDates[data.annualDates.findIndex(x=>x.id===id)]=payload;
     else data.annualDates.push(payload);
     saveData(); closeAddDialog(); renderAll(); refreshListsImmediately(); return;
@@ -1739,7 +1746,7 @@ function showAnchoredMenu(button){
 document.addEventListener('click',e=>{if(activeAnchoredMenu&&!activeAnchoredMenu.contains(e.target)&&!e.target.closest('.item-menu-trigger'))closeAnchoredMenu();});
 window.addEventListener('scroll',closeAnchoredMenu,true); window.addEventListener('resize',closeAnchoredMenu);
 function compactMenu(actions,label){return `<span class="item-menu-anchor"><button type="button" class="item-menu-trigger" onclick="event.stopPropagation();showAnchoredMenu(this)" aria-label="Options for ${escapeHtml(label)}">⋯</button><span class="item-menu-template hidden">${actions}</span></span>`;}
-function renderAnnualDates(){const area=document.getElementById('annualArea');area.innerHTML='';if(!data.annualDates.length){area.innerHTML='<div class="empty-state">No birthdays or annual dates yet.</div>';return;}[...data.annualDates].sort((a,b)=>nextAnnualOccurrence(a.monthDay)-nextAnnualOccurrence(b.monthDay)).forEach(item=>{const next=nextAnnualOccurrence(item.monthDay),row=document.createElement('div');row.className='annual-manage-row';row.innerHTML=`<div><strong>${escapeHtml(item.name)}</strong><div class="card-meta">${next?next.toLocaleDateString('en-GB',{day:'numeric',month:'long'}):''}</div></div>${compactMenu(`<button onclick="closeAnchoredMenu();editAnnual('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteAnnual('${item.id}')">Delete</button>`,item.name)}`;area.appendChild(row);});}
+function renderAnnualDates(){const area=document.getElementById('annualArea');area.innerHTML='';if(!data.annualDates.length){area.innerHTML='<div class="empty-state">No birthdays or annual dates yet.</div>';return;}[...data.annualDates].sort((a,b)=>nextAnnualOccurrence(a.monthDay)-nextAnnualOccurrence(b.monthDay)).forEach(item=>{const next=nextAnnualOccurrence(item.monthDay),row=document.createElement('div');row.className='annual-manage-row';const nextText=next?next.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'}):'';const reminder=Number(item.reminderDays??7);const age=(item.birthYear&&next)?` · turns ${next.getFullYear()-Number(item.birthYear)}`:'';row.innerHTML=`<div><strong>${escapeHtml(item.name)}</strong><div class="card-meta">${nextText?`Next: ${escapeHtml(nextText)}`:''}${age} · reminder ${reminder} day${reminder===1?'':'s'} before</div></div>${compactMenu(`<button onclick="closeAnchoredMenu();editAnnual('${item.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteAnnual('${item.id}')">Delete</button>`,item.name)}`;area.appendChild(row);});}
 
 function addStepBuilderRow(builderId, step={}){
  const box=document.getElementById(builderId); if(!box)return;
@@ -1750,7 +1757,7 @@ function addStepBuilderRow(builderId, step={}){
  row.querySelector('.step-remove').onclick=()=>row.remove(); box.appendChild(row);
 }
 function loadStepBuilder(builderId,steps=[]){const box=document.getElementById(builderId);if(!box)return;box.innerHTML='';(steps||[]).forEach(s=>addStepBuilderRow(builderId,s));}
-function baseDateForSteps(builderId){if(builderId==='projectStepsBuilder'||builderId==='itemStepsBuilder'){const t=document.getElementById('itemType').value;if(t==='annual'){const v=document.getElementById('annualDate').value;return v||null;}return document.getElementById('dueDate').value||null;}return null;}
+function baseDateForSteps(builderId){if(builderId==='projectStepsBuilder'||builderId==='itemStepsBuilder'){const t=document.getElementById('itemType').value;if(t==='annual'){const v=document.getElementById('annualDate').value;if(!v)return null;const next=nextAnnualOccurrence(v.slice(5));return next?localDateKey(next):null;}return document.getElementById('dueDate').value||null;}return null;}
 function serializeStepBuilder(builderId){const box=document.getElementById(builderId),base=baseDateForSteps(builderId);if(!box)return '';return [...box.querySelectorAll('.step-builder-row')].map(row=>{const name=row.querySelector('.step-name-input').value.trim();if(!name)return null;const mode=row.querySelector('.step-date-mode').value;let date='';let leadDays=0;if(mode==='date')date=row.querySelector('.step-date-input').value||'';if(mode==='before'){leadDays=Number(row.querySelector('.step-before-input input').value||0);if(base){const d=new Date(base+'T12:00:00');d.setDate(d.getDate()-leadDays);date=d.toISOString().slice(0,10);}}return `${date} | ${name} | lead:${leadDays}`;}).filter(Boolean).join('\n');}
 function syncStepBuilders(){const a=document.getElementById('projectSteps');const b=document.getElementById('itemSteps');if(a)a.value=serializeStepBuilder('projectStepsBuilder');if(b)b.value=serializeStepBuilder('itemStepsBuilder');}
 

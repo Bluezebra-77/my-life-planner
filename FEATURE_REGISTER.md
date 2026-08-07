@@ -108,3 +108,11 @@
 
 ## v54m protected workflows
 - Home Today rendering and recurring completion are protected regression-gate workflows.
+
+
+## v54n protected birthday workflow
+- Birthdays store month/day as the annual recurrence source.
+- Next occurrence is calculated automatically each year.
+- Passed dates roll to the next year.
+- Reminder defaults to 7 days before.
+- Optional birth year is separate from recurrence year.

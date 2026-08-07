@@ -1,4 +1,4 @@
-> Current hardening baseline: **v54m**
+> Current hardening baseline: **v54n**
 
 # My Life Planner v54a — Workflow & Stability
 

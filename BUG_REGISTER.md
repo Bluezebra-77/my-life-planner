@@ -104,3 +104,8 @@
 ## v54m
 - Fixed: Today could blank after stale v54i function references were called by v54j.
 - Improved: backup import distinguishes planner JSON from an application ZIP.
+
+
+## v54n
+- Fixed annual-date editor showing artificial year 2000.
+- Fixed confusing annual-date display by showing the calculated next occurrence with year.
