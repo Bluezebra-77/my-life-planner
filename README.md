@@ -14,4 +14,4 @@ Use Lists → Projects → Templates to create reusable workflows.
 
 
 ## Protected Regression Gate
-From v54h onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54h.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.
+From v54i onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54i.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.

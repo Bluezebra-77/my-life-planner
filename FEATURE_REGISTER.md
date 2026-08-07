@@ -100,5 +100,5 @@
 - Network-only published-version check via version.json.
 - Controller-change fresh reload for installed PWA updates.
 
-## v54h protected workflow standard
+## v54i protected workflow standard
 - Accepted Home, recurrence, search, project, cleaning, routine and backup workflows are now treated as protected behaviours and must pass the regression gate before a release is accepted.

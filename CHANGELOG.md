@@ -88,6 +88,6 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 ## v54g
 - Fixed recurring completion for restored/legacy records without an explicit active status and unified recurring complete-and-advance behaviour across Home views.
 
-## v54h
+## v54i
 - Hardening release: recurring completion compatibility plus Home Today/This Week Edit/Delete management consistency.
 - Introduced a protected behavioural regression gate for accepted workflows.
