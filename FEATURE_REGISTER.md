@@ -90,3 +90,7 @@
 ## v54cR22
 - Recurring tasks may continue, end on a date, or end after a set number of occurrences.
 - Home Brain Inbox and Recurring Tasks previews expand on demand.
+
+## v54d
+- Recurring completion confirmation reports the next due date or finished recurrence.
+- Home Brain Inbox and Recurring preview controls use compact Show all / Show less actions.

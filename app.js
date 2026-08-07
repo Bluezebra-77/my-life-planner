@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54cR2";
+const APP_VERSION="54d";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -3861,3 +3861,98 @@ recurringTaskCard=function(task){
 
 function v54cR22Refresh(){renderRecurringTasks();renderRecurringHome();renderInbox();renderWeekly();renderTodayReminders();renderTimeline();}
 setTimeout(v54cR22Refresh,80);
+
+
+/* ===== v54d recurring completion workflow hardening ===== */
+function v54dRefreshRecurringViews(){
+  try{renderTodayReminders();}catch(e){console.error('Today refresh failed',e);}
+  try{renderRecurringHome();}catch(e){console.error('Recurring Home refresh failed',e);}
+  try{renderRecurringTasks();}catch(e){console.error('Recurring Lists refresh failed',e);}
+  try{renderWeekly();}catch(e){console.error('This Week refresh failed',e);}
+  try{renderTimeline();}catch(e){console.error('Timeline refresh failed',e);}
+  try{renderEveningReflection();}catch(e){}
+  try{renderHiddenStatistics();}catch(e){}
+}
+
+completeRecurringTask=function(id){
+  const task=(data.recurringTasks||[]).find(x=>String(x.id)===String(id));
+  if(!task||task.status!=='active')return;
+  const completedName=task.name||'Recurring task';
+  const completedAt=new Date();
+  task.lastCompleted=completedAt.toISOString();
+  task.completedOccurrences=(Number(task.completedOccurrences)||0)+1;
+  if(typeof v53aLogOnce==='function')v53aLogOnce('recurring',completedName,{itemId:id});
+  else if(typeof v52dLog==='function')v52dLog('recurring',completedName,{itemId:id});
+
+  let finished=false;
+  if(v54cR22EndMode(task)==='count'&&task.completedOccurrences>=Math.max(1,Number(task.endCount)||1)){
+    task.status='completed';
+    task.completedAt=completedAt.toISOString();
+    finished=true;
+  }else{
+    let next=recurringDate(task.nextDue)||recurringDate(localDateKey());
+    const today=recurringDate(localDateKey());
+    do{next=addRecurringInterval(next,task.unit,task.interval,task);}while(next<=today);
+    const nextKey=recurringDateKey(next);
+    if(v54cR22EndMode(task)==='date'&&task.endDate&&dateOnly(nextKey)>dateOnly(task.endDate)){
+      task.status='completed';
+      task.completedAt=completedAt.toISOString();
+      finished=true;
+    }else{
+      task.nextDue=nextKey;
+      task.status='active';
+    }
+  }
+
+  saveData();
+  // Re-render the whole application first, then explicitly refresh every time-based
+  // surface. This prevents the checkbox from remaining visually ticked after the
+  // occurrence has already advanced in storage.
+  renderAll();
+  requestAnimationFrame(v54dRefreshRecurringViews);
+
+  if(typeof showSaved==='function'){
+    if(finished)showSaved(`${completedName} complete · recurrence finished`);
+    else showSaved(`${completedName} complete · next due ${formatDate(task.nextDue)}`);
+  }
+};
+
+// Make the recurring completion control behave like the other completion circles.
+// The three-dot menu remains for management only.
+renderRecurringHome=function(){
+  const area=document.getElementById('homeRecurringArea');if(!area)return;area.innerHTML='';
+  const today=recurringDate(localDateKey());
+  const all=(data.recurringTasks||[]).filter(t=>t.status==='active'&&t.nextDue&&recurringDate(t.nextDue)<=today).sort((a,b)=>String(a.nextDue).localeCompare(String(b.nextDue)));
+  if(!all.length){area.innerHTML='<div class="empty-state">No recurring responsibilities are due.</div>';return;}
+  const expanded=v54cR22Bool(V54C_HOME_RECURRING_EXPANDED),tasks=expanded?all:all.slice(0,3);
+  tasks.forEach(task=>{
+    const st=recurringStatus(task);
+    const row=makeV10Row({name:task.name,meta:`${recurringPatternLabel(task)} · ${st.label}`,dueDate:task.nextDue,action:()=>completeRecurringTask(task.id),open:()=>openRecurringTaskDialog(task.id)},
+      {menu:compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${task.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${task.id}')">Pause</button>`,task.name)});
+    area.appendChild(row);
+  });
+  if(all.length>3){const wrap=document.createElement('div');wrap.className='home-preview-actions';wrap.innerHTML=v54cR22PreviewButton(`Show all ${all.length}`,expanded,'toggleHomeRecurringPreview()');area.appendChild(wrap);}
+};
+
+// Harden the Today completion workflow for recurring items: use a button-style
+// completion circle rather than leaving a native checkbox checked while views refresh.
+const v54dCompactReminderBase=compactReminderRow;
+compactReminderRow=function(item,options={}){
+  if(item?.itemType!=='recurring'||!options.actionable)return v54dCompactReminderBase(item,options);
+  const row=document.createElement('div');
+  const overdue=item.dueDate&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
+  row.className=`compact-reminder-row${options.clickable?' clickable-reminder':''}${overdue?' overdue-row':''}`;
+  const done=document.createElement('button');done.type='button';done.className='complete-dot compact-complete-dot';done.setAttribute('aria-label',`Complete ${item.name}`);done.setAttribute('title','Complete and advance recurrence');
+  done.onclick=event=>{event.stopPropagation();done.disabled=true;completeRecurringTask(item.id);};
+  const copy=document.createElement('div');copy.className='compact-copy';copy.innerHTML=`<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(options.meta||'')}</span>`;
+  row.append(done,copy);
+  if(options.badge){const badge=document.createElement('span');badge.className='compact-badge';badge.textContent=options.badge;row.appendChild(badge);}
+  if(options.clickable){row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label',`Open ${item.name}`);row.addEventListener('click',event=>{if(event.target.closest('button,input'))return;openReminderItem(item);});row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openReminderItem(item);}});}
+  return row;
+};
+
+// Keep the preview controls visually light rather than full-width action buttons.
+v54cR22PreviewButton=function(label,expanded,onclick){return `<button type="button" class="home-preview-toggle secondary-button" onclick="${onclick}">${expanded?'Show less ↑':label+' ↓'}</button>`;};
+
+function v54dRefresh(){v54dRefreshRecurringViews();renderInbox();}
+setTimeout(v54dRefresh,100);

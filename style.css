@@ -1596,3 +1596,10 @@ body.timer-minimised .quick-add-fab{
 /* v54c recurring limits and Home preview controls */
 .home-preview-actions{display:flex;justify-content:center;margin-top:.75rem}.home-preview-toggle{width:auto;min-width:150px;padding:.65rem 1rem}.recurring-rule-summary{min-height:1.4em}
 @media(max-width:560px){.home-preview-toggle{width:100%}}
+
+/* v54d recurring workflow polish */
+.compact-complete-dot{margin:0;align-self:center}
+.home-preview-actions{display:flex;justify-content:center;margin-top:.6rem}
+.home-preview-toggle{width:auto!important;min-width:0!important;padding:.45rem .75rem!important;border-radius:999px!important;font-size:.82rem!important;box-shadow:none!important;background:transparent!important;color:var(--accent)!important;border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)!important}
+.home-preview-toggle:hover{background:var(--accent-soft)!important}
+@media(max-width:560px){.home-preview-toggle{width:auto!important;max-width:100%}}

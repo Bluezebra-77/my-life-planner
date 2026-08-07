@@ -79,3 +79,7 @@
 ## Corrected in v54cR22
 - Newly advanced recurring occurrences were visible in Timeline but missing from Home This Week.
 - Home Brain Inbox preview had no way to reveal captures beyond the first three.
+
+## Corrected in v54d
+- Recurring item in Home Today could remain visibly checked instead of disappearing and advancing.
+- Recurring Home completion control could require the three-dot menu rather than the visible completion circle.
