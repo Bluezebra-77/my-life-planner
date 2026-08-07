@@ -83,3 +83,7 @@
 ## Corrected in v54d
 - Recurring item in Home Today could remain visibly checked instead of disappearing and advancing.
 - Recurring Home completion control could require the three-dot menu rather than the visible completion circle.
+
+## Corrected in v54e
+- Installed iPhone PWA could remain on an older release while desktop and Safari showed the new release.
+- Manual update check could falsely report the current version because it checked worker waiting state before installation completed.

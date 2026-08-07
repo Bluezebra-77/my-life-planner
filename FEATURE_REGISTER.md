@@ -94,3 +94,8 @@
 ## v54d
 - Recurring completion confirmation reports the next due date or finished recurrence.
 - Home Brain Inbox and Recurring preview controls use compact Show all / Show less actions.
+
+## v54e infrastructure
+- Stable service-worker registration URL.
+- Network-only published-version check via version.json.
+- Controller-change fresh reload for installed PWA updates.
