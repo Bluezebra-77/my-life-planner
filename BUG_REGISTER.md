@@ -88,5 +88,5 @@
 - Installed iPhone PWA could remain on an older release while desktop and Safari showed the new release.
 - Manual update check could falsely report the current version because it checked worker waiting state before installation completed.
 
-## Corrected in v54eR
+## Corrected in v54f
 - Installed iPhone PWA could remain on v54cR because the replacement worker could fail installation if any pre-cached optional asset was unavailable.

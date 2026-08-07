@@ -82,5 +82,5 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 - Rebuilt PWA update discovery around a stable service-worker URL and a network-only version manifest.
 - Added reliable asynchronous update detection and fresh reload after worker activation.
 
-## v54eR
+## v54f
 - Transition-safe service-worker installation; optional missing files can no longer block a PWA update.

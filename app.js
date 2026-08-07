@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54eR";
+const APP_VERSION="54f";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4037,3 +4037,96 @@ v54cR22PreviewButton=function(label,expanded,onclick){return `<button type="butt
 
 function v54dRefresh(){v54dRefreshRecurringViews();renderInbox();}
 setTimeout(v54dRefresh,100);
+
+
+/* ===== v54f recurring completion — single source of truth ===== */
+function v54fRecurringIsFinished(task){return task?.status==='completed';}
+function v54fAdvanceRecurringOccurrence(id){
+  const task=(data.recurringTasks||[]).find(x=>String(x.id)===String(id));
+  if(!task||task.status!=='active')return {ok:false};
+  const completedName=task.name||'Recurring task';
+  const completedAt=new Date();
+  const completedDue=task.nextDue||localDateKey();
+  task.lastCompleted=completedAt.toISOString();
+  task.completedOccurrences=(Number(task.completedOccurrences)||0)+1;
+
+  // One activity record for the completed occurrence.
+  if(typeof v53aLogOnce==='function')v53aLogOnce('recurring',completedName,{itemId:id,dueDate:completedDue});
+  else if(typeof v52dLog==='function')v52dLog('recurring',completedName,{itemId:id,dueDate:completedDue});
+
+  let finished=false;
+  const endMode=typeof v54cR22EndMode==='function'?v54cR22EndMode(task):(task.endMode||'never');
+  if(endMode==='count'&&task.completedOccurrences>=Math.max(1,Number(task.endCount)||1)){
+    task.status='completed';task.completedAt=completedAt.toISOString();finished=true;
+  }else{
+    let next=recurringDate(task.nextDue)||recurringDate(localDateKey());
+    const today=recurringDate(localDateKey());
+    // A completed occurrence can never remain due today/overdue. Always advance
+    // until the next occurrence is strictly after today.
+    do{next=addRecurringInterval(next,task.unit,task.interval,task);}while(next<=today);
+    const nextKey=recurringDateKey(next);
+    if(endMode==='date'&&task.endDate&&dateOnly(nextKey)>dateOnly(task.endDate)){
+      task.status='completed';task.completedAt=completedAt.toISOString();finished=true;
+    }else{
+      task.nextDue=nextKey;task.status='active';delete task.completedAt;
+    }
+  }
+  saveData();
+  // Re-render synchronously so the completed occurrence disappears immediately.
+  renderAll();
+  try{renderTodayReminders();}catch(_){}
+  try{renderRecurringHome();}catch(_){}
+  try{renderRecurringTasks();}catch(_){}
+  try{renderWeekly();}catch(_){}
+  try{renderTimeline();}catch(_){}
+  try{renderEveningReflection();}catch(_){}
+  try{renderHiddenStatistics();}catch(_){}
+  const result={ok:true,finished,nextDue:finished?'':task.nextDue,name:completedName};
+  if(typeof showSaved==='function')showSaved(finished?`${completedName} complete · recurrence finished`:`${completedName} complete · next due ${formatDate(task.nextDue)}`);
+  return result;
+}
+completeRecurringTask=function(id){return v54fAdvanceRecurringOccurrence(id);};
+
+// Today uses a dedicated recurring completion button instead of a checkbox. This
+// prevents an old checked control remaining on screen after the recurrence advances.
+renderTodayReminders=function(){
+  const area=document.getElementById('todayRemindersArea');if(!area)return;
+  const items=getTodayReminderItems();area.innerHTML='';
+  if(!items.length){area.innerHTML='<div class="empty-state">Nothing time-sensitive needs attention today.</div>';return;}
+  items.forEach(item=>{
+    const overdue=item.itemType!=='annual'&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
+    const meta=`${item.source} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
+    if(item.itemType==='recurring'){
+      const row=document.createElement('div');row.className=`compact-reminder-row clickable-reminder${overdue?' overdue-row':''}`;
+      const done=document.createElement('button');done.type='button';done.className='complete-dot compact-complete-dot recurring-complete-button';done.setAttribute('aria-label',`Complete ${item.name} and advance recurrence`);done.title='Complete and move to the next occurrence';
+      done.addEventListener('click',event=>{event.stopPropagation();if(done.disabled)return;done.disabled=true;v54fAdvanceRecurringOccurrence(item.id);});
+      const copy=document.createElement('div');copy.className='compact-copy';copy.innerHTML=`<strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(meta)}</span>`;
+      row.append(done,copy);row.tabIndex=0;row.setAttribute('role','button');row.setAttribute('aria-label',`Open ${item.name}`);
+      row.addEventListener('click',event=>{if(event.target.closest('button,input'))return;openRecurringTaskDialog(item.id);});
+      row.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openRecurringTaskDialog(item.id);}});
+      area.appendChild(row);return;
+    }
+    area.appendChild(compactReminderRow(item,{meta,actionable:item.itemType!=='annual',onComplete:completionFor(item),clickable:true}));
+  });
+};
+
+// Home recurring preview uses the same complete-and-advance action.
+renderRecurringHome=function(){
+  const area=document.getElementById('homeRecurringArea');if(!area)return;area.innerHTML='';
+  const today=recurringDate(localDateKey());
+  const all=(data.recurringTasks||[]).filter(t=>t.status==='active'&&t.nextDue&&recurringDate(t.nextDue)<=today).sort((a,b)=>String(a.nextDue).localeCompare(String(b.nextDue)));
+  if(!all.length){area.innerHTML='<div class="empty-state">No recurring responsibilities are due.</div>';return;}
+  const expanded=typeof v54cR22Bool==='function'?v54cR22Bool(V54C_HOME_RECURRING_EXPANDED):false;
+  const tasks=expanded?all:all.slice(0,3);
+  tasks.forEach(task=>{
+    const st=recurringStatus(task);
+    const row=makeV10Row({name:task.name,meta:`${recurringPatternLabel(task)} · ${st.label}`,dueDate:task.nextDue,action:()=>v54fAdvanceRecurringOccurrence(task.id),open:()=>openRecurringTaskDialog(task.id)},
+      {menu:compactMenu(`<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${task.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleRecurringPause('${task.id}')">Pause</button>`,task.name)});
+    area.appendChild(row);
+  });
+  if(all.length>3&&typeof v54cR22PreviewButton==='function'){
+    const wrap=document.createElement('div');wrap.className='home-preview-actions';wrap.innerHTML=v54cR22PreviewButton(`Show all ${all.length}`,expanded,'toggleHomeRecurringPreview()');area.appendChild(wrap);
+  }
+};
+
+setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();}catch(e){console.error('v54f recurring refresh failed',e);}},120);

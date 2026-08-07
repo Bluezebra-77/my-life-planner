@@ -1603,3 +1603,6 @@ body.timer-minimised .quick-add-fab{
 .home-preview-toggle{width:auto!important;min-width:0!important;padding:.45rem .75rem!important;border-radius:999px!important;font-size:.82rem!important;box-shadow:none!important;background:transparent!important;color:var(--accent)!important;border:1px solid color-mix(in srgb,var(--accent) 35%,transparent)!important}
 .home-preview-toggle:hover{background:var(--accent-soft)!important}
 @media(max-width:560px){.home-preview-toggle{width:auto!important;max-width:100%}}
+
+/* v54f recurring completion control */
+.recurring-complete-button{appearance:none;-webkit-appearance:none;display:grid;place-items:center;flex:0 0 auto;cursor:pointer}.recurring-complete-button:disabled{opacity:.45;cursor:wait}.recurring-complete-button::after{content:""}.recurring-complete-button:hover{transform:scale(1.04)}
