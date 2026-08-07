@@ -106,5 +106,5 @@
 ## v54i protected workflow standard
 - Accepted Home, recurrence, search, project, cleaning, routine and backup workflows are now treated as protected behaviours and must pass the regression gate before a release is accepted.
 
-## v54l protected workflows
+## v54m protected workflows
 - Home Today rendering and recurring completion are protected regression-gate workflows.

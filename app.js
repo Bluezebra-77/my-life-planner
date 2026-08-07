@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54l";
+const APP_VERSION="54m";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -3512,7 +3512,7 @@ renderProjects=function(){
   const openStates=getProjectStepStates();[...projects].sort(sortByDueDate).forEach(project=>{const steps=Array.isArray(project.steps)?project.steps:[];const complete=steps.length>0&&steps.every(s=>s.completed);project.completed=complete;const count=steps.filter(s=>s.completed).length;const row=document.createElement('div');row.className=`compact-manage-row project-compact-row ${complete?'completed-row':''}`;const actions=`<button onclick="closeAnchoredMenu();openAddDialog('step','${project.id}')">Add step</button><button onclick="closeAnchoredMenu();editProject('${project.id}')">Edit project</button><button onclick="closeAnchoredMenu();saveProjectAsTemplate('${project.id}')">Save as template</button><button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${project.id}');refreshListsImmediately()">Delete project</button>`;row.innerHTML=`<button type="button" class="project-expand-button" onclick="toggleProjectSteps('${project.id}')" aria-expanded="${Boolean(openStates[project.id])}">${openStates[project.id]?'▾':'▸'}</button><button type="button" class="compact-row-main" onclick="toggleProjectSteps('${project.id}')"><span class="compact-row-title">${escapeHtml(project.name||'Untitled project')}</span><span class="compact-row-meta">${steps.length?`${count} of ${steps.length} steps`:'No steps'}</span></button>${compactMenu(actions,project.name||'project')}`;area.appendChild(row);const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];steps.forEach((step,index)=>{const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row ${step.completed?'completed-row':''}`;const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button><button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;group.appendChild(sr);});area.appendChild(group);});
 };
 
-function v53aLogOnce(type,name,meta={}){const log=v52dActivity();const key=`${type}:${meta.itemId||meta.projectId||meta.parentId||name}:${localDateKey()}`;if(log.some(e=>e.dedupeKey===key))return;v52dLog(type,name,{...meta,dedupeKey:key});}
+function v53aLogOnce(type,name,meta={}){const log=typeof v52dRead==='function'?v52dRead(V52D_ACTIVITY_KEY,[]):[];const key=`${type}:${meta.itemId||meta.projectId||meta.parentId||name}:${localDateKey()}`;if(log.some(e=>e.dedupeKey===key))return;if(typeof v52dLog==='function')v52dLog(type,name,{...meta,dedupeKey:key});}
 const v53aToggleTodo=toggleTodo;toggleTodo=function(id){const item=data.todos.find(x=>String(x.id)===String(id)),was=Boolean(item?.completed);v53aToggleTodo(id);if(item&&!was&&item.completed){item.completedAt=new Date().toISOString();v53aLogOnce('todo',item.name,{itemId:id});saveData();}renderEveningReflection();};
 const v53aToggleTodoStep=toggleTodoStep;toggleTodoStep=function(todoId,stepId){const todo=data.todos.find(x=>String(x.id)===String(todoId)),step=todo?.steps?.find(x=>String(x.id)===String(stepId)),was=Boolean(step?.completed);v53aToggleTodoStep(todoId,stepId);if(step&&!was&&step.completed){step.completedAt=new Date().toISOString();v53aLogOnce('todoStep',step.name,{itemId:stepId,parentId:todoId});saveData();}renderEveningReflection();};
 const v53aToggleStep=toggleStep;toggleStep=function(projectId,stepId){const project=data.projects.find(x=>String(x.id)===String(projectId)),step=project?.steps?.find(x=>String(x.id)===String(stepId)),was=Boolean(step?.completed);v53aToggleStep(projectId,stepId);if(step&&!was&&step.completed){step.completedAt=new Date().toISOString();v53aLogOnce('projectStep',step.name,{itemId:stepId,projectId});saveData();}renderEveningReflection();};
@@ -4481,19 +4481,19 @@ renderTodayReminders=function(){
 try{v54jNormaliseRecurringRecords();}catch(_){}
 setTimeout(()=>{try{renderTodayReminders();renderRecurringHome();renderWeekly();renderTimeline();}catch(error){console.error('v54j recurring interaction refresh failed',error);}},200);
 
-/* ===== v54l canonical recurring advance fix =====
+/* ===== v54m canonical recurring advance fix =====
    Protected workflow: completing a recurring occurrence MUST either finish the
    recurrence or move nextDue strictly beyond today's date. Legacy unit labels
    from restored backups are normalised here so an unrecognised unit can never
    leave nextDue unchanged and strand the task in Today.
 */
-function v54lRecurringUnit(value){
+function v54mRecurringUnit(value){
   const raw=String(value||'week').trim().toLowerCase();
   const map={day:'day',days:'day',daily:'day',week:'week',weeks:'week',weekly:'week',month:'month',months:'month',monthly:'month',year:'year',years:'year',yearly:'year',annually:'year',annual:'year'};
   return map[raw]||'week';
 }
-function v54lNextRecurringDate(task,fromDate){
-  const unit=v54lRecurringUnit(task?.unit);
+function v54mNextRecurringDate(task,fromDate){
+  const unit=v54mRecurringUnit(task?.unit);
   const interval=Math.max(1,Number(task?.interval)||1);
   let next=addRecurringInterval(new Date(fromDate),unit,interval,task||{});
   // Hard safety: the next date must move forwards. If legacy data causes the
@@ -4507,11 +4507,11 @@ function v54lNextRecurringDate(task,fromDate){
   }
   return next;
 }
-function v54lAdvanceRecurringOccurrence(id){
+function v54mAdvanceRecurringOccurrence(id){
   const task=(data.recurringTasks||[]).find(x=>String(x.id)===String(id));
   if(!task||task.status==='paused'||task.status==='completed')return {ok:false,reason:'inactive'};
   task.status='active';
-  task.unit=v54lRecurringUnit(task.unit);
+  task.unit=v54mRecurringUnit(task.unit);
   const completedName=task.name||'Recurring task';
   const completedAt=new Date();
   const completedDue=task.nextDue||localDateKey();
@@ -4530,7 +4530,7 @@ function v54lAdvanceRecurringOccurrence(id){
     let guard=0;
     do{
       const before=new Date(next);
-      next=v54lNextRecurringDate(task,before);
+      next=v54mNextRecurringDate(task,before);
       guard++;
       if(guard>400)throw new Error('Recurring date failed to advance');
     }while(next<=today);
@@ -4544,19 +4544,19 @@ function v54lAdvanceRecurringOccurrence(id){
   saveData();
   // Refresh only after persisted nextDue/status is final.
   renderAll();
-  try{renderTodayReminders();}catch(error){console.error('v54l Today refresh',error);}
-  try{renderRecurringHome();}catch(error){console.error('v54l recurring Home refresh',error);}
-  try{renderRecurringTasks();}catch(error){console.error('v54l recurring Lists refresh',error);}
-  try{renderWeekly();}catch(error){console.error('v54l This Week refresh',error);}
-  try{renderTimeline();}catch(error){console.error('v54l Timeline refresh',error);}
+  try{renderTodayReminders();}catch(error){console.error('v54m Today refresh',error);}
+  try{renderRecurringHome();}catch(error){console.error('v54m recurring Home refresh',error);}
+  try{renderRecurringTasks();}catch(error){console.error('v54m recurring Lists refresh',error);}
+  try{renderWeekly();}catch(error){console.error('v54m This Week refresh',error);}
+  try{renderTimeline();}catch(error){console.error('v54m Timeline refresh',error);}
   if(typeof showSaved==='function')showSaved(finished?`${completedName} complete · recurrence finished`:`${completedName} complete · next due ${formatDate(task.nextDue)}`);
   return {ok:true,finished,nextDue:finished?'':task.nextDue,name:completedName};
 }
-v54jAdvanceRecurringOccurrence=v54lAdvanceRecurringOccurrence;
-completeRecurringTask=v54lAdvanceRecurringOccurrence;
+v54jAdvanceRecurringOccurrence=v54mAdvanceRecurringOccurrence;
+completeRecurringTask=v54mAdvanceRecurringOccurrence;
 // Normalise legacy unit names once at startup without changing valid schedules.
 try{
   let changed=false;
-  (data.recurringTasks||[]).forEach(task=>{const unit=v54lRecurringUnit(task.unit);if(task.unit!==unit){task.unit=unit;changed=true;}});
+  (data.recurringTasks||[]).forEach(task=>{const unit=v54mRecurringUnit(task.unit);if(task.unit!==unit){task.unit=unit;changed=true;}});
   if(changed)saveData();
-}catch(error){console.error('v54l recurrence normalisation',error);}
+}catch(error){console.error('v54m recurrence normalisation',error);}

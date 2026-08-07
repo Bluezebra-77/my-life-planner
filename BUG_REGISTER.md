@@ -101,6 +101,6 @@
 - Legacy/restored recurring tasks could appear but refuse to advance because status was missing or non-standard.
 - Home Today/This Week could navigate to an item without exposing its normal Edit/Delete management actions.
 
-## v54l
+## v54m
 - Fixed: Today could blank after stale v54i function references were called by v54j.
 - Improved: backup import distinguishes planner JSON from an application ZIP.
