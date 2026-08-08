@@ -1,3 +1,8 @@
+## v54r — Undo Project Step Completion (8 August 2026)
+- Renames the completed project-step action to Mark incomplete.
+- Reverses project-step completion metadata and its activity/statistics record when reopened.
+- No other functional changes.
+
 ## v54q — Project Step Reordering (8 August 2026)
 - Adds Move up / Move down to project-step menus only.
 - Saves project step order and refreshes project Next-step views without altering dates or completion state.

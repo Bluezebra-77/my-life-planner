@@ -1,3 +1,9 @@
+## v54r — Undo / Mark Incomplete (Phase 1)
+- Scope: project steps only.
+- Completed project steps can be reopened using Mark incomplete.
+- Undo removes the completion timestamp and corresponding activity record.
+- Recurring-task undo is deliberately excluded from this phase.
+
 ## v54j protected recurring interaction
 - Recurring completion uses a dedicated explicit button/action path in both Home surfaces.
 

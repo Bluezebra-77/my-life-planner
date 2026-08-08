@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54q";
+const APP_VERSION="54r";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -2354,7 +2354,7 @@ function renderProjects() {
     const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];
     steps.forEach((step,index)=>{
       const stepRow=document.createElement('div');stepRow.className=`compact-manage-row nested-compact-row ${step.completed?'completed-row':''}`;
-      const stepActions=`<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark active':'Complete step'}</button><button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
+      const stepActions=`<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button><button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
       stepRow.innerHTML=`<button type="button" class="compact-row-main" onclick="toggleStep('${project.id}','${step.id}');refreshListsImmediately()"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}</span></button>${compactMenu(stepActions,step.name||'project step')}`;
       group.appendChild(stepRow);
     });
@@ -3530,7 +3530,7 @@ editCleaning=function(id){v53aEditCleaningBase(id);setTimeout(v53aAddCleaningRoo
 renderProjects=function(){
   const area=document.getElementById('projectsArea');if(!area)return;area.innerHTML='';const projects=Array.isArray(data.projects)?data.projects:[];
   if(!projects.length){area.innerHTML='<div class="empty-state">No projects are saved yet.</div>';return;}
-  const openStates=getProjectStepStates();[...projects].sort(sortByDueDate).forEach(project=>{const steps=Array.isArray(project.steps)?project.steps:[];const complete=steps.length>0&&steps.every(s=>s.completed);project.completed=complete;const count=steps.filter(s=>s.completed).length;const row=document.createElement('div');row.className=`compact-manage-row project-compact-row ${complete?'completed-row':''}`;const actions=`<button onclick="closeAnchoredMenu();openAddDialog('step','${project.id}')">Add step</button><button onclick="closeAnchoredMenu();editProject('${project.id}')">Edit project</button><button onclick="closeAnchoredMenu();saveProjectAsTemplate('${project.id}')">Save as template</button><button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${project.id}');refreshListsImmediately()">Delete project</button>`;row.innerHTML=`<button type="button" class="project-expand-button" onclick="toggleProjectSteps('${project.id}')" aria-expanded="${Boolean(openStates[project.id])}">${openStates[project.id]?'▾':'▸'}</button><button type="button" class="compact-row-main" onclick="toggleProjectSteps('${project.id}')"><span class="compact-row-title">${escapeHtml(project.name||'Untitled project')}</span><span class="compact-row-meta">${steps.length?`${count} of ${steps.length} steps`:'No steps'}</span></button>${compactMenu(actions,project.name||'project')}`;area.appendChild(row);const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];steps.forEach((step,index)=>{const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row ${step.completed?'completed-row':''}`;const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button><button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;group.appendChild(sr);});area.appendChild(group);});
+  const openStates=getProjectStepStates();[...projects].sort(sortByDueDate).forEach(project=>{const steps=Array.isArray(project.steps)?project.steps:[];const complete=steps.length>0&&steps.every(s=>s.completed);project.completed=complete;const count=steps.filter(s=>s.completed).length;const row=document.createElement('div');row.className=`compact-manage-row project-compact-row ${complete?'completed-row':''}`;const actions=`<button onclick="closeAnchoredMenu();openAddDialog('step','${project.id}')">Add step</button><button onclick="closeAnchoredMenu();editProject('${project.id}')">Edit project</button><button onclick="closeAnchoredMenu();saveProjectAsTemplate('${project.id}')">Save as template</button><button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${project.id}');refreshListsImmediately()">Delete project</button>`;row.innerHTML=`<button type="button" class="project-expand-button" onclick="toggleProjectSteps('${project.id}')" aria-expanded="${Boolean(openStates[project.id])}">${openStates[project.id]?'▾':'▸'}</button><button type="button" class="compact-row-main" onclick="toggleProjectSteps('${project.id}')"><span class="compact-row-title">${escapeHtml(project.name||'Untitled project')}</span><span class="compact-row-meta">${steps.length?`${count} of ${steps.length} steps`:'No steps'}</span></button>${compactMenu(actions,project.name||'project')}`;area.appendChild(row);const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];steps.forEach((step,index)=>{const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row ${step.completed?'completed-row':''}`;const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button><button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;group.appendChild(sr);});area.appendChild(group);});
 };
 
 function v53aLogOnce(type,name,meta={}){const log=typeof v52dRead==='function'?v52dRead(V52D_ACTIVITY_KEY,[]):[];const key=`${type}:${meta.itemId||meta.projectId||meta.parentId||name}:${localDateKey()}`;if(log.some(e=>e.dedupeKey===key))return;if(typeof v52dLog==='function')v52dLog(type,name,{...meta,dedupeKey:key});}
@@ -3817,7 +3817,7 @@ renderProjects=function(){
     const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];
     steps.forEach((step,index)=>{
       const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row project-step-manage-row ${step.completed?'completed-row':''}`;
-      const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
+      const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
       sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;
       group.appendChild(sr);
     });
@@ -4600,3 +4600,32 @@ try{
   (data.recurringTasks||[]).forEach(task=>{const unit=v54mRecurringUnit(task.unit);if(task.unit!==unit){task.unit=unit;changed=true;}});
   if(changed)saveData();
 }catch(error){console.error('v54m recurrence normalisation',error);}
+
+
+/* ===== v54r Undo / Mark Incomplete — Project Steps only ===== */
+function v54rRemoveProjectStepCompletionLog(projectId, stepId, stepName){
+  if(typeof v52dRead!=='function' || typeof v52dWrite!=='function') return;
+  const log=v52dRead(V52D_ACTIVITY_KEY,[]);
+  const filtered=log.filter(event=>{
+    if(event?.type!=='projectStep') return true;
+    if(event.itemId!=null && String(event.itemId)===String(stepId)) return false;
+    // Compatibility with older project-step activity records that pre-date itemId.
+    if(event.itemId==null && String(event.projectId||'')===String(projectId) && String(event.name||'')===String(stepName||'')) return false;
+    return true;
+  });
+  if(filtered.length!==log.length) v52dWrite(V52D_ACTIVITY_KEY,filtered);
+}
+const v54rToggleStepBase=toggleStep;
+toggleStep=function(projectId,stepId){
+  const project=(data.projects||[]).find(item=>String(item.id)===String(projectId));
+  const step=project?.steps?.find(item=>String(item.id)===String(stepId));
+  const wasComplete=Boolean(step?.completed);
+  v54rToggleStepBase(projectId,stepId);
+  if(step && wasComplete && !step.completed){
+    step.completedAt=null;
+    v54rRemoveProjectStepCompletionLog(projectId,stepId,step.name);
+    saveData();
+    if(typeof renderEveningReflection==='function') renderEveningReflection();
+    if(typeof renderHiddenStatistics==='function') renderHiddenStatistics();
+  }
+};
