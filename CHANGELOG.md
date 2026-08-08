@@ -1,3 +1,9 @@
+## v54s — Undo Ordinary To-do Completion (8 August 2026)
+- Adds explicit Mark incomplete for completed ordinary to-dos and to-do steps.
+- Reverses their completion metadata and matching activity/statistics record when reopened.
+- Recurring tasks are not changed.
+- No other functional changes.
+
 ## v54r — Undo Project Step Completion (8 August 2026)
 - Renames the completed project-step action to Mark incomplete.
 - Reverses project-step completion metadata and its activity/statistics record when reopened.

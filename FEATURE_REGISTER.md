@@ -1,3 +1,9 @@
+## v54s — Undo / Mark Incomplete (Phase 2)
+- Scope: ordinary to-dos and their steps only.
+- Completed to-dos and to-do steps can be reopened using Mark incomplete.
+- Undo removes the completion timestamp and corresponding activity record.
+- Recurring-task undo remains deliberately excluded.
+
 ## v54r — Undo / Mark Incomplete (Phase 1)
 - Scope: project steps only.
 - Completed project steps can be reopened using Mark incomplete.

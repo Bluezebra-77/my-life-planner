@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54r";
+const APP_VERSION="54s";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -2318,7 +2318,7 @@ function renderTodos() {
     row.className = `compact-manage-row ${todo.completed ? 'completed-row' : ''}`;
     const timing = escapeHtml(getTimingText(todo) || 'No date');
     const details = todo.details ? ` · ${escapeHtml(todo.details)}` : '';
-    const actions = `<button onclick="closeAnchoredMenu();toggleTodo('${todo.id}');refreshListsImmediately()">${todo.completed ? 'Mark active' : 'Complete'}</button><button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteTodo('${todo.id}');refreshListsImmediately()">Delete</button>`;
+    const actions = `<button onclick="closeAnchoredMenu();toggleTodo('${todo.id}');refreshListsImmediately()">${todo.completed ? 'Mark incomplete' : 'Complete'}</button><button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteTodo('${todo.id}');refreshListsImmediately()">Delete</button>`;
     row.innerHTML = `<button type="button" class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name || 'Untitled to-do')}</span><span class="compact-row-meta">${timing}${details}</span></button>${compactMenu(actions,todo.name || 'to-do')}`;
     area.appendChild(row);
 
@@ -2326,7 +2326,7 @@ function renderTodos() {
     steps.forEach((step,index) => {
       const stepRow=document.createElement('div');
       stepRow.className=`compact-manage-row nested-compact-row ${step.completed?'completed-row':''}`;
-      const stepActions=`<button onclick="closeAnchoredMenu();toggleTodoStep('${todo.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark active':'Complete'}</button><button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit to-do</button>`;
+      const stepActions=`<button onclick="closeAnchoredMenu();toggleTodoStep('${todo.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete'}</button><button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit to-do</button>`;
       stepRow.innerHTML=`<button type="button" class="compact-row-main" onclick="toggleTodoStep('${todo.id}','${step.id}');refreshListsImmediately()"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}</span></button>${compactMenu(stepActions,step.name||'step')}`;
       area.appendChild(stepRow);
     });
@@ -4624,6 +4624,50 @@ toggleStep=function(projectId,stepId){
   if(step && wasComplete && !step.completed){
     step.completedAt=null;
     v54rRemoveProjectStepCompletionLog(projectId,stepId,step.name);
+    saveData();
+    if(typeof renderEveningReflection==='function') renderEveningReflection();
+    if(typeof renderHiddenStatistics==='function') renderHiddenStatistics();
+  }
+};
+
+
+/* ===== v54s Undo / Mark Incomplete — Ordinary To-dos only =====
+   Scope: to-dos and their steps. Recurring tasks remain deliberately untouched. */
+function v54sRemoveTodoCompletionLog(type, itemId, parentId, itemName){
+  if(typeof v52dRead!=='function' || typeof v52dWrite!=='function') return;
+  const log=v52dRead(V52D_ACTIVITY_KEY,[]);
+  const filtered=log.filter(event=>{
+    if(event?.type!==type) return true;
+    if(event.itemId!=null && String(event.itemId)===String(itemId)) return false;
+    // Compatibility with older records that may not contain itemId.
+    if(event.itemId==null && type==='todoStep' && String(event.parentId||'')===String(parentId||'') && String(event.name||'')===String(itemName||'')) return false;
+    if(event.itemId==null && type==='todo' && String(event.name||'')===String(itemName||'')) return false;
+    return true;
+  });
+  if(filtered.length!==log.length) v52dWrite(V52D_ACTIVITY_KEY,filtered);
+}
+const v54sToggleTodoBase=toggleTodo;
+toggleTodo=function(id){
+  const item=(data.todos||[]).find(todo=>String(todo.id)===String(id));
+  const wasComplete=Boolean(item?.completed);
+  v54sToggleTodoBase(id);
+  if(item && wasComplete && !item.completed){
+    item.completedAt=null;
+    v54sRemoveTodoCompletionLog('todo',id,'',item.name);
+    saveData();
+    if(typeof renderEveningReflection==='function') renderEveningReflection();
+    if(typeof renderHiddenStatistics==='function') renderHiddenStatistics();
+  }
+};
+const v54sToggleTodoStepBase=toggleTodoStep;
+toggleTodoStep=function(todoId,stepId){
+  const todo=(data.todos||[]).find(item=>String(item.id)===String(todoId));
+  const step=todo?.steps?.find(item=>String(item.id)===String(stepId));
+  const wasComplete=Boolean(step?.completed);
+  v54sToggleTodoStepBase(todoId,stepId);
+  if(step && wasComplete && !step.completed){
+    step.completedAt=null;
+    v54sRemoveTodoCompletionLog('todoStep',stepId,todoId,step.name);
     saveData();
     if(typeof renderEveningReflection==='function') renderEveningReflection();
     if(typeof renderHiddenStatistics==='function') renderHiddenStatistics();
