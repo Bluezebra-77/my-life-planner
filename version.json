@@ -1,5 +1,6 @@
 {
-  "version": "54p",
+  "version": "54q",
   "released": "2026-08-08",
-  "channel": "stable"
+  "channel": "stable",
+  "label": "v54q"
 }

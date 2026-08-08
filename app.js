@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54p";
+const APP_VERSION="54q";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -3780,6 +3780,25 @@ function v54bTimelineItems(){
 }
 timelineItems=v54bTimelineItems;
 
+/* ===== v54q Project step reordering ===== */
+function moveProjectStep(projectId,stepId,direction){
+  const project=(data.projects||[]).find(p=>String(p.id)===String(projectId));
+  if(!project||!Array.isArray(project.steps))return;
+  const index=project.steps.findIndex(step=>String(step.id)===String(stepId));
+  if(index<0)return;
+  const target=index+(direction<0?-1:1);
+  if(target<0||target>=project.steps.length)return;
+  const [step]=project.steps.splice(index,1);
+  project.steps.splice(target,0,step);
+  project.updatedAt=new Date().toISOString();
+  saveData();
+  renderProjects();
+  renderProjectNextActions();
+  renderTodayReminders();
+  renderWeekly();
+  try{renderTimeline();}catch(error){console.error('Timeline could not refresh after project step reorder',error);}
+}
+
 renderProjects=function(){
   const area=document.getElementById('projectsArea');if(!area)return;area.innerHTML='';
   const projects=Array.isArray(data.projects)?data.projects:[];
@@ -3798,7 +3817,7 @@ renderProjects=function(){
     const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];
     steps.forEach((step,index)=>{
       const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row project-step-manage-row ${step.completed?'completed-row':''}`;
-      const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button><button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
+      const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
       sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;
       group.appendChild(sr);
     });

@@ -121,3 +121,8 @@
 ## v54p — Global Home Timer
 - Home quick action opens the existing timer without requiring a Today's Focus item.
 - Existing linked Focus Timer behaviour remains unchanged.
+
+
+## v54q — Project Step Reordering
+- Project steps can be moved up or down from their three-dot menu.
+- Reordering is persistent and feeds the project Next-step calculation.

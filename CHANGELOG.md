@@ -1,3 +1,7 @@
+## v54q — Project Step Reordering (8 August 2026)
+- Adds Move up / Move down to project-step menus only.
+- Saves project step order and refreshes project Next-step views without altering dates or completion state.
+
 ## v54p — Global Home Timer (8 August 2026)
 - Added one Home Timer shortcut that reuses the existing Focus Timer. No task, recurrence, project, birthday or storage behaviour changed.
 
