@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54n";
+const APP_VERSION="54o";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -2901,6 +2901,7 @@ function chooseQuickAdd(type){
     else if(type==='project')openAddDialog('project');
     else if(type==='cleaning')openCleaningDialog();
     else if(type==='waiting')openCaptureDialog('waiting');
+    else if(type==='annual')openAnnualDialog();
     else if(type==='inbox')openCaptureDialog('inbox');
   },50);
 }
