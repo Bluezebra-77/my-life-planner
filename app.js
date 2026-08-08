@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54o";
+const APP_VERSION="54p";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -2786,22 +2786,35 @@ function minimiseFocusTimer(){
 }
 function restoreFocusTimerDialog(){
   document.getElementById('focusTimerMini')?.classList.add('hidden');
-  document.body.classList.remove('timer-minimised');const item=focusItemById(focusTimerItemId);if(item)document.getElementById('focusTimerTitle').textContent=item.name;
+  document.body.classList.remove('timer-minimised');const item=focusItemById(focusTimerItemId);if(item)document.getElementById('focusTimerTitle').textContent=item.name;setFocusTimerCompletionVisibility();
   document.getElementById('focusTimerChoices')?.classList.toggle('hidden',focusTimerRemaining>0||focusTimerEndAt>0);
   document.getElementById('focusTimerRunningActions')?.classList.toggle('hidden',!(focusTimerRemaining>0||focusTimerEndAt>0));updateFocusTimerDisplay();document.getElementById('focusTimerDialog')?.showModal();
 }
 function closeFocusTimer(){minimiseFocusTimer();}
 function cancelFocusTimer(){clearInterval(focusTimerInterval);focusTimerInterval=null;focusTimerRemaining=0;focusTimerEndAt=0;focusTimerPaused=false;focusTimerItemId='';clearFocusTimerState();document.getElementById('focusTimerDialog')?.close();document.getElementById('focusTimerMini')?.classList.add('hidden');document.body.classList.remove('timer-minimised');updateFocusTimerDisplay();}
 function completeFocusFromTimer(){const item=focusItemById(focusTimerItemId);if(item&&!item.completed)toggleTodayFocusItem(item.id);cancelFocusTimer();}
+function setFocusTimerCompletionVisibility(){
+  const button=document.getElementById('focusTimerCompleteButton');
+  if(button)button.classList.toggle('hidden',!focusItemById(focusTimerItemId));
+}
+function openGlobalTimer(){
+  if(focusTimerRemaining>0||focusTimerEndAt){restoreFocusTimerDialog();return;}
+  focusTimerItemId='';focusTimerRemaining=15*60;focusTimerEndAt=0;focusTimerPaused=false;
+  const title=document.getElementById('focusTimerTitle');if(title)title.textContent='Timer';
+  document.getElementById('focusTimerChoices')?.classList.remove('hidden');
+  document.getElementById('focusTimerRunningActions')?.classList.add('hidden');
+  const message=document.getElementById('focusTimerMessage');if(message)message.textContent='Choose a time.';
+  setFocusTimerCompletionVisibility();updateFocusTimerDisplay();document.getElementById('focusTimerDialog')?.showModal();
+}
 function openFocusTimer(id){
   const item=focusItemById(id);if(!item)return;
   if(focusTimerItemId&&focusTimerItemId!==String(id)&&(focusTimerRemaining>0||focusTimerEndAt)){if(!confirm('Replace the timer that is already running?'))return;cancelFocusTimer();}
   focusTimerItemId=String(id);focusTimerRemaining=(Number(item.estimatedMinutes)||15)*60;focusTimerEndAt=0;focusTimerPaused=false;
-  document.getElementById('focusTimerTitle').textContent=item.name;document.getElementById('focusTimerChoices')?.classList.remove('hidden');document.getElementById('focusTimerRunningActions')?.classList.add('hidden');
+  document.getElementById('focusTimerTitle').textContent=item.name;setFocusTimerCompletionVisibility();document.getElementById('focusTimerChoices')?.classList.remove('hidden');document.getElementById('focusTimerRunningActions')?.classList.add('hidden');
   document.getElementById('focusTimerMessage').textContent=item.estimatedMinutes?`Suggested time: ${item.estimatedMinutes} minutes.`:'Choose a focus time.';updateFocusTimerDisplay();document.getElementById('focusTimerDialog')?.showModal();
 }
 function restoreStoredFocusTimer(){
-  try{const state=JSON.parse(localStorage.getItem(FOCUS_TIMER_STORAGE_KEY)||'null');if(!state||!state.active)return;focusTimerItemId=String(state.itemId||'');focusTimerRemaining=Math.max(0,Number(state.remaining)||0);focusTimerPaused=Boolean(state.paused);focusTimerEndAt=focusTimerPaused?0:Number(state.endAt)||0;recalculateFocusTimer();if(focusTimerRemaining>0){ensureFocusTimerInterval();document.getElementById('focusTimerMini')?.classList.remove('hidden');updateFocusTimerDisplay();}else clearFocusTimerState();}catch(e){clearFocusTimerState();}
+  try{const state=JSON.parse(localStorage.getItem(FOCUS_TIMER_STORAGE_KEY)||'null');if(!state||!state.active)return;focusTimerItemId=String(state.itemId||'');focusTimerRemaining=Math.max(0,Number(state.remaining)||0);focusTimerPaused=Boolean(state.paused);focusTimerEndAt=focusTimerPaused?0:Number(state.endAt)||0;if(!focusItemById(focusTimerItemId)){const title=document.getElementById('focusTimerTitle');if(title)title.textContent=state.title||'Timer';}setFocusTimerCompletionVisibility();recalculateFocusTimer();if(focusTimerRemaining>0){ensureFocusTimerInterval();document.getElementById('focusTimerMini')?.classList.remove('hidden');updateFocusTimerDisplay();}else clearFocusTimerState();}catch(e){clearFocusTimerState();}
 }
 function openWaitingForList(){showView('tasks');setTimeout(()=>jumpToList('waitingListSection'),30);}
 function renderWaitingHome(){

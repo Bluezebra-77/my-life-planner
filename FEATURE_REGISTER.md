@@ -116,3 +116,8 @@
 - Passed dates roll to the next year.
 - Reminder defaults to 7 days before.
 - Optional birth year is separate from recurrence year.
+
+
+## v54p — Global Home Timer
+- Home quick action opens the existing timer without requiring a Today's Focus item.
+- Existing linked Focus Timer behaviour remains unchanged.

@@ -1,3 +1,6 @@
+## v54p — Global Home Timer (8 August 2026)
+- Added one Home Timer shortcut that reuses the existing Focus Timer. No task, recurrence, project, birthday or storage behaviour changed.
+
 ## v54j
 ## v54n — Birthday rollover
 - Annual dates now calculate and display the real next occurrence instead of using a placeholder year 2000.
