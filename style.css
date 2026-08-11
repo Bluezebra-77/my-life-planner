@@ -1613,3 +1613,14 @@ body.timer-minimised .quick-add-fab{
 
 /* v54n birthday annual-date polish */
 .annual-birth-year-row{display:flex;align-items:center;gap:.65rem;margin-top:.55rem;font-size:.9rem;color:var(--muted,#64748b);font-weight:600}.annual-birth-year-row input{max-width:9rem;margin:0}
+
+/* ===== v54sR1 iPhone portrait Lists menu regression repair =====
+   Keep indented project-step rows inside their parent width so the reserved
+   three-dot menu column remains visible in portrait. */
+.project-step-manage-row{
+  box-sizing:border-box!important;
+  max-width:calc(100% - 24px)!important;
+}
+@media(max-width:520px){
+  .project-step-manage-row{max-width:calc(100% - 12px)!important;}
+}
