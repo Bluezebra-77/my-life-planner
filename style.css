@@ -1624,3 +1624,35 @@ body.timer-minimised .quick-add-fab{
 @media(max-width:520px){
   .project-step-manage-row{max-width:calc(100% - 12px)!important;}
 }
+
+/* ===== v54sR2 iPhone portrait Lists > To-dos menu regression repair =====
+   Keep ordinary to-do rows and indented to-do step rows inside the list width
+   so their reserved three-dot menu control remains visible in portrait. */
+#todoArea > .compact-manage-row{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+#todoArea > .compact-manage-row > .compact-row-main{
+  min-width:0!important;
+}
+#todoArea > .compact-manage-row > .item-menu-anchor{
+  flex:0 0 44px!important;
+  width:44px!important;
+  min-width:44px!important;
+  margin-left:auto!important;
+  display:flex!important;
+  visibility:visible!important;
+  justify-content:flex-end;
+}
+#todoArea > .compact-manage-row > .item-menu-anchor .item-menu-trigger{
+  display:grid!important;
+  visibility:visible!important;
+}
+@media(max-width:520px){
+  #todoArea > .nested-compact-row{
+    width:calc(100% - 12px)!important;
+    max-width:calc(100% - 12px)!important;
+  }
+}
