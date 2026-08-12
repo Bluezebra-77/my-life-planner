@@ -1,7 +1,3 @@
-## v54tR1 — Today completed appointment sort repair (12 August 2026)
-- In Home → Today — Time Sensitive, ticking an appointment keeps it visible for today and immediately moves its row below outstanding items.
-- No appointment recurrence/data model or recurring-task completion behaviour is changed.
-
 ## v54s — Undo Ordinary To-do Completion (8 August 2026)
 - Adds explicit Mark incomplete for completed ordinary to-dos and to-do steps.
 - Reverses their completion metadata and matching activity/statistics record when reopened.
@@ -124,3 +120,7 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 ## v54i
 - Hardening release: recurring completion compatibility plus Home Today/This Week Edit/Delete management consistency.
 - Introduced a protected behavioural regression gate for accepted workflows.
+
+
+## v54u — Recurring-task Undo
+- Added one-level Undo last completion for recurring tasks, restoring the prior occurrence and reversing its activity/statistics record.

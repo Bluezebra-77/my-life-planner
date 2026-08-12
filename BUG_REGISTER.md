@@ -109,3 +109,7 @@
 ## v54n
 - Fixed annual-date editor showing artificial year 2000.
 - Fixed confusing annual-date display by showing the calculated next occurrence with year.
+
+
+## v54u
+- Adds guarded recovery for accidental recurring completion without changing the protected recurrence-advance calculation.

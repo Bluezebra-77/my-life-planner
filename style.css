@@ -1625,7 +1625,7 @@ body.timer-minimised .quick-add-fab{
   .project-step-manage-row{max-width:calc(100% - 12px)!important;}
 }
 
-/* ===== v54t iPhone portrait Lists > To-dos menu regression repair =====
+/* ===== v54sR2 iPhone portrait Lists > To-dos menu regression repair =====
    Keep ordinary to-do rows and indented to-do step rows inside the list width
    so their reserved three-dot menu control remains visible in portrait. */
 #todoArea > .compact-manage-row{

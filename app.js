@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54tR1";
+const APP_VERSION="54u";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4280,12 +4280,7 @@ renderTodayReminders=function(){
   items.forEach(item=>{
     const overdue=item.itemType!=='annual'&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
     const meta=`${item.source} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
-    const row=compactReminderRow(item,{meta,actionable:item.itemType!=='annual',onComplete:item.itemType==='recurring'?()=>v54jAdvanceRecurringOccurrence(item.id):completionFor(item),clickable:true});
-    if(item.itemType==='appointment'){
-      const checkbox=row.querySelector('input[type="checkbox"]');
-      checkbox?.addEventListener('change',()=>{if(checkbox.checked)area.appendChild(row);});
-    }
-    area.appendChild(row);
+    area.appendChild(compactReminderRow(item,{meta,actionable:item.itemType!=='annual',onComplete:item.itemType==='recurring'?()=>v54jAdvanceRecurringOccurrence(item.id):completionFor(item),clickable:true}));
   });
 };
 v54jNormaliseRecurringRecords();
@@ -4678,3 +4673,89 @@ toggleTodoStep=function(todoId,stepId){
     if(typeof renderHiddenStatistics==='function') renderHiddenStatistics();
   }
 };
+
+/* ===== v54u Recurring-task Undo / Mark Incomplete =====
+   Scope: one-level undo of the most recent recurring completion made in v54u.
+   Completion itself continues to use the protected v54m advance path. */
+function v54uRemoveRecurringCompletionLog(taskId, dueDate, completedAt){
+  if(typeof v52dRead!=='function' || typeof v52dWrite!=='function') return;
+  const log=v52dRead(V52D_ACTIVITY_KEY,[]);
+  let removeIndex=-1;
+  for(let index=log.length-1;index>=0;index--){
+    const event=log[index];
+    if(event?.type!=='recurring') continue;
+    if(event.itemId==null || String(event.itemId)!==String(taskId)) continue;
+    if(event.dueDate && dueDate && String(event.dueDate)!==String(dueDate)) continue;
+    // Prefer the record created by this completion. The due-date match keeps
+    // compatibility with records written before exact completion timestamps.
+    if(completedAt && event.at && Math.abs(new Date(event.at)-new Date(completedAt))>120000) continue;
+    removeIndex=index;break;
+  }
+  if(removeIndex>=0){log.splice(removeIndex,1);v52dWrite(V52D_ACTIVITY_KEY,log);}
+}
+const v54uAdvanceRecurringBase=v54mAdvanceRecurringOccurrence;
+function v54uAdvanceRecurringOccurrence(id){
+  const task=(data.recurringTasks||[]).find(item=>String(item.id)===String(id));
+  if(!task || task.status==='paused' || task.status==='completed') return {ok:false,reason:'inactive'};
+  const before={
+    nextDue:task.nextDue||localDateKey(),
+    status:task.status||'active',
+    completedOccurrences:Number(task.completedOccurrences)||0,
+    lastCompleted:task.lastCompleted||'',
+    hadCompletedAt:Object.prototype.hasOwnProperty.call(task,'completedAt'),
+    completedAt:task.completedAt??null
+  };
+  const result=v54uAdvanceRecurringBase(id);
+  if(result?.ok){
+    task.v54uUndoLastCompletion={...before,completionAt:task.lastCompleted||new Date().toISOString()};
+    saveData();
+    try{renderRecurringTasks();}catch(error){console.error('v54u recurring Lists refresh',error);}
+  }
+  return result;
+}
+function undoLastRecurringCompletion(id){
+  const task=(data.recurringTasks||[]).find(item=>String(item.id)===String(id));
+  const snapshot=task?.v54uUndoLastCompletion;
+  if(!task || !snapshot){if(typeof showSaved==='function')showSaved('No recurring completion is available to undo');return {ok:false};}
+  task.nextDue=snapshot.nextDue;
+  task.status=snapshot.status==='paused'?'paused':'active';
+  task.completedOccurrences=Math.max(0,Number(snapshot.completedOccurrences)||0);
+  task.lastCompleted=snapshot.lastCompleted||'';
+  if(snapshot.hadCompletedAt) task.completedAt=snapshot.completedAt;
+  else delete task.completedAt;
+  v54uRemoveRecurringCompletionLog(id,snapshot.nextDue,snapshot.completionAt);
+  delete task.v54uUndoLastCompletion;
+  saveData();
+  renderAll();
+  try{renderTodayReminders();}catch(error){console.error('v54u Today refresh',error);}
+  try{renderRecurringHome();}catch(error){console.error('v54u recurring Home refresh',error);}
+  try{renderRecurringTasks();}catch(error){console.error('v54u recurring Lists refresh',error);}
+  try{renderWeekly();}catch(error){console.error('v54u This Week refresh',error);}
+  try{renderTimeline();}catch(error){console.error('v54u Timeline refresh',error);}
+  try{renderEveningReflection();}catch(_){ }
+  try{renderHiddenStatistics();}catch(_){ }
+  if(typeof showSaved==='function')showSaved(`${task.name||'Recurring task'} completion undone · due ${formatDate(task.nextDue)}`);
+  return {ok:true,nextDue:task.nextDue};
+}
+v54mAdvanceRecurringOccurrence=v54uAdvanceRecurringOccurrence;
+v54jAdvanceRecurringOccurrence=v54uAdvanceRecurringOccurrence;
+completeRecurringTask=v54uAdvanceRecurringOccurrence;
+
+// The occurrence vanishes from Home after completion, so Lists → Recurring tasks
+// is the explicit recovery point for an accidental completion.
+const v54uRecurringTaskCardBase=recurringTaskCard;
+recurringTaskCard=function(task){
+  const row=v54uRecurringTaskCardBase(task);
+  if(task?.v54uUndoLastCompletion){
+    const actions=row.querySelector('.card-actions');
+    if(actions){
+      const undo=document.createElement('button');
+      undo.type='button';undo.className='secondary-button';undo.textContent='Undo last completion';
+      undo.addEventListener('click',()=>undoLastRecurringCompletion(task.id));
+      actions.insertBefore(undo,actions.firstChild);
+    }
+  }
+  return row;
+};
+try{renderRecurringTasks();}catch(error){console.error('v54u initial recurring Lists refresh',error);}
+

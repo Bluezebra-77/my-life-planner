@@ -138,3 +138,7 @@
 ## v54q — Project Step Reordering
 - Project steps can be moved up or down from their three-dot menu.
 - Reordering is persistent and feeds the project Next-step calculation.
+
+
+## v54u
+- Recurring tasks: one-level Undo last completion from Lists → Recurring tasks.
