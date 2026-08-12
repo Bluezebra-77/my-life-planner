@@ -1,3 +1,6 @@
+## v54v
+- Home Today — Time Sensitive: timed appointments due today display their time and sort ahead of untimed items due today. Overdue items remain first.
+
 ## v54s — Undo / Mark Incomplete (Phase 2)
 - Scope: ordinary to-dos and their steps only.
 - Completed to-dos and to-do steps can be reopened using Mark incomplete.

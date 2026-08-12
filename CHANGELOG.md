@@ -1,3 +1,7 @@
+## v54v — Today timed appointment priority
+- Today — Time Sensitive keeps overdue items first, then shows today’s timed appointments before untimed items and displays appointment times.
+- Built from accepted v54u; no recurrence/completion logic changed.
+
 ## v54s — Undo Ordinary To-do Completion (8 August 2026)
 - Adds explicit Mark incomplete for completed ordinary to-dos and to-do steps.
 - Reverses their completion metadata and matching activity/statistics record when reopened.

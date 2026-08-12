@@ -4759,3 +4759,35 @@ recurringTaskCard=function(task){
 };
 try{renderRecurringTasks();}catch(error){console.error('v54u initial recurring Lists refresh',error);}
 
+
+
+/* ===== v54v Today — Time Sensitive: timed appointment priority =====
+   One-change build: overdue items remain first. For items due today, appointments
+   with a saved time appear before untimed items and show that time in the row.
+   No completion, recurrence, list-menu or data behaviour is changed. */
+function v54vTodaySortKey(item){
+  const todayKey=localDateKey();
+  const dueKey=item?.dueDate?recurringDateKey(dateOnly(item.dueDate)):'';
+  if(dueKey && dueKey<todayKey) return [0,dueKey,''];
+  if(dueKey===todayKey && item?.itemType==='appointment' && item?.time) return [1,dueKey,String(item.time)];
+  if(dueKey===todayKey) return [2,dueKey,''];
+  return [3,dueKey,''];
+}
+function v54vCompareTodayItems(a,b){
+  const ka=v54vTodaySortKey(a),kb=v54vTodaySortKey(b);
+  for(let i=0;i<ka.length;i++){if(ka[i]<kb[i])return -1;if(ka[i]>kb[i])return 1;}
+  return 0;
+}
+renderTodayReminders=function(){
+  const area=document.getElementById('todayRemindersArea');if(!area)return;
+  const items=[...(getTodayReminderItems()||[])].sort(v54vCompareTodayItems);area.innerHTML='';
+  if(!items.length){area.innerHTML='<div class="empty-state">Nothing time-sensitive needs attention today.</div>';return;}
+  items.forEach(item=>{
+    const overdue=item.itemType!=='annual'&&dateOnly(item.dueDate)<new Date(new Date().setHours(0,0,0,0));
+    const timePart=item.itemType==='appointment'&&item.time?` · ${item.time}`:'';
+    const meta=`${item.source}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
+    if(item.itemType==='recurring') area.appendChild(v54jTodayRecurringRow(item,meta));
+    else area.appendChild(v54jReminderRow(item,meta));
+  });
+};
+try{renderTodayReminders();}catch(error){console.error('v54v Today timed priority refresh',error);}

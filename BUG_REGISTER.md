@@ -1,3 +1,6 @@
+## v54v
+- No unrelated bug fix. One-change presentation/priority build from v54u.
+
 ## Corrected in v54j
 - Recurring completion circles rendered but did not respond reliably on iPhone Home views.
 
