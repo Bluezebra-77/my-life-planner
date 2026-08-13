@@ -1,3 +1,8 @@
+## v54y — Project Templates Phase 1
+- Existing projects can be saved as reusable templates.
+- Templates are stored in main planner data and included in backup/export/restore.
+- Phase 2 will create independent projects from templates.
+
 ## v54x — Ordinary To-do Pending status
 - Ordinary non-recurring to-dos can be marked Pending or returned to Active.
 - Marking Pending can store an optional short reason.

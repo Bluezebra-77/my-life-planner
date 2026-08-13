@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54x";
+const APP_VERSION="54y";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -103,7 +103,7 @@ const DATA_MIGRATIONS = Object.freeze({
 
 function validatePlannerData(candidate) {
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) throw new Error("Planner data is not an object");
-  const requiredLists = ["todos","projects","annualDates","cleaningTasks","appointments","recurringTasks","inbox","waiting","customLists","todayFocus"];
+  const requiredLists = ["todos","projects","projectTemplates","annualDates","cleaningTasks","appointments","recurringTasks","inbox","waiting","customLists","todayFocus"];
   for (const field of requiredLists) if (!Array.isArray(candidate[field])) throw new Error(`Invalid ${field} collection`);
   if (Number(candidate.schemaVersion) !== SCHEMA_VERSION) throw new Error("Schema version verification failed");
   return true;
@@ -153,6 +153,7 @@ function normaliseLegacyShape(value = {}) {
     ...source,
     todos: source.todos || source.todoItems || source.tasks || [],
     projects: source.projects || source.projectItems || [],
+    projectTemplates: Array.isArray(source.projectTemplates) ? source.projectTemplates : [],
     annualDates: source.annualDates || source.birthdays || source.annualReminders || [],
     cleaningTasks: source.cleaningTasks || source.cleaning || source.cleaningJobs || source.householdTasks || [],
     appointments: source.appointments || source.events || [],
@@ -164,7 +165,7 @@ function normaliseLegacyShape(value = {}) {
 function scoreData(candidate = {}) {
   const shaped = normaliseLegacyShape(candidate);
   return [
-    shaped.todos, shaped.projects, shaped.annualDates, shaped.cleaningTasks, shaped.appointments,
+    shaped.todos, shaped.projects, shaped.projectTemplates, shaped.annualDates, shaped.cleaningTasks, shaped.appointments,
     shaped.recurringTasks, shaped.inbox, shaped.waiting, shaped.customLists, shaped.todayFocus
   ].reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
 }
@@ -230,6 +231,7 @@ function getData() {
     ...preferred,
     todos: mergeUniqueLists(candidates,"todos"),
     projects: mergeUniqueLists(candidates,"projects"),
+    projectTemplates: mergeUniqueLists(candidates,"projectTemplates"),
     annualDates: mergeUniqueLists(candidates,"annualDates"),
     cleaningTasks: mergeUniqueLists(candidates,"cleaningTasks"),
     appointments: mergeUniqueLists(candidates,"appointments"),
@@ -273,6 +275,7 @@ function normaliseData(loaded = {}) {
     migrationMeta: loaded.migrationMeta && typeof loaded.migrationMeta === "object" ? loaded.migrationMeta : {},
     todos: Array.isArray(loaded.todos) ? loaded.todos : [],
     projects: Array.isArray(loaded.projects) ? loaded.projects : [],
+    projectTemplates: Array.isArray(loaded.projectTemplates) ? loaded.projectTemplates : [],
     annualDates: Array.isArray(loaded.annualDates) ? loaded.annualDates : [],
     cleaningTasks: Array.isArray(loaded.cleaningTasks) ? loaded.cleaningTasks : Array.isArray(loaded.cleaning) ? loaded.cleaning : Array.isArray(loaded.cleaningJobs) ? loaded.cleaningJobs : [],
     appointments: Array.isArray(loaded.appointments) ? loaded.appointments : [],
@@ -3720,14 +3723,32 @@ setTimeout(v53aFinalPolishRefresh,50);
 
 /* ===== v54b Project Templates ===== */
 const PROJECT_TEMPLATES_KEY='myLifePlannerProjectTemplates';
-function getProjectTemplates(){try{const value=JSON.parse(localStorage.getItem(PROJECT_TEMPLATES_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return []}}
-function setProjectTemplates(items){localStorage.setItem(PROJECT_TEMPLATES_KEY,JSON.stringify(Array.isArray(items)?items:[]));}
+function getProjectTemplates(){
+  const current=Array.isArray(data?.projectTemplates)?data.projectTemplates:[];
+  if(current.length)return current;
+  // One-time compatibility rescue for templates left by the older dormant v54b implementation.
+  try{
+    const legacy=JSON.parse(localStorage.getItem(PROJECT_TEMPLATES_KEY)||'[]');
+    if(Array.isArray(legacy)&&legacy.length){
+      data.projectTemplates=legacy;
+      try{localStorage.removeItem(PROJECT_TEMPLATES_KEY);}catch{}
+      saveData();
+      return data.projectTemplates;
+    }
+  }catch(error){console.warn('Could not rescue legacy project templates',error);}
+  return current;
+}
+function setProjectTemplates(items){
+  data.projectTemplates=Array.isArray(items)?items:[];
+  try{localStorage.removeItem(PROJECT_TEMPLATES_KEY);}catch{}
+  saveData();
+}
 function templateStepLines(steps){return (steps||[]).map(step=>`${Number.isFinite(Number(step.daysBefore))?Number(step.daysBefore)+' | ':''}${step.name||''}`).join('\n');}
 function parseTemplateSteps(text){return String(text||'').split(/\n/).map(x=>x.trim()).filter(Boolean).map(line=>{const match=line.match(/^(\d+)\s*\|\s*(.+)$/);return match?{name:match[2].trim(),daysBefore:Number(match[1])}:{name:line,daysBefore:null};}).filter(x=>x.name);}
 function openProjectTemplates(){renderProjectTemplates();clearProjectTemplateForm();document.getElementById('projectTemplatesDialog')?.showModal();}
 function closeProjectTemplates(){document.getElementById('projectTemplatesDialog')?.close();}
 function clearProjectTemplateForm(){const f=document.getElementById('projectTemplateForm');if(f)f.reset();const id=document.getElementById('projectTemplateId');if(id)id.value='';const s=document.getElementById('projectTemplateEditorSummary');if(s)s.textContent='Create a template';}
-function renderProjectTemplates(){const area=document.getElementById('projectTemplatesList');if(!area)return;const items=getProjectTemplates();area.innerHTML='';if(!items.length){area.innerHTML='<div class="empty-state">No templates yet. Save an existing project as a template or create one below.</div>';return;}items.forEach(t=>{const row=document.createElement('div');row.className='template-card';row.innerHTML=`<div class="template-card-copy"><strong>${escapeHtml(t.name||'Untitled template')}</strong><span>${(t.steps||[]).length} steps${t.details?' · '+escapeHtml(t.details):''}</span></div><div class="template-card-actions"><button type="button" onclick="useProjectTemplate('${t.id}')">Use</button><button type="button" class="secondary-button" onclick="editProjectTemplate('${t.id}')">Edit</button><button type="button" class="secondary-button danger-text" onclick="deleteProjectTemplate('${t.id}')">Delete</button></div>`;area.appendChild(row);});}
+function renderProjectTemplates(){const area=document.getElementById('projectTemplatesList');if(!area)return;const items=getProjectTemplates();area.innerHTML='';if(!items.length){area.innerHTML='<div class="empty-state">No templates yet. Save an existing project as a template or create one below.</div>';return;}items.forEach(t=>{const row=document.createElement('div');row.className='template-card';row.innerHTML=`<div class="template-card-copy"><strong>${escapeHtml(t.name||'Untitled template')}</strong><span>${(t.steps||[]).length} steps${t.details?' · '+escapeHtml(t.details):''}</span></div><div class="template-card-actions"><button type="button" class="secondary-button" onclick="editProjectTemplate('${t.id}')">Edit</button><button type="button" class="secondary-button danger-text" onclick="deleteProjectTemplate('${t.id}')">Delete</button></div>`;area.appendChild(row);});}
 function saveProjectTemplate(event){event.preventDefault();const id=document.getElementById('projectTemplateId').value;const name=document.getElementById('projectTemplateName').value.trim();const details=document.getElementById('projectTemplateDetails').value.trim();const steps=parseTemplateSteps(document.getElementById('projectTemplateSteps').value);if(!name||!steps.length)return;const items=getProjectTemplates();const payload={id:id||uid(),name,details,steps,updatedAt:new Date().toISOString()};if(id){const i=items.findIndex(x=>String(x.id)===String(id));if(i>=0)items[i]={...items[i],...payload};else items.push(payload);}else items.push(payload);setProjectTemplates(items);clearProjectTemplateForm();renderProjectTemplates();}
 function editProjectTemplate(id){const t=getProjectTemplates().find(x=>String(x.id)===String(id));if(!t)return;document.getElementById('projectTemplateId').value=t.id;document.getElementById('projectTemplateName').value=t.name||'';document.getElementById('projectTemplateDetails').value=t.details||'';document.getElementById('projectTemplateSteps').value=templateStepLines(t.steps);document.getElementById('projectTemplateEditorSummary').textContent='Edit template';document.querySelector('.template-editor-details')?.setAttribute('open','');document.getElementById('projectTemplateName').focus();}
 function deleteProjectTemplate(id){if(!confirm('Delete this template? Existing projects will not be affected.'))return;setProjectTemplates(getProjectTemplates().filter(x=>String(x.id)!==String(id)));renderProjectTemplates();}
@@ -4865,3 +4886,9 @@ toggleTodo=function(id){
 };
 try{renderTodos();}catch(error){console.error('v54x To-do Pending refresh',error);}
 
+
+
+/* ===== v54y Project Templates Phase 1 =====
+   Templates are now saved inside planner data so backup/export/restore include them.
+   Phase 1 exposes save/edit/delete only; project creation from a template remains for Phase 2.
+*/
