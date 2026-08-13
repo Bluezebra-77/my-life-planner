@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54w";
+const APP_VERSION="54x";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1178,6 +1178,8 @@ addForm.addEventListener("submit",event=>{
     if(id) {
       const old=data.todos.find(x=>x.id===id);
       common.completed=old?.completed||false;
+      common.pending=Boolean(old?.pending);
+      common.pendingReason=old?.pendingReason||'';
       common.steps=mergeEnteredSteps(old?.steps || [], parsedItemSteps, common);
       data.todos[data.todos.findIndex(x=>x.id===id)]=common;
     } else { common.steps=mergeEnteredSteps([], parsedItemSteps, common); data.todos.push(common); }
@@ -2319,8 +2321,10 @@ function renderTodos() {
     row.className = `compact-manage-row ${todo.completed ? 'completed-row' : ''}`;
     const timing = escapeHtml(getTimingText(todo) || 'No date');
     const details = todo.details ? ` · ${escapeHtml(todo.details)}` : '';
-    const actions = `<button onclick="closeAnchoredMenu();toggleTodo('${todo.id}');refreshListsImmediately()">${todo.completed ? 'Mark incomplete' : 'Complete'}</button><button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteTodo('${todo.id}');refreshListsImmediately()">Delete</button>`;
-    row.innerHTML = `<button type="button" class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name || 'Untitled to-do')}</span><span class="compact-row-meta">${timing}${details}</span></button>${compactMenu(actions,todo.name || 'to-do')}`;
+    const pendingMeta = todo.pending ? ` · Pending${todo.pendingReason ? ' — '+escapeHtml(todo.pendingReason) : ''}` : '';
+    const pendingAction = !todo.completed ? `<button onclick="closeAnchoredMenu();toggleTodoPending('${todo.id}')">${todo.pending ? 'Mark active' : 'Mark pending'}</button>` : '';
+    const actions = `<button onclick="closeAnchoredMenu();toggleTodo('${todo.id}');refreshListsImmediately()">${todo.completed ? 'Mark incomplete' : 'Complete'}</button>${pendingAction}<button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteTodo('${todo.id}');refreshListsImmediately()">Delete</button>`;
+    row.innerHTML = `<button type="button" class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name || 'Untitled to-do')}</span><span class="compact-row-meta">${timing}${pendingMeta}${details}</span></button>${compactMenu(actions,todo.name || 'to-do')}`;
     area.appendChild(row);
 
     const steps = Array.isArray(todo.steps) ? todo.steps : [];
@@ -4824,3 +4828,40 @@ function toggleProjectStepPending(projectId,stepId){
   try{renderTimeline();}catch(_){ }
 }
 try{renderProjects();renderProjectNextActions();renderTodayReminders();renderWeekly();}catch(error){console.error('v54w Project Step Pending refresh',error);}
+
+/* ===== v54x Ordinary To-do Pending status =====
+   One-change build: ordinary non-recurring to-dos only. Waiting For,
+   recurring tasks and the accepted v54w project-step Pending behaviour are
+   deliberately untouched. */
+function toggleTodoPending(id){
+  const todo=(data.todos||[]).find(item=>String(item.id)===String(id));
+  if(!todo||todo.completed)return;
+  if(todo.pending){
+    todo.pending=false;
+    todo.pendingReason='';
+  }else{
+    const reason=prompt('Optional reason this to-do is pending:',todo.pendingReason||'');
+    if(reason===null)return;
+    todo.pending=true;
+    todo.pendingReason=String(reason||'').trim();
+  }
+  todo.updatedAt=new Date().toISOString();
+  saveData();
+  renderAll();
+  try{refreshListsImmediately();}catch(_){ }
+}
+const v54xToggleTodoBase=toggleTodo;
+toggleTodo=function(id){
+  const todo=(data.todos||[]).find(item=>String(item.id)===String(id));
+  const wasComplete=Boolean(todo?.completed);
+  v54xToggleTodoBase(id);
+  if(todo && !wasComplete && todo.completed && (todo.pending || todo.pendingReason)){
+    todo.pending=false;
+    todo.pendingReason='';
+    saveData();
+    renderAll();
+    try{refreshListsImmediately();}catch(_){ }
+  }
+};
+try{renderTodos();}catch(error){console.error('v54x To-do Pending refresh',error);}
+

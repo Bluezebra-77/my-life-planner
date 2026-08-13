@@ -1,3 +1,10 @@
+## v54x — Ordinary To-do Pending status
+- Ordinary non-recurring to-dos can be marked Pending or returned to Active.
+- Marking Pending can store an optional short reason.
+- Completing a Pending to-do clears its Pending state and reason.
+- Project-step Pending, Waiting For and recurring-task behaviour are unchanged.
+- Built from accepted v54w.
+
 ## v54w — Project Step Pending status
 - Project steps can be marked Pending or returned to Active.
 - Marking Pending can store an optional short reason.

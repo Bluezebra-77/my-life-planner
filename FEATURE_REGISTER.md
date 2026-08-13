@@ -1,3 +1,8 @@
+## v54x
+- Ordinary To-do Pending status: Mark pending / Mark active in To-do menus.
+- Optional Pending reason is shown with the to-do in Lists.
+- Completing the to-do clears its Pending status and reason.
+
 ## v54w
 - Project Step Pending status: Mark pending / Mark active in Project-step menus.
 - Optional Pending reason is shown with the step in project views.
