@@ -1,3 +1,8 @@
+## v54w
+- Project Step Pending status: Mark pending / Mark active in Project-step menus.
+- Optional Pending reason is shown with the step in project views.
+- Project Next-step selection ignores incomplete Pending steps and moves to the next incomplete Active step.
+
 ## v54v
 - Home Today — Time Sensitive: timed appointments due today display their time and sort ahead of untimed items due today. Overdue items remain first.
 

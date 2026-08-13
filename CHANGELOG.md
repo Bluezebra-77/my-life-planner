@@ -1,3 +1,10 @@
+## v54w — Project Step Pending status
+- Project steps can be marked Pending or returned to Active.
+- Marking Pending can store an optional short reason.
+- Pending project steps remain visible but are skipped when choosing the project Next step.
+- Ordinary to-dos, Waiting For and recurring-task behaviour are unchanged.
+- Built from accepted v54v.
+
 ## v54v — Today timed appointment priority
 - Today — Time Sensitive keeps overdue items first, then shows today’s timed appointments before untimed items and displays appointment times.
 - Built from accepted v54u; no recurrence/completion logic changed.

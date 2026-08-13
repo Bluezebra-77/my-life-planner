@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54u";
+const APP_VERSION="54w";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -484,7 +484,7 @@ function savedChoiceItems() {
   return [
     ...data.todos.filter(x => !x.completed).map(x => x.name),
     ...data.projects.filter(x => !x.completed).map(x => x.name),
-    ...data.projects.flatMap(p => p.steps.filter(s => !s.completed).map(s => s.name)),
+    ...data.projects.flatMap(p => p.steps.filter(s => !s.completed && !s.pending).map(s => s.name)),
     ...Object.values(data.categoryTasks || {}).flat(),
     ...data.cleaningTasks.filter(x => isDueTodayOrEarlier(x.nextDue)).map(x => x.name)
   ].filter(Boolean);
@@ -507,7 +507,7 @@ function helpfulCandidates(mode='extra') {
   const items = [
     ...data.todos.filter(x=>!x.completed).map(x=>({key:`todo:${x.id}`,label:x.name,detail:x.dueDate?getTimingText(x):'To-do',open:()=>editTodo(x.id),priority:x.dueDate?0:3})),
     ...data.projects.filter(x=>!x.completed).flatMap(p=>{
-      const s=(p.steps||[]).find(x=>!x.completed);
+      const s=(p.steps||[]).find(x=>!x.completed && !x.pending);
       return s?[{key:`step:${p.id}:${s.id}`,label:s.name,detail:`Project: ${p.name}`,open:()=>editStep(p.id,s.id),priority:s.dueDate?0:2}]:[{key:`project:${p.id}`,label:`Review ${p.name}`,detail:'Project without a next step',open:()=>editProject(p.id),priority:4}];
     }),
     ...data.cleaningTasks.filter(x=>!x.completed).map(x=>({key:`clean:${x.id}`,label:x.name,detail:`Cleaning · ${x.room||'Home'}`,open:()=>editCleaning(x.id),priority:isDueTodayOrEarlier(x.nextDue)?0:5}))
@@ -1204,7 +1204,7 @@ addForm.addEventListener("submit",event=>{
     if(project) {
       if(id) {
         const old=project.steps.find(x=>x.id===id);
-        project.steps[project.steps.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false};
+        project.steps[project.steps.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,pending:Boolean(old?.pending),pendingReason:old?.pendingReason||'',order:old?.order};
       } else { project.steps.push({...common,order:project.steps.length}); project.completed=false; }
     }
   }
@@ -1674,7 +1674,7 @@ function activeProjectDashboardItems() {
   const today = new Date().toISOString().slice(0,10);
   return data.projects.flatMap(project => {
     if (project.completed) return [];
-    const nextStep = (project.steps || []).find(step => !step.completed);
+    const nextStep = (project.steps || []).find(step => !step.completed && !step.pending);
     if (!nextStep) return [];
     return [{...nextStep, dueDate: nextStep.dueDate || today, source:`Project: ${project.name}`, itemType:"step", parentId:project.id, isUndatedProjectStep:!nextStep.dueDate}];
   });
@@ -1837,7 +1837,7 @@ function focusCandidateRows(){
   const today=new Date(); today.setHours(12,0,0,0);
   data.todos.filter(x=>!x.completed).forEach(x=>rows.push({name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
   data.cleaningTasks.filter(x=>isDueTodayOrEarlier(x.nextDue)).forEach(x=>rows.push({name:x.name,meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,kind:'Cleaning',action:()=>completeCleaning(x.id),open:()=>editCleaning(x.id),score:-2}));
-  data.projects.filter(x=>!x.completed).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});});
+  data.projects.filter(x=>!x.completed).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed && !x.pending);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});});
   data.waiting.filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
 }
@@ -1874,7 +1874,8 @@ function renderProjectNextActions(){
     if(!steps.length){body.innerHTML=`<div class="empty-state">No steps yet. Use Manage to add the first step.</div>`;}
     else steps.forEach(step=>{
       const row=document.createElement('div');row.className=`v10-row home-project-step ${step.completed?'completed-row':''}`;
-      row.innerHTML=`<button type="button" class="complete-dot" onclick="toggleStep('${project.id}','${step.id}')" aria-label="${step.completed?'Reinstate':'Complete'} ${escapeHtml(step.name||'step')}">${step.completed?'✓':''}</button><button type="button" class="v10-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="v10-row-title">${escapeHtml(step.name||'Untitled step')}</span><span class="v10-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap text to edit</span></button>`;
+      const pendingText=step.pending?` · Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}`:'';
+      row.innerHTML=`<button type="button" class="complete-dot" onclick="toggleStep('${project.id}','${step.id}')" aria-label="${step.completed?'Reinstate':'Complete'} ${escapeHtml(step.name||'step')}">${step.completed?'✓':''}</button><button type="button" class="v10-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="v10-row-title">${escapeHtml(step.name||'Untitled step')}</span><span class="v10-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}${pendingText} · Tap text to edit</span></button>`;
       body.appendChild(row);
     });
     card.appendChild(body);area.appendChild(card);
@@ -3074,7 +3075,7 @@ function focusCandidateRows(){
   const alreadyShown=v52aTodayIdentitySet();
   data.todos.filter(x=>!x.completed&&!alreadyShown.has(`todo:${x.id}`)&&!alreadyShown.has(`todoParent:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
   data.cleaningTasks.filter(x=>isDueTodayOrEarlier(x.nextDue)&&!alreadyShown.has(`cleaning:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,kind:'Cleaning',action:()=>completeCleaning(x.id),open:()=>editCleaning(x.id),score:-2}));
-  data.projects.filter(x=>!x.completed&&!alreadyShown.has(`project:${x.id}`)).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});});
+  data.projects.filter(x=>!x.completed&&!alreadyShown.has(`project:${x.id}`)).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed && !x.pending);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});});
   data.waiting.filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
 }
@@ -3808,8 +3809,9 @@ renderProjects=function(){
     const steps=Array.isArray(project.steps)?project.steps:[];
     const genuinelyComplete=steps.length>0&&steps.every(step=>step.completed);project.completed=genuinelyComplete;
     const completedCount=steps.filter(step=>step.completed).length;
-    const nextStep=steps.find(step=>!step.completed);
-    const nextMeta=nextStep?`Next: ${escapeHtml(nextStep.name||'Untitled step')}${nextStep.dueDate?' · '+formatDate(nextStep.dueDate):''}`:(steps.length?'All steps complete':'No steps');
+    const nextStep=steps.find(step=>!step.completed && !step.pending);
+    const hasIncomplete=steps.some(step=>!step.completed);
+    const nextMeta=nextStep?`Next: ${escapeHtml(nextStep.name||'Untitled step')}${nextStep.dueDate?' · '+formatDate(nextStep.dueDate):''}`:(hasIncomplete?'No active next step':(steps.length?'All steps complete':'No steps'));
     const row=document.createElement('div');row.className=`compact-manage-row project-compact-row ${genuinelyComplete?'completed-row':''}`;
     const projectActions=`<button onclick="closeAnchoredMenu();openAddDialog('step','${project.id}')">Add step</button><button onclick="closeAnchoredMenu();editProject('${project.id}')">Edit project</button><button onclick="closeAnchoredMenu();saveProjectAsTemplate('${project.id}')">Save as template</button><button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${project.id}');refreshListsImmediately()">Delete project</button>`;
     row.innerHTML=`<button type="button" class="project-expand-button" onclick="toggleProjectSteps('${project.id}')" aria-expanded="${Boolean(openStates[project.id])}" aria-label="${openStates[project.id]?'Hide':'Show'} steps">${openStates[project.id]?'▾':'▸'}</button><button type="button" class="compact-row-main" onclick="toggleProjectSteps('${project.id}')"><span class="compact-row-title">${escapeHtml(project.name||'Untitled project')}</span><span class="compact-row-meta">${steps.length?`${completedCount} of ${steps.length} steps`:'No steps'}${project.dueDate?' · Deadline '+formatDate(project.dueDate):''}</span><span class="compact-row-next">${nextMeta}</span></button>${compactMenu(projectActions,project.name||'project')}`;
@@ -3817,8 +3819,9 @@ renderProjects=function(){
     const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];
     steps.forEach((step,index)=>{
       const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row project-step-manage-row ${step.completed?'completed-row':''}`;
-      const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
-      sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;
+      const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}${!step.completed?`<button onclick="closeAnchoredMenu();toggleProjectStepPending('${project.id}','${step.id}')">${step.pending?'Mark active':'Mark pending'}</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
+      const pendingMeta=step.pending?` · Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}`:'';
+      sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}${pendingMeta} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;
       group.appendChild(sr);
     });
     area.appendChild(group);
@@ -4791,3 +4794,33 @@ renderTodayReminders=function(){
   });
 };
 try{renderTodayReminders();}catch(error){console.error('v54v Today timed priority refresh',error);}
+
+
+/* ===== v54w Project Step Pending status =====
+   One-change build: project steps only. Pending steps remain visible in project
+   management but are skipped when the planner selects a project's Next step.
+   Waiting For, ordinary to-dos and recurring tasks are deliberately untouched. */
+function toggleProjectStepPending(projectId,stepId){
+  const project=(data.projects||[]).find(item=>String(item.id)===String(projectId));
+  const step=project?.steps?.find(item=>String(item.id)===String(stepId));
+  if(!project||!step||step.completed)return;
+  if(step.pending){
+    step.pending=false;
+    step.pendingReason='';
+  }else{
+    const reason=prompt('Optional reason this step is pending:',step.pendingReason||'');
+    if(reason===null)return;
+    step.pending=true;
+    step.pendingReason=String(reason||'').trim();
+  }
+  project.updatedAt=new Date().toISOString();
+  saveData();
+  renderAll();
+  try{refreshListsImmediately();}catch(_){ }
+  try{renderProjects();}catch(_){ }
+  try{renderProjectNextActions();}catch(_){ }
+  try{renderTodayReminders();}catch(_){ }
+  try{renderWeekly();}catch(_){ }
+  try{renderTimeline();}catch(_){ }
+}
+try{renderProjects();renderProjectNextActions();renderTodayReminders();renderWeekly();}catch(error){console.error('v54w Project Step Pending refresh',error);}
