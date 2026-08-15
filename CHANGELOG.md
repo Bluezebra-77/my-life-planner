@@ -1,5 +1,7 @@
-## v54yR2 — Project Templates Phase 1 visibility repair
-- Persistent Project Templates route under Lists → Projects; templates stored in planner data.
+## v54aa — Timeline appointment delete
+- Existing appointments now show **Delete** in the appointment edit dialog, including when opened from Timeline.
+- Delete is hidden when adding a new appointment.
+- Repeating appointments explicitly confirm that the full repeating appointment will be removed.
 
 ## v54x — Ordinary To-do Pending status
 - Ordinary non-recurring to-dos can be marked Pending or returned to Active.
@@ -145,6 +147,3 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 
 ## v54u — Recurring-task Undo
 - Added one-level Undo last completion for recurring tasks, restoring the prior occurrence and reversing its activity/statistics record.
-
-## v54zR1 — Project Templates Phase 2
-Saved templates can now create fresh independent projects. Template step order is retained; optional saved day offsets calculate step dates from the new project deadline; copied steps start incomplete and Active.

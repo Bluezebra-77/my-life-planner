@@ -1,3 +1,6 @@
+## v54aa
+- Usability gap fixed: Timeline appointments previously opened an edit dialog with Save/Cancel only, forcing deletion through Lists.
+
 ## v54x
 - No unrelated bug fix. One-change ordinary To-do Pending test build from accepted v54w.
 

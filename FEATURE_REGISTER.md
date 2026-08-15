@@ -1,5 +1,5 @@
-## v54yR2 — Project Templates Phase 1 visibility repair
-- Persistent Project Templates route under Lists → Projects; templates stored in planner data.
+## v54aa
+- Timeline appointment editing: an existing appointment can be deleted directly from its edit dialog.
 
 ## v54x
 - Ordinary To-do Pending status: Mark pending / Mark active in To-do menus.
@@ -158,6 +158,3 @@
 
 ## v54u
 - Recurring tasks: one-level Undo last completion from Lists → Recurring tasks.
-
-## Project Templates Phase 2 (v54zR1)
-A saved template can be used to create a new independent project with clean step state and optional deadline-relative dates.

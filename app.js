@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54zR1";
+const APP_VERSION="54aa";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -230,7 +230,6 @@ function getData() {
     ...preferred,
     todos: mergeUniqueLists(candidates,"todos"),
     projects: mergeUniqueLists(candidates,"projects"),
-    projectTemplates: mergeUniqueLists(candidates,"projectTemplates"),
     annualDates: mergeUniqueLists(candidates,"annualDates"),
     cleaningTasks: mergeUniqueLists(candidates,"cleaningTasks"),
     appointments: mergeUniqueLists(candidates,"appointments"),
@@ -274,7 +273,6 @@ function normaliseData(loaded = {}) {
     migrationMeta: loaded.migrationMeta && typeof loaded.migrationMeta === "object" ? loaded.migrationMeta : {},
     todos: Array.isArray(loaded.todos) ? loaded.todos : [],
     projects: Array.isArray(loaded.projects) ? loaded.projects : [],
-    projectTemplates: Array.isArray(loaded.projectTemplates) ? loaded.projectTemplates : [],
     annualDates: Array.isArray(loaded.annualDates) ? loaded.annualDates : [],
     cleaningTasks: Array.isArray(loaded.cleaningTasks) ? loaded.cleaningTasks : Array.isArray(loaded.cleaning) ? loaded.cleaning : Array.isArray(loaded.cleaningJobs) ? loaded.cleaningJobs : [],
     appointments: Array.isArray(loaded.appointments) ? loaded.appointments : [],
@@ -2178,7 +2176,9 @@ function openAppointmentDialog(id='',prefillName='',prefillNotes=''){
   document.getElementById('appointmentRepeatEnd').value=rule.endType;
   document.getElementById('appointmentRepeatCount').value=rule.count||10;
   document.getElementById('appointmentRepeatEndDate').value=rule.endDate||'';
-  document.getElementById('appointmentDialogTitle').textContent=a?'Edit appointment':'Add appointment';updateAppointmentRepeatControls();
+  document.getElementById('appointmentDialogTitle').textContent=a?'Edit appointment':'Add appointment';
+  const deleteButton=document.getElementById('appointmentDeleteButton');if(deleteButton)deleteButton.hidden=!a;
+  updateAppointmentRepeatControls();
   const dlg=document.getElementById('appointmentDialog');if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','');
   setTimeout(()=>document.getElementById('appointmentName').focus(),50);
 }
@@ -2205,6 +2205,17 @@ function normaliseAppointmentLink(value){
 }
 function openAppointmentLink(id){const a=(data.appointments||[]).find(x=>String(x.id)===String(id));const link=normaliseAppointmentLink(a?.link||a?.url||a?.meetingLink||'');if(link)window.open(link,'_blank','noopener,noreferrer');}
 function deleteAppointment(id){if(!confirm('Delete this appointment?'))return;data.appointments=data.appointments.filter(x=>String(x.id)!==String(id));saveData();renderAll();}
+function deleteAppointmentFromDialog(){
+  const id=document.getElementById('appointmentId')?.value;
+  if(!id)return;
+  const appointment=(data.appointments||[]).find(x=>String(x.id)===String(id));
+  const repeating=appointment&&normaliseAppointmentRepeat(appointment).repeat!=='none';
+  const message=repeating?'Delete this repeating appointment and all of its occurrences?':'Delete this appointment?';
+  if(!confirm(message))return;
+  data.appointments=(data.appointments||[]).filter(x=>String(x.id)!==String(id));
+  saveData();closeAppointmentDialog();renderAll();showSaved('Appointment deleted');
+}
+
 function renderAppointments(){
   const area=document.getElementById('appointmentsArea');if(!area)return;area.innerHTML='';
   const items=[...(data.appointments||[])].sort((a,b)=>((a.date||'')+(a.time||'')).localeCompare((b.date||'')+(b.time||'')));
@@ -3722,32 +3733,14 @@ setTimeout(v53aFinalPolishRefresh,50);
 
 /* ===== v54b Project Templates ===== */
 const PROJECT_TEMPLATES_KEY='myLifePlannerProjectTemplates';
-function getProjectTemplates(){
-  const current=Array.isArray(data?.projectTemplates)?data.projectTemplates:[];
-  if(current.length)return current;
-  // One-time compatibility rescue for templates left by the older dormant v54b implementation.
-  try{
-    const legacy=JSON.parse(localStorage.getItem(PROJECT_TEMPLATES_KEY)||'[]');
-    if(Array.isArray(legacy)&&legacy.length){
-      data.projectTemplates=legacy;
-      try{localStorage.removeItem(PROJECT_TEMPLATES_KEY);}catch{}
-      saveData();
-      return data.projectTemplates;
-    }
-  }catch(error){console.warn('Could not rescue legacy project templates',error);}
-  return current;
-}
-function setProjectTemplates(items){
-  data.projectTemplates=Array.isArray(items)?items:[];
-  try{localStorage.removeItem(PROJECT_TEMPLATES_KEY);}catch{}
-  saveData();
-}
+function getProjectTemplates(){try{const value=JSON.parse(localStorage.getItem(PROJECT_TEMPLATES_KEY)||'[]');return Array.isArray(value)?value:[]}catch{return []}}
+function setProjectTemplates(items){localStorage.setItem(PROJECT_TEMPLATES_KEY,JSON.stringify(Array.isArray(items)?items:[]));}
 function templateStepLines(steps){return (steps||[]).map(step=>`${Number.isFinite(Number(step.daysBefore))?Number(step.daysBefore)+' | ':''}${step.name||''}`).join('\n');}
 function parseTemplateSteps(text){return String(text||'').split(/\n/).map(x=>x.trim()).filter(Boolean).map(line=>{const match=line.match(/^(\d+)\s*\|\s*(.+)$/);return match?{name:match[2].trim(),daysBefore:Number(match[1])}:{name:line,daysBefore:null};}).filter(x=>x.name);}
 function openProjectTemplates(){renderProjectTemplates();clearProjectTemplateForm();document.getElementById('projectTemplatesDialog')?.showModal();}
 function closeProjectTemplates(){document.getElementById('projectTemplatesDialog')?.close();}
 function clearProjectTemplateForm(){const f=document.getElementById('projectTemplateForm');if(f)f.reset();const id=document.getElementById('projectTemplateId');if(id)id.value='';const s=document.getElementById('projectTemplateEditorSummary');if(s)s.textContent='Create a template';}
-function renderProjectTemplates(){const area=document.getElementById('projectTemplatesList');if(!area)return;const items=getProjectTemplates();area.innerHTML='';if(!items.length){area.innerHTML='<div class="empty-state">No templates yet. Save an existing project as a template or create one below.</div>';return;}items.forEach(t=>{const row=document.createElement('div');row.className='template-card';row.innerHTML=`<div class="template-card-copy"><strong>${escapeHtml(t.name||'Untitled template')}</strong><span>${(t.steps||[]).length} steps${t.details?' · '+escapeHtml(t.details):''}</span></div><div class="template-card-actions"><button type="button" onclick="useProjectTemplate('${t.id}')">Use template</button><button type="button" class="secondary-button" onclick="editProjectTemplate('${t.id}')">Edit</button><button type="button" class="secondary-button danger-text" onclick="deleteProjectTemplate('${t.id}')">Delete</button></div>`;area.appendChild(row);});}
+function renderProjectTemplates(){const area=document.getElementById('projectTemplatesList');if(!area)return;const items=getProjectTemplates();area.innerHTML='';if(!items.length){area.innerHTML='<div class="empty-state">No templates yet. Save an existing project as a template or create one below.</div>';return;}items.forEach(t=>{const row=document.createElement('div');row.className='template-card';row.innerHTML=`<div class="template-card-copy"><strong>${escapeHtml(t.name||'Untitled template')}</strong><span>${(t.steps||[]).length} steps${t.details?' · '+escapeHtml(t.details):''}</span></div><div class="template-card-actions"><button type="button" onclick="useProjectTemplate('${t.id}')">Use</button><button type="button" class="secondary-button" onclick="editProjectTemplate('${t.id}')">Edit</button><button type="button" class="secondary-button danger-text" onclick="deleteProjectTemplate('${t.id}')">Delete</button></div>`;area.appendChild(row);});}
 function saveProjectTemplate(event){event.preventDefault();const id=document.getElementById('projectTemplateId').value;const name=document.getElementById('projectTemplateName').value.trim();const details=document.getElementById('projectTemplateDetails').value.trim();const steps=parseTemplateSteps(document.getElementById('projectTemplateSteps').value);if(!name||!steps.length)return;const items=getProjectTemplates();const payload={id:id||uid(),name,details,steps,updatedAt:new Date().toISOString()};if(id){const i=items.findIndex(x=>String(x.id)===String(id));if(i>=0)items[i]={...items[i],...payload};else items.push(payload);}else items.push(payload);setProjectTemplates(items);clearProjectTemplateForm();renderProjectTemplates();}
 function editProjectTemplate(id){const t=getProjectTemplates().find(x=>String(x.id)===String(id));if(!t)return;document.getElementById('projectTemplateId').value=t.id;document.getElementById('projectTemplateName').value=t.name||'';document.getElementById('projectTemplateDetails').value=t.details||'';document.getElementById('projectTemplateSteps').value=templateStepLines(t.steps);document.getElementById('projectTemplateEditorSummary').textContent='Edit template';document.querySelector('.template-editor-details')?.setAttribute('open','');document.getElementById('projectTemplateName').focus();}
 function deleteProjectTemplate(id){if(!confirm('Delete this template? Existing projects will not be affected.'))return;setProjectTemplates(getProjectTemplates().filter(x=>String(x.id)!==String(id)));renderProjectTemplates();}
@@ -3757,25 +3750,8 @@ function dateMinusDays(value,days){if(!value||!Number.isFinite(Number(days)))ret
 function useProjectTemplate(id){const t=getProjectTemplates().find(x=>String(x.id)===String(id));if(!t)return;document.getElementById('projectTemplateUseId').value=t.id;document.getElementById('projectTemplateUseTitle').textContent=t.name||'Create project';document.getElementById('projectTemplateProjectName').value='';document.getElementById('projectTemplateDueDate').value='';document.getElementById('projectTemplateProjectDetails').value=t.details||'';renderProjectTemplatePreview(t);document.getElementById('projectTemplatesDialog')?.close();document.getElementById('projectTemplateUseDialog')?.showModal();document.getElementById('projectTemplateProjectName').focus();}
 function closeProjectTemplateUse(){document.getElementById('projectTemplateUseDialog')?.close();}
 function renderProjectTemplatePreview(template){const area=document.getElementById('projectTemplatePreview');if(!area)return;area.innerHTML=`<strong>Steps to create</strong><ol>${(template.steps||[]).map(s=>`<li>${escapeHtml(s.name)}${Number.isFinite(Number(s.daysBefore))?` <span>${Number(s.daysBefore)} days before due date</span>`:''}</li>`).join('')}</ol>`;}
-function createProjectFromTemplate(event){event.preventDefault();const t=getProjectTemplates().find(x=>String(x.id)===String(document.getElementById('projectTemplateUseId').value));if(!t)return;const name=document.getElementById('projectTemplateProjectName').value.trim();if(!name)return;const dueDate=document.getElementById('projectTemplateDueDate').value||null;const details=document.getElementById('projectTemplateProjectDetails').value.trim();const project={id:uid(),name,details,tags:[],timingType:dueDate?'date':'none',dueDate,leadDays:7,completed:false,createdAt:new Date().toISOString(),templateId:t.id,steps:(t.steps||[]).map((s,index)=>({id:uid(),name:s.name,details:'',timingType:dueDate&&Number.isFinite(Number(s.daysBefore))?'date':'none',dueDate:dueDate&&Number.isFinite(Number(s.daysBefore))?dateMinusDays(dueDate,s.daysBefore):null,leadDays:0,completed:false,completedAt:null,pending:false,pendingReason:'',order:index}))};data.projects.push(project);saveData();closeProjectTemplateUse();renderAll();refreshListsImmediately();showAppView('tasks');setTimeout(()=>document.getElementById('projectsListSection')?.scrollIntoView({behavior:'smooth',block:'start'}),50);}
+function createProjectFromTemplate(event){event.preventDefault();const t=getProjectTemplates().find(x=>String(x.id)===String(document.getElementById('projectTemplateUseId').value));if(!t)return;const name=document.getElementById('projectTemplateProjectName').value.trim();if(!name)return;const dueDate=document.getElementById('projectTemplateDueDate').value||null;const details=document.getElementById('projectTemplateProjectDetails').value.trim();const project={id:uid(),name,details,tags:[],timingType:dueDate?'date':'none',dueDate,leadDays:7,completed:false,createdAt:new Date().toISOString(),templateId:t.id,steps:(t.steps||[]).map((s,index)=>({id:uid(),name:s.name,details:'',timingType:dueDate&&Number.isFinite(Number(s.daysBefore))?'date':'none',dueDate:dueDate&&Number.isFinite(Number(s.daysBefore))?dateMinusDays(dueDate,s.daysBefore):null,leadDays:0,completed:false,order:index}))};data.projects.push(project);saveData();closeProjectTemplateUse();renderAll();refreshListsImmediately();showAppView('tasks');setTimeout(()=>document.getElementById('projectsListSection')?.scrollIntoView({behavior:'smooth',block:'start'}),50);}
 
-
-/* ===== v54yR2 Project Templates Phase 1 visibility repair =====
-   Ensure the Templates route remains visible whenever the Projects view is rendered.
-*/
-function ensureProjectTemplatesEntry(){
-  const section=document.getElementById('projectsListSection');
-  const area=document.getElementById('projectsArea');
-  if(!section||!area)return;
-  const heading=section.querySelector(':scope > .section-heading');
-  let actions=heading?.querySelector('.project-section-actions');
-  if(heading&&!actions){actions=document.createElement('div');actions.className='section-actions project-section-actions';const plus=heading.querySelector(':scope > .section-plus');if(plus){plus.replaceWith(actions);actions.appendChild(plus);}else heading.appendChild(actions);}
-  if(actions&&!actions.querySelector('[data-project-templates-button]')){const button=document.createElement('button');button.type='button';button.className='small-button secondary-button';button.dataset.projectTemplatesButton='true';button.textContent='Templates';button.onclick=openProjectTemplates;actions.prepend(button);}
-  if(!section.querySelector(':scope > .project-templates-entry')){const entry=document.createElement('button');entry.type='button';entry.className='project-templates-entry';entry.onclick=openProjectTemplates;entry.innerHTML='<span><strong>Project Templates</strong><small>View and manage saved reusable project templates</small></span><span aria-hidden="true">›</span>';area.before(entry);}
-}
-document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureProjectTemplatesEntry,0));
-window.addEventListener('pageshow',ensureProjectTemplatesEntry);
-setTimeout(ensureProjectTemplatesEntry,50);
 
 /* ===== v54b Smart Projects: dated steps in Timeline and mobile project management ===== */
 TIMELINE_TYPES.todoStep={icon:'☑️',label:'To-do step'};
@@ -4902,3 +4878,10 @@ toggleTodo=function(id){
 };
 try{renderTodos();}catch(error){console.error('v54x To-do Pending refresh',error);}
 
+
+/* ===== v54aa Timeline appointment delete =====
+   One-change build: when an existing appointment is opened from Timeline (or any
+   other appointment edit route), the appointment dialog exposes Delete directly.
+   New appointments do not show Delete. Repeating appointments require confirmation
+   that the full repeating appointment will be removed.
+*/
