@@ -1,3 +1,6 @@
+## v54ac — Home Action Dashboard
+- Removed the duplicate This Week section from Home; Timeline remains the weekly planning view.
+
 ## v54ab — Timeline delete for all dated items
 
 Extends direct Timeline deletion from appointments to every Timeline item type while preserving item-specific delete semantics.
