@@ -1,3 +1,6 @@
+## v54ae — Pending in Needs Attention
+- Due/overdue Pending to-dos and project steps now surface clearly in Needs Attention, with their Pending reason.
+
 ## v54ad — Timeline Naming Consistency
 - Renamed the bottom Planner tab to Timeline so both routes to the same screen use the same name.
 

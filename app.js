@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ad";
+const APP_VERSION="54ae";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -3090,9 +3090,10 @@ function focusCandidateRows(){
   const rows=[];
   const today=new Date(); today.setHours(12,0,0,0);
   const alreadyShown=v52aTodayIdentitySet();
-  data.todos.filter(x=>!x.completed&&!alreadyShown.has(`todo:${x.id}`)&&!alreadyShown.has(`todoParent:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
+  data.todos.filter(x=>!x.completed&&!x.pending&&!alreadyShown.has(`todo:${x.id}`)&&!alreadyShown.has(`todoParent:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
+  data.todos.filter(x=>!x.completed&&x.pending&&x.dueDate&&dateOnly(x.dueDate)<=today&&!alreadyShown.has(`todo:${x.id}`)&&!alreadyShown.has(`todoParent:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:`Pending${x.pendingReason?' — '+x.pendingReason:''} · ${getTimingText(x)}`,dueDate:x.dueDate,kind:'Pending to-do',open:()=>editTodo(x.id),score:daysBetween(today,dateOnly(x.dueDate))}));
   data.cleaningTasks.filter(x=>isDueTodayOrEarlier(x.nextDue)&&!alreadyShown.has(`cleaning:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,kind:'Cleaning',action:()=>completeCleaning(x.id),open:()=>editCleaning(x.id),score:-2}));
-  data.projects.filter(x=>!x.completed&&!alreadyShown.has(`project:${x.id}`)).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed && !x.pending);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});});
+  data.projects.filter(x=>!x.completed&&!alreadyShown.has(`project:${x.id}`)).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed && !x.pending);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});(p.steps||[]).filter(x=>!x.completed&&x.pending&&x.dueDate&&dateOnly(x.dueDate)<=today).forEach(x=>rows.push({name:x.name,meta:`Pending · ${p.name}${x.pendingReason?' — '+x.pendingReason:''}`,dueDate:x.dueDate,kind:'Pending project step',open:()=>editStep(p.id,x.id),score:daysBetween(today,dateOnly(x.dueDate))}));});
   data.waiting.filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
 }
