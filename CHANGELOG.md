@@ -1,3 +1,6 @@
+## v54ad — Timeline Naming Consistency
+- Renamed the bottom Planner tab to Timeline so both routes to the same screen use the same name.
+
 ## v54ac — Home Action Dashboard
 - Removed the duplicate This Week section from Home; Timeline remains the weekly planning view.
 
