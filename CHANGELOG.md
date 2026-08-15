@@ -1,3 +1,6 @@
+## v54yR1
+Project Templates Phase 1 visibility repair: adds an obvious persistent Project Templates entry under Lists → Projects and labels the saved template list. No Phase 2 creation-from-template behaviour added.
+
 ## v54y — Project Templates Phase 1
 - Existing projects can be saved as reusable templates.
 - Templates are stored in main planner data and included in backup/export/restore.

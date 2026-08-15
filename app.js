@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54y";
+const APP_VERSION="54yR1";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4888,7 +4888,7 @@ try{renderTodos();}catch(error){console.error('v54x To-do Pending refresh',error
 
 
 
-/* ===== v54y Project Templates Phase 1 =====
+/* ===== v54yR1R1 Project Templates Phase 1 =====
    Templates are now saved inside planner data so backup/export/restore include them.
    Phase 1 exposes save/edit/delete only; project creation from a template remains for Phase 2.
 */
