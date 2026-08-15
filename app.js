@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54aa";
+const APP_VERSION="54ab";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4879,9 +4879,105 @@ toggleTodo=function(id){
 try{renderTodos();}catch(error){console.error('v54x To-do Pending refresh',error);}
 
 
-/* ===== v54aa Timeline appointment delete =====
+/* ===== v54ab Timeline appointment delete =====
    One-change build: when an existing appointment is opened from Timeline (or any
    other appointment edit route), the appointment dialog exposes Delete directly.
    New appointments do not show Delete. Repeating appointments require confirmation
    that the full repeating appointment will be removed.
 */
+
+
+/* ===== v54ab Timeline delete for every item type =====
+   One-change build: any existing dated item opened from Timeline gets a direct
+   Delete action in its edit dialog. The delete targets the exact Timeline item:
+   a dated to-do/project step deletes only that step; a project deadline deletes
+   the project; recurring/annual/waiting/cleaning items delete their underlying record.
+   Appointment Delete continues to use the accepted v54aa dialog behaviour.
+*/
+function v54abTimelineIds(item){
+  const raw=String(item?.id||'');
+  const cut=raw.indexOf(':');
+  return cut<0?[raw,'']:[raw.slice(0,cut),raw.slice(cut+1)];
+}
+function v54abCloseOpenDialog(){
+  const dialogs=[...document.querySelectorAll('dialog[open]')];
+  const dlg=dialogs[dialogs.length-1];
+  if(!dlg)return;
+  try{dlg.close();}catch(_){dlg.removeAttribute('open');}
+}
+function v54abDeleteTimelineItem(item){
+  if(!item)return;
+  const type=item.type;
+  const [parentId,childId]=v54abTimelineIds(item);
+  let target=null,message='Delete this item?';
+  if(type==='appointment'){
+    const a=(data.appointments||[]).find(x=>String(x.id)===String(item.id));
+    if(!a)return;
+    const repeating=normaliseAppointmentRepeat(a).repeat!=='none';
+    message=repeating?'Delete this repeating appointment and all of its occurrences?':`Delete “${a.name||'this appointment'}”?`;
+    if(!confirm(message))return;
+    data.appointments=(data.appointments||[]).filter(x=>String(x.id)!==String(item.id));
+  }else if(type==='todo'){
+    target=(data.todos||[]).find(x=>String(x.id)===String(item.id));if(!target)return;
+    if(!confirm(`Delete “${target.name||'this to-do'}”?`))return;
+    data.todos=(data.todos||[]).filter(x=>String(x.id)!==String(item.id));
+  }else if(type==='todoStep'){
+    const todo=(data.todos||[]).find(x=>String(x.id)===String(parentId));
+    const step=(todo?.steps||[]).find(x=>String(x.id)===String(childId));if(!todo||!step)return;
+    if(!confirm(`Delete step “${step.name||'Untitled step'}”?`))return;
+    todo.steps=(todo.steps||[]).filter(x=>String(x.id)!==String(childId));
+    todo.completed=(todo.steps||[]).length>0&&todo.steps.every(s=>s.completed);
+  }else if(type==='projectStep'){
+    const project=(data.projects||[]).find(x=>String(x.id)===String(parentId));
+    const step=(project?.steps||[]).find(x=>String(x.id)===String(childId));if(!project||!step)return;
+    if(!confirm(`Delete step “${step.name||'Untitled step'}”?`))return;
+    project.steps=(project.steps||[]).filter(x=>String(x.id)!==String(childId));
+  }else if(type==='projectMilestone'||type==='project'){
+    target=(data.projects||[]).find(x=>String(x.id)===String(item.id));if(!target)return;
+    if(!confirm(`Delete project “${target.name||'this project'}” and all of its steps?`))return;
+    data.projects=(data.projects||[]).filter(x=>String(x.id)!==String(item.id));
+  }else if(type==='cleaning'){
+    target=(data.cleaningTasks||[]).find(x=>String(x.id)===String(item.id));if(!target)return;
+    if(!confirm(`Delete cleaning task “${target.name||'this task'}”?`))return;
+    data.cleaningTasks=(data.cleaningTasks||[]).filter(x=>String(x.id)!==String(item.id));
+  }else if(type==='recurring'){
+    target=(data.recurringTasks||[]).find(x=>String(x.id)===String(item.id));if(!target)return;
+    if(!confirm(`Delete recurring task “${target.name||'this task'}”? This removes the recurring task, not just one occurrence.`))return;
+    data.recurringTasks=(data.recurringTasks||[]).filter(x=>String(x.id)!==String(item.id));
+  }else if(type==='annual'){
+    target=(data.annualDates||[]).find(x=>String(x.id)===String(item.id));if(!target)return;
+    if(!confirm(`Delete “${target.name||'this annual date'}”?`))return;
+    data.annualDates=(data.annualDates||[]).filter(x=>String(x.id)!==String(item.id));
+  }else if(type==='waiting'){
+    target=(data.waiting||[]).find(x=>String(x.id)===String(item.id));if(!target)return;
+    if(!confirm(`Delete “${target.name||'this Waiting For item'}”?`))return;
+    data.waiting=(data.waiting||[]).filter(x=>String(x.id)!==String(item.id));
+  }else return;
+  saveData();v54abCloseOpenDialog();renderAll();showSaved('Deleted');
+}
+function v54abTimelineDeleteLabel(type){
+  if(type==='todoStep'||type==='projectStep')return 'Delete step';
+  if(type==='projectMilestone'||type==='project')return 'Delete project';
+  if(type==='recurring')return 'Delete recurring task';
+  return 'Delete';
+}
+function v54abAttachTimelineDelete(item){
+  if(!item||item.type==='appointment')return; // appointment already has accepted v54aa Delete
+  const dialogs=[...document.querySelectorAll('dialog[open]')];
+  const dlg=dialogs[dialogs.length-1];if(!dlg)return;
+  const actions=dlg.querySelector('.dialog-actions');if(!actions)return;
+  actions.querySelectorAll('[data-v54ab-timeline-delete]').forEach(b=>b.remove());
+  const button=document.createElement('button');
+  button.type='button';button.className='secondary-button danger-text';
+  button.dataset.v54abTimelineDelete='1';button.textContent=v54abTimelineDeleteLabel(item.type);
+  button.addEventListener('click',()=>v54abDeleteTimelineItem(item));
+  actions.insertBefore(button,actions.firstChild);
+}
+const v54abTimelineItemsBase=timelineItems;
+timelineItems=function(){
+  return v54abTimelineItemsBase().map(item=>{
+    const open=item.open;
+    return {...item,open:()=>{open();setTimeout(()=>v54abAttachTimelineDelete(item),0);}};
+  });
+};
+try{renderTimeline();}catch(error){console.error('v54ab Timeline delete refresh',error);}

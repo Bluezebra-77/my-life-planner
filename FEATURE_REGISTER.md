@@ -1,4 +1,8 @@
-## v54aa
+## v54ab
+
+- Direct Delete is available for every item opened from Timeline.
+
+## v54ab
 - Timeline appointment editing: an existing appointment can be deleted directly from its edit dialog.
 
 ## v54x

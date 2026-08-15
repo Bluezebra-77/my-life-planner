@@ -1,4 +1,8 @@
-## v54aa
+## v54ab
+
+- Usability gap fixed: Timeline items no longer require a detour to Lists for deletion.
+
+## v54ab
 - Usability gap fixed: Timeline appointments previously opened an edit dialog with Save/Cancel only, forcing deletion through Lists.
 
 ## v54x

@@ -1,4 +1,8 @@
-## v54aa — Timeline appointment delete
+## v54ab — Timeline delete for all dated items
+
+Extends direct Timeline deletion from appointments to every Timeline item type while preserving item-specific delete semantics.
+
+## v54ab — Timeline appointment delete
 - Existing appointments now show **Delete** in the appointment edit dialog, including when opened from Timeline.
 - Delete is hidden when adding a new appointment.
 - Repeating appointments explicitly confirm that the full repeating appointment will be removed.
