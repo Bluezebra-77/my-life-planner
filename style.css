@@ -1657,7 +1657,8 @@ body.timer-minimised .quick-add-fab{
   }
 }
 
-
-/* v54yR1: make saved Project Templates unmistakably accessible in Lists > Projects */
+/* v54yR2 Project Templates visibility repair */
+.project-section-actions{display:flex;align-items:center;gap:.55rem}.project-section-actions .small-button{width:auto}
 .project-templates-entry{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 14px;padding:13px 14px!important;text-align:left!important;background:var(--accent-soft)!important;color:var(--accent)!important;border:1px solid var(--line)!important;border-radius:14px!important;box-shadow:none!important}
 .project-templates-entry>span:first-child{display:grid;gap:3px;min-width:0}.project-templates-entry strong{font-size:.95rem}.project-templates-entry small{font-size:.8rem;color:var(--muted);font-weight:600}.project-templates-entry>span:last-child{font-size:1.5rem;line-height:1}.template-list-heading{margin:14px 0 8px;font-size:1rem;text-align:left}
+@media(max-width:600px){.project-section-actions{width:100%;justify-content:flex-end}}

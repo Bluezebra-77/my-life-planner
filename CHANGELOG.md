@@ -1,10 +1,5 @@
-## v54yR1
-Project Templates Phase 1 visibility repair: adds an obvious persistent Project Templates entry under Lists → Projects and labels the saved template list. No Phase 2 creation-from-template behaviour added.
-
-## v54y — Project Templates Phase 1
-- Existing projects can be saved as reusable templates.
-- Templates are stored in main planner data and included in backup/export/restore.
-- Phase 2 will create independent projects from templates.
+## v54yR2 — Project Templates Phase 1 visibility repair
+- Persistent Project Templates route under Lists → Projects; templates stored in planner data.
 
 ## v54x — Ordinary To-do Pending status
 - Ordinary non-recurring to-dos can be marked Pending or returned to Active.

@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54yR1";
+const APP_VERSION="54yR2";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -103,7 +103,7 @@ const DATA_MIGRATIONS = Object.freeze({
 
 function validatePlannerData(candidate) {
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) throw new Error("Planner data is not an object");
-  const requiredLists = ["todos","projects","projectTemplates","annualDates","cleaningTasks","appointments","recurringTasks","inbox","waiting","customLists","todayFocus"];
+  const requiredLists = ["todos","projects","annualDates","cleaningTasks","appointments","recurringTasks","inbox","waiting","customLists","todayFocus"];
   for (const field of requiredLists) if (!Array.isArray(candidate[field])) throw new Error(`Invalid ${field} collection`);
   if (Number(candidate.schemaVersion) !== SCHEMA_VERSION) throw new Error("Schema version verification failed");
   return true;
@@ -153,7 +153,6 @@ function normaliseLegacyShape(value = {}) {
     ...source,
     todos: source.todos || source.todoItems || source.tasks || [],
     projects: source.projects || source.projectItems || [],
-    projectTemplates: Array.isArray(source.projectTemplates) ? source.projectTemplates : [],
     annualDates: source.annualDates || source.birthdays || source.annualReminders || [],
     cleaningTasks: source.cleaningTasks || source.cleaning || source.cleaningJobs || source.householdTasks || [],
     appointments: source.appointments || source.events || [],
@@ -165,7 +164,7 @@ function normaliseLegacyShape(value = {}) {
 function scoreData(candidate = {}) {
   const shaped = normaliseLegacyShape(candidate);
   return [
-    shaped.todos, shaped.projects, shaped.projectTemplates, shaped.annualDates, shaped.cleaningTasks, shaped.appointments,
+    shaped.todos, shaped.projects, shaped.annualDates, shaped.cleaningTasks, shaped.appointments,
     shaped.recurringTasks, shaped.inbox, shaped.waiting, shaped.customLists, shaped.todayFocus
   ].reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
 }
@@ -231,7 +230,6 @@ function getData() {
     ...preferred,
     todos: mergeUniqueLists(candidates,"todos"),
     projects: mergeUniqueLists(candidates,"projects"),
-    projectTemplates: mergeUniqueLists(candidates,"projectTemplates"),
     annualDates: mergeUniqueLists(candidates,"annualDates"),
     cleaningTasks: mergeUniqueLists(candidates,"cleaningTasks"),
     appointments: mergeUniqueLists(candidates,"appointments"),
@@ -275,7 +273,6 @@ function normaliseData(loaded = {}) {
     migrationMeta: loaded.migrationMeta && typeof loaded.migrationMeta === "object" ? loaded.migrationMeta : {},
     todos: Array.isArray(loaded.todos) ? loaded.todos : [],
     projects: Array.isArray(loaded.projects) ? loaded.projects : [],
-    projectTemplates: Array.isArray(loaded.projectTemplates) ? loaded.projectTemplates : [],
     annualDates: Array.isArray(loaded.annualDates) ? loaded.annualDates : [],
     cleaningTasks: Array.isArray(loaded.cleaningTasks) ? loaded.cleaningTasks : Array.isArray(loaded.cleaning) ? loaded.cleaning : Array.isArray(loaded.cleaningJobs) ? loaded.cleaningJobs : [],
     appointments: Array.isArray(loaded.appointments) ? loaded.appointments : [],
@@ -3761,6 +3758,23 @@ function renderProjectTemplatePreview(template){const area=document.getElementBy
 function createProjectFromTemplate(event){event.preventDefault();const t=getProjectTemplates().find(x=>String(x.id)===String(document.getElementById('projectTemplateUseId').value));if(!t)return;const name=document.getElementById('projectTemplateProjectName').value.trim();if(!name)return;const dueDate=document.getElementById('projectTemplateDueDate').value||null;const details=document.getElementById('projectTemplateProjectDetails').value.trim();const project={id:uid(),name,details,tags:[],timingType:dueDate?'date':'none',dueDate,leadDays:7,completed:false,createdAt:new Date().toISOString(),templateId:t.id,steps:(t.steps||[]).map((s,index)=>({id:uid(),name:s.name,details:'',timingType:dueDate&&Number.isFinite(Number(s.daysBefore))?'date':'none',dueDate:dueDate&&Number.isFinite(Number(s.daysBefore))?dateMinusDays(dueDate,s.daysBefore):null,leadDays:0,completed:false,order:index}))};data.projects.push(project);saveData();closeProjectTemplateUse();renderAll();refreshListsImmediately();showAppView('tasks');setTimeout(()=>document.getElementById('projectsListSection')?.scrollIntoView({behavior:'smooth',block:'start'}),50);}
 
 
+/* ===== v54yR2 Project Templates Phase 1 visibility repair =====
+   Ensure the Templates route remains visible whenever the Projects view is rendered.
+*/
+function ensureProjectTemplatesEntry(){
+  const section=document.getElementById('projectsListSection');
+  const area=document.getElementById('projectsArea');
+  if(!section||!area)return;
+  const heading=section.querySelector(':scope > .section-heading');
+  let actions=heading?.querySelector('.project-section-actions');
+  if(heading&&!actions){actions=document.createElement('div');actions.className='section-actions project-section-actions';const plus=heading.querySelector(':scope > .section-plus');if(plus){plus.replaceWith(actions);actions.appendChild(plus);}else heading.appendChild(actions);}
+  if(actions&&!actions.querySelector('[data-project-templates-button]')){const button=document.createElement('button');button.type='button';button.className='small-button secondary-button';button.dataset.projectTemplatesButton='true';button.textContent='Templates';button.onclick=openProjectTemplates;actions.prepend(button);}
+  if(!section.querySelector(':scope > .project-templates-entry')){const entry=document.createElement('button');entry.type='button';entry.className='project-templates-entry';entry.onclick=openProjectTemplates;entry.innerHTML='<span><strong>Project Templates</strong><small>View and manage saved reusable project templates</small></span><span aria-hidden="true">›</span>';area.before(entry);}
+}
+document.addEventListener('DOMContentLoaded',()=>setTimeout(ensureProjectTemplatesEntry,0));
+window.addEventListener('pageshow',ensureProjectTemplatesEntry);
+setTimeout(ensureProjectTemplatesEntry,50);
+
 /* ===== v54b Smart Projects: dated steps in Timeline and mobile project management ===== */
 TIMELINE_TYPES.todoStep={icon:'☑️',label:'To-do step'};
 TIMELINE_TYPES.projectStep={icon:'📌',label:'Project step'};
@@ -4886,9 +4900,3 @@ toggleTodo=function(id){
 };
 try{renderTodos();}catch(error){console.error('v54x To-do Pending refresh',error);}
 
-
-
-/* ===== v54yR1R1 Project Templates Phase 1 =====
-   Templates are now saved inside planner data so backup/export/restore include them.
-   Phase 1 exposes save/edit/delete only; project creation from a template remains for Phase 2.
-*/
