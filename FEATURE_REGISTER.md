@@ -159,5 +159,5 @@
 ## v54u
 - Recurring tasks: one-level Undo last completion from Lists → Recurring tasks.
 
-## Project Templates Phase 2 (v54z)
+## Project Templates Phase 2 (v54zR1)
 A saved template can be used to create a new independent project with clean step state and optional deadline-relative dates.

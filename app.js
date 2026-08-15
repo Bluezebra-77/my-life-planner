@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54z";
+const APP_VERSION="54zR1";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -230,6 +230,7 @@ function getData() {
     ...preferred,
     todos: mergeUniqueLists(candidates,"todos"),
     projects: mergeUniqueLists(candidates,"projects"),
+    projectTemplates: mergeUniqueLists(candidates,"projectTemplates"),
     annualDates: mergeUniqueLists(candidates,"annualDates"),
     cleaningTasks: mergeUniqueLists(candidates,"cleaningTasks"),
     appointments: mergeUniqueLists(candidates,"appointments"),
@@ -273,6 +274,7 @@ function normaliseData(loaded = {}) {
     migrationMeta: loaded.migrationMeta && typeof loaded.migrationMeta === "object" ? loaded.migrationMeta : {},
     todos: Array.isArray(loaded.todos) ? loaded.todos : [],
     projects: Array.isArray(loaded.projects) ? loaded.projects : [],
+    projectTemplates: Array.isArray(loaded.projectTemplates) ? loaded.projectTemplates : [],
     annualDates: Array.isArray(loaded.annualDates) ? loaded.annualDates : [],
     cleaningTasks: Array.isArray(loaded.cleaningTasks) ? loaded.cleaningTasks : Array.isArray(loaded.cleaning) ? loaded.cleaning : Array.isArray(loaded.cleaningJobs) ? loaded.cleaningJobs : [],
     appointments: Array.isArray(loaded.appointments) ? loaded.appointments : [],

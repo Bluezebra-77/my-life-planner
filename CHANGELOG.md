@@ -146,5 +146,5 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 ## v54u — Recurring-task Undo
 - Added one-level Undo last completion for recurring tasks, restoring the prior occurrence and reversing its activity/statistics record.
 
-## v54z — Project Templates Phase 2
+## v54zR1 — Project Templates Phase 2
 Saved templates can now create fresh independent projects. Template step order is retained; optional saved day offsets calculate step dates from the new project deadline; copied steps start incomplete and Active.
