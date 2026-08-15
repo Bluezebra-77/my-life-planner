@@ -1,5 +1,5 @@
-## v54ae — Pending in Needs Attention
-- Due/overdue Pending to-dos and project steps now surface clearly in Needs Attention, with their Pending reason.
+## v54aeR1 — Pending Consistency Repair
+- Pending due/overdue items are consistently visible and manageable in Home/Lists; overdue Pending items use red overdue styling.
 
 ## v54ad — Timeline Naming Consistency
 - Renamed the bottom Planner tab to Timeline so both routes to the same screen use the same name.

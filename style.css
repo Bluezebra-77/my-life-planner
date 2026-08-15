@@ -1656,3 +1656,11 @@ body.timer-minimised .quick-add-fab{
     max-width:calc(100% - 12px)!important;
   }
 }
+
+
+/* v54aeR1 Pending consistency */
+.pending-inline-toggle{display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;font-size:.72rem;font-weight:700;color:var(--muted);padding:4px 5px;border-radius:8px;background:var(--surface-soft,#f4f7f5)}
+.pending-inline-toggle input{width:17px;height:17px;margin:0;accent-color:var(--accent)}
+.v10-row.overdue-row{border-color:#d78b8b;background:#fff7f7;border-left:4px solid #b42318}
+.v10-row.overdue-row .v10-row-title,.v10-row.overdue-row .v10-row-meta{color:#b42318}
+@media(max-width:520px){.pending-inline-toggle span{display:none}.pending-inline-toggle{padding:4px}}
