@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54aeR1";
+const APP_VERSION="54aeR2";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4983,122 +4983,129 @@ timelineItems=function(){
 try{renderTimeline();}catch(error){console.error('v54ab Timeline delete refresh',error);}
 
 
-/* ===== v54aeR1 Pending consistency repair =====
-   Pending is an action/status, so expose it consistently where a project step
-   is managed. Needs Attention now surfaces only due/overdue Pending to-dos and
-   project steps, keeps their reason visible, and gives overdue Pending rows the
-   same red overdue treatment as other overdue work. Recurring/Waiting logic is
-   deliberately untouched. */
-function v54aeR1IsDueNow(value){
-  if(!value)return false;
-  const today=new Date();today.setHours(12,0,0,0);
-  return dateOnly(value)<=today;
+/* ===== v54aeR2 Pending consistency repair =====
+   Rebuilt from stable v54ad after v54ae/v54aeR1 failed user testing.
+   Pending actions are exposed consistently in Lists, Home Needs Attention and
+   Home Today for ordinary to-dos/project steps. Due/overdue Pending items in
+   Needs Attention show their reason and explicit overdue red treatment. */
+function v54aeR2DateKey(value){
+  if(!value)return '';
+  const d=dateOnly(value);if(!d)return '';
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
 }
-function v54aeR1IsOverdue(value){
-  if(!value)return false;
-  const today=new Date();today.setHours(0,0,0,0);
-  return dateOnly(value)<today;
-}
-function v54aeR1PendingMeta(prefix,item){
+function v54aeR2DueNow(value){return Boolean(value)&&v54aeR2DateKey(value)<=localDateKey();}
+function v54aeR2Overdue(value){return Boolean(value)&&v54aeR2DateKey(value)<localDateKey();}
+function v54aeR2PendingMeta(prefix,item){
   const reason=item?.pendingReason?` — ${item.pendingReason}`:'';
-  const overdue=v54aeR1IsOverdue(item?.dueDate)?' · OVERDUE':'';
-  return `${prefix} · Pending${reason}${overdue}`;
+  return `${prefix} · Pending${reason}${v54aeR2Overdue(item?.dueDate)?' · OVERDUE':''}`;
+}
+function v54aeR2SetPending(kind,id,parentId,wanted){
+  if(kind==='todo'){
+    const item=(data.todos||[]).find(x=>String(x.id)===String(id));if(!item||item.completed)return;
+    if(Boolean(item.pending)!==Boolean(wanted))toggleTodoPending(id);
+  }else if(kind==='step'){
+    const project=(data.projects||[]).find(x=>String(x.id)===String(parentId));
+    const item=(project?.steps||[]).find(x=>String(x.id)===String(id));if(!item||item.completed)return;
+    if(Boolean(item.pending)!==Boolean(wanted))toggleProjectStepPending(parentId,id);
+  }
+}
+function v54aeR2PendingControl(kind,id,parentId,pending){
+  const label=document.createElement('label');label.className='pending-inline-toggle';label.title=pending?'Uncheck to mark active':'Check to mark pending';
+  const input=document.createElement('input');input.type='checkbox';input.checked=Boolean(pending);input.setAttribute('aria-label',pending?'Pending — uncheck to mark active':'Mark pending');
+  input.addEventListener('click',e=>e.stopPropagation());
+  input.addEventListener('change',e=>{e.stopPropagation();v54aeR2SetPending(kind,id,parentId,input.checked);});
+  const text=document.createElement('span');text.textContent='Pending';label.append(input,text);return label;
 }
 
-// Needs Attention: Active work behaves as before; Pending work enters only when
-// its own date is due today or overdue. Pending project steps are not skipped.
+// Needs Attention: due/overdue Pending items are included explicitly. Active
+// project Next step still skips Pending steps.
 focusCandidateRows=function(){
-  const rows=[];
-  const today=new Date();today.setHours(12,0,0,0);
-  const alreadyShown=v52aTodayIdentitySet();
+  const rows=[];const today=new Date();today.setHours(12,0,0,0);const alreadyShown=v52aTodayIdentitySet();
   (data.todos||[]).filter(x=>!x.completed&&!x.pending&&!alreadyShown.has(`todo:${x.id}`)&&!alreadyShown.has(`todoParent:${x.id}`)).forEach(x=>rows.push({id:x.id,itemType:'todo',name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
-  (data.todos||[]).filter(x=>!x.completed&&x.pending&&v54aeR1IsDueNow(x.dueDate)).forEach(x=>rows.push({id:x.id,itemType:'todo',pending:true,pendingReason:x.pendingReason||'',name:x.name,meta:v54aeR1PendingMeta('To-do',x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
+  (data.todos||[]).filter(x=>!x.completed&&x.pending&&v54aeR2DueNow(x.dueDate)).forEach(x=>rows.push({id:x.id,itemType:'todo',pending:true,name:x.name,meta:v54aeR2PendingMeta('To-do',x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
   (data.cleaningTasks||[]).filter(x=>isDueTodayOrEarlier(x.nextDue)&&!alreadyShown.has(`cleaning:${x.id}`)).forEach(x=>rows.push({id:x.id,itemType:'cleaning',name:x.name,meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,kind:'Cleaning',action:()=>completeCleaning(x.id),open:()=>editCleaning(x.id),score:-2}));
   (data.projects||[]).filter(x=>!x.completed).forEach(p=>{
     if(!alreadyShown.has(`project:${p.id}`)){
-      const s=(p.steps||[]).find(x=>!x.completed&&!x.pending);
-      if(s)rows.push({id:s.id,parentId:p.id,itemType:'step',name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});
+      const next=(p.steps||[]).find(x=>!x.completed&&!x.pending);
+      if(next)rows.push({id:next.id,parentId:p.id,itemType:'step',pending:false,name:next.name,meta:`Next action · ${p.name}`,dueDate:next.dueDate,kind:'Project',action:()=>toggleStep(p.id,next.id),open:()=>editStep(p.id,next.id),score:next.dueDate?daysBetween(today,dateOnly(next.dueDate)):12});
     }
-    (p.steps||[]).filter(s=>!s.completed&&s.pending&&v54aeR1IsDueNow(s.dueDate)).forEach(s=>rows.push({id:s.id,parentId:p.id,itemType:'step',pending:true,pendingReason:s.pendingReason||'',name:s.name,meta:v54aeR1PendingMeta(`Project: ${p.name}`,s),dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate))-20:-20}));
+    (p.steps||[]).filter(x=>!x.completed&&x.pending&&v54aeR2DueNow(x.dueDate)).forEach(x=>rows.push({id:x.id,parentId:p.id,itemType:'step',pending:true,name:x.name,meta:v54aeR2PendingMeta(`Project: ${p.name}`,x),dueDate:x.dueDate,kind:'Project',action:()=>toggleStep(p.id,x.id),open:()=>editStep(p.id,x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
   });
   (data.waiting||[]).filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({id:x.id,itemType:'waiting',name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
 };
 
-function v54aeR1SetPendingFromCheckbox(kind,id,parentId,checkbox){
-  if(kind==='step'){
-    const project=(data.projects||[]).find(p=>String(p.id)===String(parentId));
-    const step=project?.steps?.find(s=>String(s.id)===String(id));
-    if(!step)return;
-    if(Boolean(step.pending)!==Boolean(checkbox.checked))toggleProjectStepPending(parentId,id);
-    checkbox.checked=Boolean(step.pending);
-  }else if(kind==='todo'){
-    const todo=(data.todos||[]).find(t=>String(t.id)===String(id));
-    if(!todo)return;
-    if(Boolean(todo.pending)!==Boolean(checkbox.checked))toggleTodoPending(id);
-    checkbox.checked=Boolean(todo.pending);
-  }
-}
-function v54aeR1PendingToggle(kind,id,parentId,checked){
-  const label=document.createElement('label');label.className='pending-inline-toggle';label.title=checked?'Mark active':'Mark pending';
-  const input=document.createElement('input');input.type='checkbox';input.checked=Boolean(checked);input.setAttribute('aria-label',checked?'Pending — uncheck to mark active':'Mark pending');
-  input.addEventListener('click',event=>event.stopPropagation());
-  input.addEventListener('change',event=>{event.stopPropagation();v54aeR1SetPendingFromCheckbox(kind,id,parentId,input);});
-  const text=document.createElement('span');text.textContent='Pending';
-  label.append(input,text);return label;
-}
-
 renderFocusToday=function(){
-  const area=document.getElementById('focusTodayArea');if(!area)return;area.innerHTML='';
-  const items=focusCandidateRows();
+  const area=document.getElementById('focusTodayArea');if(!area)return;area.innerHTML='';const items=focusCandidateRows();
   if(!items.length){area.innerHTML='<div class="empty-state calm-empty"><strong>You are clear for now.</strong><span>Capture a thought or add a task when something comes to mind.</span></div>';return;}
   items.forEach(item=>{
     let menu='';
-    if(item.itemType==='todo')menu=compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.id}')">Edit</button>${!item.completed?`<button onclick="closeAnchoredMenu();toggleTodoPending('${item.id}')">${item.pending?'Mark active':'Mark pending'}</button>`:''}<button onclick="closeAnchoredMenu();toggleTodo('${item.id}')">Complete</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteTodo('${item.id}')">Delete</button>`,item.name||'to-do');
+    if(item.itemType==='todo')menu=compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleTodoPending('${item.id}')">${item.pending?'Mark active':'Mark pending'}</button><button onclick="closeAnchoredMenu();toggleTodo('${item.id}')">Complete</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteTodo('${item.id}')">Delete</button>`,item.name||'to-do');
     if(item.itemType==='step')menu=compactMenu(`<button onclick="closeAnchoredMenu();editStep('${item.parentId}','${item.id}')">Edit step</button><button onclick="closeAnchoredMenu();toggleProjectStepPending('${item.parentId}','${item.id}')">${item.pending?'Mark active':'Mark pending'}</button><button onclick="closeAnchoredMenu();toggleStep('${item.parentId}','${item.id}')">Complete step</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteProjectStep('${item.parentId}','${item.id}')">Delete step</button>`,item.name||'project step');
     const row=makeV10Row(item,{menu});
-    if(item.pending){
-      row.classList.add('pending-row');
-      if(v54aeR1IsOverdue(item.dueDate))row.classList.add('overdue-row');
-      const trigger=row.querySelector('.item-menu-trigger');
-      const toggle=v54aeR1PendingToggle(item.itemType,item.id,item.parentId,true);
-      if(trigger)row.insertBefore(toggle,trigger);else row.appendChild(toggle);
+    if(v54aeR2Overdue(item.dueDate)){row.classList.add('overdue-row');}
+    if(item.itemType==='todo'||item.itemType==='step'){
+      const trigger=row.querySelector('.item-menu-trigger');const control=v54aeR2PendingControl(item.itemType,item.id,item.parentId,item.pending);
+      if(trigger)row.insertBefore(control,trigger);else row.appendChild(control);
     }
     area.appendChild(row);
   });
 };
 
-// Add a visible Pending checkbox to every incomplete project step in Lists.
-function v54aeR1InstallProjectPendingToggles(){
-  document.querySelectorAll('#projectsArea .project-steps-group').forEach(group=>{
-    const project=(data.projects||[]).find(p=>String(p.id)===String(group.dataset.projectId));if(!project)return;
-    [...group.querySelectorAll(':scope > .project-step-manage-row')].forEach((row,index)=>{
-      const step=(project.steps||[])[index];if(!step||step.completed||row.querySelector('.pending-inline-toggle'))return;
-      const trigger=row.querySelector('.item-menu-trigger');
-      const toggle=v54aeR1PendingToggle('step',step.id,project.id,step.pending);
-      if(trigger)row.insertBefore(toggle,trigger);else row.appendChild(toggle);
-    });
+// Rebuild the final Projects renderer with the Pending control placed directly
+// into each step row rather than trying to discover/patch rows afterwards.
+renderProjects=function(){
+  const area=document.getElementById('projectsArea');if(!area)return;area.innerHTML='';const projects=Array.isArray(data.projects)?data.projects:[];
+  if(!projects.length){area.innerHTML='<div class="empty-state">No projects are saved yet.</div>';return;}
+  const openStates=getProjectStepStates();
+  [...projects].sort(sortByDueDate).forEach(project=>{
+    const steps=Array.isArray(project.steps)?project.steps:[];const genuinelyComplete=steps.length>0&&steps.every(step=>step.completed);project.completed=genuinelyComplete;
+    const completedCount=steps.filter(step=>step.completed).length;const nextStep=steps.find(step=>!step.completed&&!step.pending);const hasIncomplete=steps.some(step=>!step.completed);
+    const nextMeta=nextStep?`Next: ${escapeHtml(nextStep.name||'Untitled step')}${nextStep.dueDate?' · '+formatDate(nextStep.dueDate):''}`:(hasIncomplete?'No active next step':(steps.length?'All steps complete':'No steps'));
+    const row=document.createElement('div');row.className=`compact-manage-row project-compact-row ${genuinelyComplete?'completed-row':''}`;
+    const actions=`<button onclick="closeAnchoredMenu();openAddDialog('step','${project.id}')">Add step</button><button onclick="closeAnchoredMenu();editProject('${project.id}')">Edit project</button><button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${project.id}');refreshListsImmediately()">Delete project</button>`;
+    row.innerHTML=`<button type="button" class="project-expand-button" onclick="toggleProjectSteps('${project.id}')" aria-expanded="${Boolean(openStates[project.id])}">${openStates[project.id]?'▾':'▸'}</button><button type="button" class="compact-row-main" onclick="toggleProjectSteps('${project.id}')"><span class="compact-row-title">${escapeHtml(project.name||'Untitled project')}</span><span class="compact-row-meta">${steps.length?`${completedCount} of ${steps.length} steps`:'No steps'}${project.dueDate?' · Deadline '+formatDate(project.dueDate):''}</span><span class="compact-row-next">${nextMeta}</span></button>${compactMenu(actions,project.name||'project')}`;area.appendChild(row);
+    const group=document.createElement('div');group.className='project-steps-group';group.dataset.projectId=project.id;group.hidden=!openStates[project.id];
+    steps.forEach((step,index)=>{
+      const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row project-step-manage-row ${step.completed?'completed-row':''}`;
+      const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}${!step.completed?`<button onclick="closeAnchoredMenu();toggleProjectStepPending('${project.id}','${step.id}')">${step.pending?'Mark active':'Mark pending'}</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
+      const pendingMeta=step.pending?` · Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}`:'';
+      sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}${pendingMeta} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;
+      if(!step.completed){const trigger=sr.querySelector('.item-menu-trigger');const control=v54aeR2PendingControl('step',step.id,project.id,step.pending);if(trigger)sr.insertBefore(control,trigger);else sr.appendChild(control);}
+      group.appendChild(sr);
+    });area.appendChild(group);
   });
-}
-const v54aeR1RenderProjectsBase=renderProjects;
-renderProjects=function(){v54aeR1RenderProjectsBase();v54aeR1InstallProjectPendingToggles();};
-
-// Home Today menus should expose the same Pending action for ordinary to-dos
-// and project steps rather than requiring a trip to Lists.
-const v54aeR1ReminderMenuBase=v54jReminderMenu;
-v54jReminderMenu=function(item){
-  if(!item)return '';
-  const label=item.name||'item';
-  if(item.itemType==='todo'){
-    const todo=(data.todos||[]).find(t=>String(t.id)===String(item.id));
-    return compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.id}')">Edit</button>${todo&&!todo.completed?`<button onclick="closeAnchoredMenu();toggleTodoPending('${item.id}')">${todo.pending?'Mark active':'Mark pending'}</button>`:''}<button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteTodo('${item.id}')">Delete</button>`,label);
-  }
-  if(item.itemType==='step'){
-    const project=(data.projects||[]).find(p=>String(p.id)===String(item.parentId));
-    const step=project?.steps?.find(s=>String(s.id)===String(item.id));
-    return compactMenu(`<button onclick="closeAnchoredMenu();editStep('${item.parentId}','${item.id}')">Edit step</button>${step&&!step.completed?`<button onclick="closeAnchoredMenu();toggleProjectStepPending('${item.parentId}','${item.id}')">${step.pending?'Mark active':'Mark pending'}</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${item.parentId}','${item.id}')">${item.completed?'Mark active':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteProjectStep('${item.parentId}','${item.id}')">Delete step</button>`,label);
-  }
-  return v54aeR1ReminderMenuBase(item);
 };
 
-try{renderFocusToday();renderProjects();renderTodayReminders();}catch(error){console.error('v54aeR1 Pending consistency refresh',error);}
+// Today rows and menus expose the same Pending action/control for to-dos and
+// project steps. This keeps Home consistent with Lists.
+const v54aeR2ReminderMenuBase=v54jReminderMenu;
+v54jReminderMenu=function(item){
+  if(!item)return '';
+  if(item.itemType==='todo'){
+    const t=(data.todos||[]).find(x=>String(x.id)===String(item.id));
+    return compactMenu(`<button onclick="closeAnchoredMenu();editTodo('${item.id}')">Edit</button>${t&&!t.completed?`<button onclick="closeAnchoredMenu();toggleTodoPending('${item.id}')">${t.pending?'Mark active':'Mark pending'}</button>`:''}<button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteTodo('${item.id}')">Delete</button>`,item.name||'to-do');
+  }
+  if(item.itemType==='step'){
+    const p=(data.projects||[]).find(x=>String(x.id)===String(item.parentId));const st=(p?.steps||[]).find(x=>String(x.id)===String(item.id));
+    return compactMenu(`<button onclick="closeAnchoredMenu();editStep('${item.parentId}','${item.id}')">Edit step</button>${st&&!st.completed?`<button onclick="closeAnchoredMenu();toggleProjectStepPending('${item.parentId}','${item.id}')">${st.pending?'Mark active':'Mark pending'}</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${item.parentId}','${item.id}')">Complete step</button><button class="danger-text" onclick="closeAnchoredMenu();v54jDeleteProjectStep('${item.parentId}','${item.id}')">Delete step</button>`,item.name||'project step');
+  }
+  return v54aeR2ReminderMenuBase(item);
+};
+const v54aeR2ReminderRowBase=v54jReminderRow;
+v54jReminderRow=function(item,meta){
+  const row=v54aeR2ReminderRowBase(item,meta);
+  if(item.itemType==='todo'){
+    const t=(data.todos||[]).find(x=>String(x.id)===String(item.id));if(t&&!t.completed){const trigger=row.querySelector('.item-menu-trigger');const c=v54aeR2PendingControl('todo',item.id,null,t.pending);if(trigger)row.insertBefore(c,trigger);else row.appendChild(c);}
+  }else if(item.itemType==='step'){
+    const p=(data.projects||[]).find(x=>String(x.id)===String(item.parentId));const st=(p?.steps||[]).find(x=>String(x.id)===String(item.id));if(st&&!st.completed){const trigger=row.querySelector('.item-menu-trigger');const c=v54aeR2PendingControl('step',item.id,item.parentId,st.pending);if(trigger)row.insertBefore(c,trigger);else row.appendChild(c);}
+  }
+  return row;
+};
+renderTodayReminders=function(){
+  const area=document.getElementById('todayRemindersArea');if(!area)return;const items=[...(getTodayReminderItems()||[])].sort(v54vCompareTodayItems);area.innerHTML='';
+  if(!items.length){area.innerHTML='<div class="empty-state">Nothing time-sensitive needs attention today.</div>';return;}
+  items.forEach(item=>{const overdue=item.itemType!=='annual'&&v54aeR2Overdue(item.dueDate);const timePart=item.itemType==='appointment'&&item.time?` · ${item.time}`:'';const meta=`${item.source}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;if(item.itemType==='recurring')area.appendChild(v54jTodayRecurringRow(item,meta));else area.appendChild(v54jReminderRow(item,meta));});
+};
+try{renderFocusToday();renderProjects();renderTodayReminders();}catch(error){console.error('v54aeR2 Pending consistency refresh',error);}

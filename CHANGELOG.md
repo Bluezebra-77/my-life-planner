@@ -1,5 +1,5 @@
-## v54aeR1 — Pending Consistency Repair
-- Pending due/overdue items are consistently visible and manageable in Home/Lists; overdue Pending items use red overdue styling.
+## v54aeR2 — Pending Consistency Repair
+- Rebuilt Pending UI from stable v54ad; fixes overdue red treatment and exposes Pending consistently for ordinary to-dos/project steps on Home and Lists.
 
 ## v54ad — Timeline Naming Consistency
 - Renamed the bottom Planner tab to Timeline so both routes to the same screen use the same name.
