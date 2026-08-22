@@ -1,7 +1,5 @@
-## v54af — Pending Stabilisation
-- Rebuilt Pending/Home changes from the last accepted v54ad baseline instead of the failed v54ae repair chain.
-- Pending actions are exposed consistently for ordinary to-dos and project steps in Lists and relevant Home rows.
-- Due/overdue Pending items surface in Today — Time Sensitive and Needs Attention with overdue red treatment.
+## v54ag — Stabilised Pending/Home
+- Rebuilt from accepted v54ad; consolidates Pending availability and Home surfacing while aligning PWA asset/cache versions.
 
 ## v54ad — Timeline Naming Consistency
 - Renamed the bottom Planner tab to Timeline so both routes to the same screen use the same name.

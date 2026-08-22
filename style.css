@@ -1657,38 +1657,10 @@ body.timer-minimised .quick-add-fab{
   }
 }
 
-/* v54af Pending stabilisation */
-.pending-inline-toggle{
-  display:inline-flex;
-  align-items:center;
-  gap:5px;
-  flex:0 0 auto;
-  font-size:.72rem;
-  font-weight:700;
-  color:var(--muted);
-  padding:4px 5px;
-  border-radius:8px;
-  background:var(--surface-soft,#f4f7f5);
-}
-.pending-inline-toggle input{
-  width:18px;
-  height:18px;
-  margin:0;
-  accent-color:var(--accent);
-}
-.v10-row.overdue-row,
-.compact-reminder-row.overdue-row{
-  border-color:#d78b8b;
-  background:#fff7f7;
-  border-left:4px solid #b42318;
-}
-.v10-row.overdue-row .v10-row-title,
-.v10-row.overdue-row .v10-row-meta,
-.compact-reminder-row.overdue-row strong,
-.compact-reminder-row.overdue-row span{
-  color:#b42318;
-}
-@media(max-width:520px){
-  .pending-inline-toggle span{display:none;}
-  .pending-inline-toggle{padding:4px;}
-}
+/* v54ag Pending controls */
+.pending-inline-toggle{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;max-width:92px;font-size:.72rem;font-weight:700;color:var(--muted);padding:3px 4px;border-radius:8px;background:var(--surface-soft,#f4f7f5)}
+.pending-inline-toggle input{width:18px;height:18px;min-width:18px;margin:0;accent-color:var(--accent)}
+.pending-form-toggle span:first-child{display:flex;align-items:center;gap:8px;font-weight:700}
+.v10-row.overdue-row,.compact-reminder-row.overdue-row{border-color:#d78b8b;background:#fff7f7;border-left:4px solid #b42318}
+.v10-row.overdue-row .v10-row-title,.v10-row.overdue-row .v10-row-meta,.compact-reminder-row.overdue-row strong,.compact-reminder-row.overdue-row span{color:#b42318}
+@media(max-width:520px){.pending-inline-toggle span{display:none}.pending-inline-toggle{max-width:30px;padding:3px}.compact-manage-row,.project-step-manage-row,.nested-compact-row{max-width:100%;box-sizing:border-box;overflow:visible}.compact-row-main,.v10-row-main,.compact-copy{min-width:0;overflow:hidden}}
