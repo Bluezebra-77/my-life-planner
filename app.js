@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ai";
+const APP_VERSION="54aiR1";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5141,7 +5141,7 @@ renderTodayReminders=function(){
     const meta=`${item.source||''}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${pendingPart}${overdue?' · OVERDUE':''}`;
     const row=item.itemType==='recurring'?v54jTodayRecurringRow(item,meta):v54jReminderRow(item,meta);
     if(item.itemType==='todo'||item.itemType==='step'){
-      const old=row.querySelector('.item-menu-wrap');
+      const old=row.querySelector('.item-menu-anchor');
       const html=v54agMenu(item);
       if(old&&html)old.outerHTML=html;
     }

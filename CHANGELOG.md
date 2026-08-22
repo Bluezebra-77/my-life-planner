@@ -1,3 +1,6 @@
+## v54aiR1 — Pending Menu Repair
+- Corrected Home menu selector from nonexistent `.item-menu-wrap` to the actual `.item-menu-anchor` emitted by compactMenu().
+
 ## v54ai — Pending Menu Consistency
 - Removed extra inline Pending checkboxes/circles added by the repair chain.
 - Restored Pending to the established three-dot menu workflow with optional reason prompt for ordinary to-dos and project steps.
