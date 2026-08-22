@@ -1,5 +1,5 @@
-## v54aeR2 — Pending Consistency Repair
-- Rebuilt Pending UI from stable v54ad; fixes overdue red treatment and exposes Pending consistently for ordinary to-dos/project steps on Home and Lists.
+## v54aeR3 — Pending Today Repair
+- Rebuilt from stable v54ad; explicitly adds due/overdue Pending to-dos and project steps to Today — Time Sensitive and keeps Pending actions consistent across Home and Lists.
 
 ## v54ad — Timeline Naming Consistency
 - Renamed the bottom Planner tab to Timeline so both routes to the same screen use the same name.
