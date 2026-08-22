@@ -1,3 +1,6 @@
+## v54aeR4 — Pending Today Cache Repair
+- Fixed stale index.html asset URLs that still requested v54w resources, so the installed PWA now loads the current v54aeR4 JavaScript/CSS/manifest.
+
 ## v54aeR3 — Pending Today Repair
 - Rebuilt from stable v54ad; explicitly adds due/overdue Pending to-dos and project steps to Today — Time Sensitive and keeps Pending actions consistent across Home and Lists.
 
