@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54aeR4";
+const APP_VERSION="54aeR5";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -4983,38 +4983,43 @@ timelineItems=function(){
 try{renderTimeline();}catch(error){console.error('v54ab Timeline delete refresh',error);}
 
 
-/* ===== v54aeR3 Pending consistency + Today source repair =====
-   Rebuilt from user-confirmed stable v54ad.
-   Pending ordinary to-dos and Pending project steps due today/overdue are
-   explicitly included in Today — Time Sensitive as well as Needs Attention.
-   The Pending action is exposed consistently on Home and Lists. */
-function v54aeR3DateKey(value){
-  if(!value)return '';
-  const d=dateOnly(value); if(!d)return '';
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+/* ===== v54aeR5 Pending Home robust repair =====
+   Rebuilt from stable v54ad.
+   This replaces the final Home Today/Needs Attention data path with a defensive
+   implementation so one malformed/local record cannot blank both Home sections.
+   It also exposes Pending consistently for ordinary to-dos and project steps. */
+
+function v54aeR5Date(value){
+  try{return dateOnly(value);}catch(_){return null;}
 }
-function v54aeR3DueTodayOrEarlier(value){
-  return Boolean(value) && v54aeR3DateKey(value) <= localDateKey();
+function v54aeR5Today(){
+  const d=new Date(); d.setHours(12,0,0,0); return d;
 }
-function v54aeR3IsOverdue(value){
-  return Boolean(value) && v54aeR3DateKey(value) < localDateKey();
+function v54aeR5DueNow(value){
+  const d=v54aeR5Date(value); return Boolean(d)&&d<=v54aeR5Today();
 }
-function v54aeR3PendingText(item){
-  return `Pending${item?.pendingReason ? ` — ${item.pendingReason}` : ''}`;
+function v54aeR5Overdue(value){
+  const d=v54aeR5Date(value); if(!d)return false;
+  const t=new Date(); t.setHours(0,0,0,0); return d<t;
 }
-function v54aeR3SetPending(kind,id,parentId,wanted){
+function v54aeR5PendingText(item){
+  return `Pending${item && item.pendingReason ? ` — ${item.pendingReason}` : ''}`;
+}
+function v54aeR5SetPending(kind,id,parentId,wanted){
   if(kind==='todo'){
-    const todo=(data.todos||[]).find(x=>String(x.id)===String(id));
-    if(!todo || todo.completed)return;
+    const todo=(Array.isArray(data.todos)?data.todos:[]).find(x=>String(x.id)===String(id));
+    if(!todo||todo.completed)return;
     if(Boolean(todo.pending)!==Boolean(wanted))toggleTodoPending(id);
-  }else if(kind==='step'){
-    const project=(data.projects||[]).find(x=>String(x.id)===String(parentId));
-    const step=(project?.steps||[]).find(x=>String(x.id)===String(id));
-    if(!step || step.completed)return;
+    return;
+  }
+  if(kind==='step'){
+    const project=(Array.isArray(data.projects)?data.projects:[]).find(x=>String(x.id)===String(parentId));
+    const step=(Array.isArray(project?.steps)?project.steps:[]).find(x=>String(x.id)===String(id));
+    if(!step||step.completed)return;
     if(Boolean(step.pending)!==Boolean(wanted))toggleProjectStepPending(parentId,id);
   }
 }
-function v54aeR3PendingControl(kind,id,parentId,pending){
+function v54aeR5PendingControl(kind,id,parentId,pending){
   const label=document.createElement('label');
   label.className='pending-inline-toggle';
   label.title=pending?'Uncheck to mark active':'Check to mark pending';
@@ -5022,149 +5027,145 @@ function v54aeR3PendingControl(kind,id,parentId,pending){
   input.type='checkbox';
   input.checked=Boolean(pending);
   input.setAttribute('aria-label',pending?'Pending — uncheck to mark active':'Mark pending');
-  input.addEventListener('click',e=>e.stopPropagation());
-  input.addEventListener('change',e=>{
+  input.onclick=function(e){e.stopPropagation();};
+  input.onchange=function(e){
     e.stopPropagation();
-    v54aeR3SetPending(kind,id,parentId,input.checked);
-  });
+    v54aeR5SetPending(kind,id,parentId,input.checked);
+  };
   const text=document.createElement('span');
   text.textContent='Pending';
-  label.append(input,text);
+  label.appendChild(input);
+  label.appendChild(text);
   return label;
 }
 
-/* Critical repair: add Pending records to the actual Today data source.
-   Parent to-dos are added explicitly even when they contain substeps, because
-   the legacy activeTodoDashboardItems() otherwise substitutes the next substep. */
-const v54aeR3TodayBase=getTodayReminderItems;
+/* Final Today source. Each source is isolated so a malformed record in one
+   collection cannot prevent all Today items from displaying. */
 getTodayReminderItems=function(){
-  const items=(v54aeR3TodayBase()||[]).slice();
-  const seen=new Set(items.map(i=>`${i.itemType}:${i.parentId||''}:${i.id}`));
+  const result=[];
+  const seen=new Set();
+  const today=v54aeR5Today();
+  function add(item,key){
+    if(!item||!key||seen.has(key))return;
+    result.push(item); seen.add(key);
+  }
 
-  (data.todos||[])
-    .filter(todo=>!todo.completed && todo.pending && v54aeR3DueTodayOrEarlier(todo.dueDate))
-    .forEach(todo=>{
-      const key=`todo::${todo.id}`;
-      if(!seen.has(key)){
-        items.push({
-          id:todo.id,
-          name:todo.name,
-          details:todo.details||todo.note||'',
-          source:'To-do',
-          dueDate:todo.dueDate,
-          itemType:'todo',
-          pending:true,
-          pendingReason:todo.pendingReason||''
-        });
-        seen.add(key);
-      }else{
-        const existing=items.find(i=>`${i.itemType}:${i.parentId||''}:${i.id}`===key);
-        if(existing){
-          existing.pending=true;
-          existing.pendingReason=todo.pendingReason||'';
+  try{
+    (Array.isArray(data.todos)?data.todos:[]).forEach(todo=>{
+      if(!todo||todo.completed)return;
+
+      /* Pending parent to-do is surfaced directly, even if it has steps. */
+      if(todo.pending){
+        if(v54aeR5DueNow(todo.dueDate)){
+          add({
+            id:todo.id,name:todo.name||'Untitled to-do',
+            details:todo.details||todo.note||'',
+            source:'To-do',dueDate:todo.dueDate,itemType:'todo',
+            pending:true,pendingReason:todo.pendingReason||''
+          },`todo:${todo.id}`);
         }
+        return;
+      }
+
+      const steps=Array.isArray(todo.steps)?todo.steps:[];
+      const next=steps.find(step=>step&&!step.completed);
+      if(next){
+        if(next.dueDate&&v54aeR5DueNow(next.dueDate)){
+          add({
+            ...next,source:`To-do: ${todo.name||'Untitled to-do'}`,
+            itemType:'todoStep',parentId:todo.id
+          },`todoStep:${todo.id}:${next.id}`);
+        }
+      }else if(todo.dueDate&&v54aeR5DueNow(todo.dueDate)){
+        add({...todo,source:'To-do',itemType:'todo'},`todo:${todo.id}`);
       }
     });
+  }catch(error){console.error('v54aeR5 Today todos',error);}
 
-  (data.projects||[]).filter(p=>!p.completed).forEach(project=>{
-    (project.steps||[])
-      .filter(step=>!step.completed && step.pending && v54aeR3DueTodayOrEarlier(step.dueDate))
-      .forEach(step=>{
-        const key=`step:${project.id}:${step.id}`;
-        if(!seen.has(key)){
-          items.push({
-            id:step.id,
-            parentId:project.id,
-            name:step.name,
-            details:step.details||step.note||'',
-            source:`Project: ${project.name}`,
-            dueDate:step.dueDate,
-            itemType:'step',
-            pending:true,
-            pendingReason:step.pendingReason||''
-          });
-          seen.add(key);
-        }else{
-          const existing=items.find(i=>`${i.itemType}:${i.parentId||''}:${i.id}`===key);
-          if(existing){
-            existing.pending=true;
-            existing.pendingReason=step.pendingReason||'';
-          }
+  try{
+    (Array.isArray(data.projects)?data.projects:[]).forEach(project=>{
+      if(!project||project.completed)return;
+      const steps=Array.isArray(project.steps)?project.steps:[];
+
+      /* Preserve the accepted Next-step behaviour for Active steps. */
+      const next=steps.find(step=>step&&!step.completed&&!step.pending);
+      if(next){
+        const effectiveDue=next.dueDate||localDateKey();
+        if(v54aeR5DueNow(effectiveDue)){
+          add({
+            ...next,dueDate:effectiveDue,
+            source:`Project: ${project.name||'Untitled project'}`,
+            itemType:'step',parentId:project.id,
+            isUndatedProjectStep:!next.dueDate,pending:false
+          },`step:${project.id}:${next.id}`);
         }
-      });
-  });
+      }
 
-  return items.sort((a,b)=>{
-    const ad=dateOnly(a.dueDate), bd=dateOnly(b.dueDate);
-    return ad-bd;
+      /* Pending steps due today/overdue are also surfaced explicitly. */
+      steps.filter(step=>step&&!step.completed&&step.pending&&v54aeR5DueNow(step.dueDate))
+        .forEach(step=>add({
+          ...step,
+          source:`Project: ${project.name||'Untitled project'}`,
+          itemType:'step',parentId:project.id,
+          pending:true,pendingReason:step.pendingReason||''
+        },`step:${project.id}:${step.id}`));
+    });
+  }catch(error){console.error('v54aeR5 Today projects',error);}
+
+  try{
+    const appointments=typeof appointmentDashboardItems==='function'?appointmentDashboardItems():[];
+    (Array.isArray(appointments)?appointments:[])
+      .filter(item=>item&&!item.completed&&item.dueDate&&v54aeR5DueNow(item.dueDate))
+      .forEach(item=>add(item,`appointment:${item.id}`));
+  }catch(error){console.error('v54aeR5 Today appointments',error);}
+
+  try{
+    (Array.isArray(data.annualDates)?data.annualDates:[]).forEach(item=>{
+      try{
+        const status=annualStatus(item);
+        if(status&&(status.isToday||status.inReminderWindow)){
+          add({
+            id:item.id,name:item.name,details:item.details,
+            source:status.isToday?'Annual date today':'Annual reminder',
+            dueDate:status.occurrence.toISOString().slice(0,10),
+            itemType:'annual'
+          },`annual:${item.id}`);
+        }
+      }catch(error){console.warn('v54aeR5 annual item skipped',item?.id,error);}
+    });
+  }catch(error){console.error('v54aeR5 Today annual dates',error);}
+
+  try{
+    (Array.isArray(data.cleaningTasks)?data.cleaningTasks:[])
+      .filter(item=>item&&isDueTodayOrEarlier(item.nextDue))
+      .forEach(item=>add({
+        id:item.id,name:item.name,details:item.details,
+        source:`Cleaning: ${item.room||'General'}`,
+        dueDate:item.nextDue,itemType:'cleaning'
+      },`cleaning:${item.id}`));
+  }catch(error){console.error('v54aeR5 Today cleaning',error);}
+
+  try{
+    const recurrenceToday=recurringDate(localDateKey());
+    (Array.isArray(data.recurringTasks)?data.recurringTasks:[])
+      .filter(task=>task&&v54jRecurringIsActive(task)&&task.nextDue&&recurringDate(task.nextDue)<=recurrenceToday)
+      .forEach(task=>add({
+        id:task.id,name:task.name,details:task.notes||'',
+        source:'Recurring task',dueDate:task.nextDue,itemType:'recurring'
+      },`recurring:${task.id}`));
+  }catch(error){console.error('v54aeR5 Today recurring',error);}
+
+  return result.sort((a,b)=>{
+    const ad=v54aeR5Date(a.dueDate),bd=v54aeR5Date(b.dueDate);
+    const av=ad?ad.getTime():Number.MAX_SAFE_INTEGER;
+    const bv=bd?bd.getTime():Number.MAX_SAFE_INTEGER;
+    return av-bv;
   });
 };
 
-/* Needs Attention explicitly includes Pending items only when due today/overdue. */
-focusCandidateRows=function(){
-  const rows=[];
-  const today=new Date(); today.setHours(12,0,0,0);
-  const alreadyShown=v52aTodayIdentitySet();
-
-  (data.todos||[])
-    .filter(x=>!x.completed && !x.pending && !alreadyShown.has(`todo:${x.id}`) && !alreadyShown.has(`todoParent:${x.id}`))
-    .forEach(x=>rows.push({
-      id:x.id,itemType:'todo',name:x.name,meta:getTimingText(x),dueDate:x.dueDate,
-      kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),
-      score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40
-    }));
-
-  (data.todos||[])
-    .filter(x=>!x.completed && x.pending && v54aeR3DueTodayOrEarlier(x.dueDate))
-    .forEach(x=>rows.push({
-      id:x.id,itemType:'todo',pending:true,name:x.name,
-      meta:`To-do · ${v54aeR3PendingText(x)}${v54aeR3IsOverdue(x.dueDate)?' · OVERDUE':''}`,
-      dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),
-      score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20
-    }));
-
-  (data.cleaningTasks||[])
-    .filter(x=>isDueTodayOrEarlier(x.nextDue) && !alreadyShown.has(`cleaning:${x.id}`))
-    .forEach(x=>rows.push({
-      id:x.id,itemType:'cleaning',name:x.name,meta:`Cleaning · ${x.room||'Home'}`,
-      dueDate:x.nextDue,kind:'Cleaning',action:()=>completeCleaning(x.id),
-      open:()=>editCleaning(x.id),score:-2
-    }));
-
-  (data.projects||[]).filter(x=>!x.completed).forEach(p=>{
-    if(!alreadyShown.has(`project:${p.id}`)){
-      const next=(p.steps||[]).find(x=>!x.completed && !x.pending);
-      if(next)rows.push({
-        id:next.id,parentId:p.id,itemType:'step',pending:false,name:next.name,
-        meta:`Next action · ${p.name}`,dueDate:next.dueDate,kind:'Project',
-        action:()=>toggleStep(p.id,next.id),open:()=>editStep(p.id,next.id),
-        score:next.dueDate?daysBetween(today,dateOnly(next.dueDate)):12
-      });
-    }
-    (p.steps||[])
-      .filter(x=>!x.completed && x.pending && v54aeR3DueTodayOrEarlier(x.dueDate))
-      .forEach(x=>rows.push({
-        id:x.id,parentId:p.id,itemType:'step',pending:true,name:x.name,
-        meta:`Project: ${p.name} · ${v54aeR3PendingText(x)}${v54aeR3IsOverdue(x.dueDate)?' · OVERDUE':''}`,
-        dueDate:x.dueDate,kind:'Project',action:()=>toggleStep(p.id,x.id),
-        open:()=>editStep(p.id,x.id),
-        score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20
-      }));
-  });
-
-  (data.waiting||[])
-    .filter(x=>!x.completed && x.reviewDate && dateOnly(x.reviewDate)<=today)
-    .forEach(x=>rows.push({
-      id:x.id,itemType:'waiting',name:x.name,meta:'Waiting for · review due',
-      dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0
-    }));
-
-  return rows.sort((a,b)=>a.score-b.score).slice(0,7);
-};
-
-function v54aeR3MenuFor(item){
+function v54aeR5Menu(item){
   if(item.itemType==='todo'){
-    const todo=(data.todos||[]).find(x=>String(x.id)===String(item.id));
+    const todo=(Array.isArray(data.todos)?data.todos:[]).find(x=>String(x.id)===String(item.id));
     return compactMenu(
       `<button onclick="closeAnchoredMenu();editTodo('${item.id}')">Edit</button>`+
       `${todo&&!todo.completed?`<button onclick="closeAnchoredMenu();toggleTodoPending('${item.id}')">${todo.pending?'Mark active':'Mark pending'}</button>`:''}`+
@@ -5174,8 +5175,8 @@ function v54aeR3MenuFor(item){
     );
   }
   if(item.itemType==='step'){
-    const project=(data.projects||[]).find(x=>String(x.id)===String(item.parentId));
-    const step=(project?.steps||[]).find(x=>String(x.id)===String(item.id));
+    const project=(Array.isArray(data.projects)?data.projects:[]).find(x=>String(x.id)===String(item.parentId));
+    const step=(Array.isArray(project?.steps)?project.steps:[]).find(x=>String(x.id)===String(item.id));
     return compactMenu(
       `<button onclick="closeAnchoredMenu();editStep('${item.parentId}','${item.id}')">Edit step</button>`+
       `${step&&!step.completed?`<button onclick="closeAnchoredMenu();toggleProjectStepPending('${item.parentId}','${item.id}')">${step.pending?'Mark active':'Mark pending'}</button>`:''}`+
@@ -5184,149 +5185,195 @@ function v54aeR3MenuFor(item){
       item.name||'project step'
     );
   }
-  return '';
+  return v54jReminderMenu(item);
 }
 
-/* Final Today renderer: Pending label/reason, red overdue treatment, and
-   visible Pending checkbox/action for ordinary to-dos/project steps. */
+/* Final Today renderer. Individual row failure cannot blank the whole panel. */
 renderTodayReminders=function(){
   const area=document.getElementById('todayRemindersArea');
   if(!area)return;
-  const items=[...(getTodayReminderItems()||[])].sort(v54vCompareTodayItems);
   area.innerHTML='';
+  let items=[];
+  try{items=getTodayReminderItems()||[];}
+  catch(error){
+    console.error('v54aeR5 Today source failed',error);
+    area.innerHTML='<div class="empty-state">Today could not refresh. Open Lists to review dated items.</div>';
+    return;
+  }
+  if(typeof v54vCompareTodayItems==='function'){
+    try{items=[...items].sort(v54vCompareTodayItems);}catch(_){}
+  }
   if(!items.length){
     area.innerHTML='<div class="empty-state">Nothing time-sensitive needs attention today.</div>';
     return;
   }
 
   items.forEach(item=>{
-    const overdue=item.itemType!=='annual' && v54aeR3IsOverdue(item.dueDate);
-    const timePart=item.itemType==='appointment'&&item.time?` · ${item.time}`:'';
-    const pendingPart=item.pending?` · ${v54aeR3PendingText(item)}`:'';
-    const meta=`${item.source}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${pendingPart}${overdue?' · OVERDUE':''}`;
-
-    let row;
-    if(item.itemType==='recurring'){
-      row=v54jTodayRecurringRow(item,meta);
-    }else{
-      const menu=(item.itemType==='todo'||item.itemType==='step')?v54aeR3MenuFor(item):v54jReminderMenu(item);
-      row=v54jReminderRow(item,meta);
-      if(menu){
-        const existing=row.querySelector('.item-menu-wrap');
-        if(existing)existing.outerHTML=menu;
+    try{
+      const overdue=item.itemType!=='annual'&&v54aeR5Overdue(item.dueDate);
+      const timePart=item.itemType==='appointment'&&item.time?` · ${item.time}`:'';
+      const pendingPart=item.pending?` · ${v54aeR5PendingText(item)}`:'';
+      const meta=`${item.source||''}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${pendingPart}${overdue?' · OVERDUE':''}`;
+      let row;
+      if(item.itemType==='recurring'){
+        row=v54jTodayRecurringRow(item,meta);
+      }else{
+        row=v54jReminderRow(item,meta);
+        if(item.itemType==='todo'||item.itemType==='step'){
+          const oldMenu=row.querySelector('.item-menu-wrap');
+          const menuHtml=v54aeR5Menu(item);
+          if(oldMenu&&menuHtml)oldMenu.outerHTML=menuHtml;
+          if(!item.completed){
+            const trigger=row.querySelector('.item-menu-trigger');
+            const control=v54aeR5PendingControl(item.itemType,item.id,item.parentId,item.pending);
+            if(trigger)row.insertBefore(control,trigger);else row.appendChild(control);
+          }
+        }
       }
-      if((item.itemType==='todo'||item.itemType==='step') && !item.completed){
-        const trigger=row.querySelector('.item-menu-trigger');
-        const control=v54aeR3PendingControl(item.itemType,item.id,item.parentId,item.pending);
-        if(trigger)row.insertBefore(control,trigger); else row.appendChild(control);
-      }
+      if(overdue)row.classList.add('overdue-row');
+      area.appendChild(row);
+    }catch(error){
+      console.warn('v54aeR5 Today row skipped',item?.id,error);
     }
-    if(overdue)row.classList.add('overdue-row');
-    area.appendChild(row);
   });
+
+  if(!area.children.length){
+    area.innerHTML='<div class="empty-state">No Today rows could be displayed. Open Lists to review dated items.</div>';
+  }
 };
 
-/* Needs Attention renderer: same Pending control/action and overdue styling. */
+/* Needs Attention no longer depends on the Today collection to build its basic
+   candidate list. Pending due/overdue items are included explicitly. */
+focusCandidateRows=function(){
+  const rows=[];
+  const today=v54aeR5Today();
+
+  try{
+    (Array.isArray(data.todos)?data.todos:[]).filter(x=>x&&!x.completed).forEach(x=>{
+      if(x.pending){
+        if(v54aeR5DueNow(x.dueDate))rows.push({
+          id:x.id,itemType:'todo',pending:true,name:x.name,
+          meta:`To-do · ${v54aeR5PendingText(x)}${v54aeR5Overdue(x.dueDate)?' · OVERDUE':''}`,
+          dueDate:x.dueDate,kind:'To-do',open:()=>editTodo(x.id),
+          score:x.dueDate?daysBetween(today,v54aeR5Date(x.dueDate))-20:-20
+        });
+      }else{
+        rows.push({
+          id:x.id,itemType:'todo',pending:false,name:x.name,
+          meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',open:()=>editTodo(x.id),
+          score:x.dueDate&&v54aeR5Date(x.dueDate)?daysBetween(today,v54aeR5Date(x.dueDate)):40
+        });
+      }
+    });
+  }catch(error){console.error('v54aeR5 Needs Attention todos',error);}
+
+  try{
+    (Array.isArray(data.cleaningTasks)?data.cleaningTasks:[])
+      .filter(x=>x&&isDueTodayOrEarlier(x.nextDue))
+      .forEach(x=>rows.push({
+        id:x.id,itemType:'cleaning',name:x.name,
+        meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,
+        kind:'Cleaning',open:()=>editCleaning(x.id),score:-2
+      }));
+  }catch(error){console.error('v54aeR5 Needs Attention cleaning',error);}
+
+  try{
+    (Array.isArray(data.projects)?data.projects:[]).filter(p=>p&&!p.completed).forEach(p=>{
+      const steps=Array.isArray(p.steps)?p.steps:[];
+      const next=steps.find(x=>x&&!x.completed&&!x.pending);
+      if(next)rows.push({
+        id:next.id,parentId:p.id,itemType:'step',pending:false,name:next.name,
+        meta:`Next action · ${p.name}`,dueDate:next.dueDate,kind:'Project',
+        open:()=>editStep(p.id,next.id),
+        score:next.dueDate&&v54aeR5Date(next.dueDate)?daysBetween(today,v54aeR5Date(next.dueDate)):12
+      });
+      steps.filter(x=>x&&!x.completed&&x.pending&&v54aeR5DueNow(x.dueDate)).forEach(x=>rows.push({
+        id:x.id,parentId:p.id,itemType:'step',pending:true,name:x.name,
+        meta:`Project: ${p.name} · ${v54aeR5PendingText(x)}${v54aeR5Overdue(x.dueDate)?' · OVERDUE':''}`,
+        dueDate:x.dueDate,kind:'Project',open:()=>editStep(p.id,x.id),
+        score:x.dueDate&&v54aeR5Date(x.dueDate)?daysBetween(today,v54aeR5Date(x.dueDate))-20:-20
+      }));
+    });
+  }catch(error){console.error('v54aeR5 Needs Attention projects',error);}
+
+  try{
+    (Array.isArray(data.waiting)?data.waiting:[])
+      .filter(x=>x&&!x.completed&&x.reviewDate&&v54aeR5DueNow(x.reviewDate))
+      .forEach(x=>rows.push({
+        id:x.id,itemType:'waiting',name:x.name,
+        meta:'Waiting for · review due',dueDate:x.reviewDate,
+        kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0
+      }));
+  }catch(error){console.error('v54aeR5 Needs Attention waiting',error);}
+
+  return rows.sort((a,b)=>a.score-b.score).slice(0,7);
+};
+
 renderFocusToday=function(){
   const area=document.getElementById('focusTodayArea');
   if(!area)return;
   area.innerHTML='';
-  const items=focusCandidateRows();
+  let items=[];
+  try{items=focusCandidateRows()||[];}
+  catch(error){
+    console.error('v54aeR5 Needs Attention source failed',error);
+    area.innerHTML='<div class="empty-state">Needs Attention could not refresh.</div>';
+    return;
+  }
   if(!items.length){
     area.innerHTML='<div class="empty-state calm-empty"><strong>You are clear for now.</strong><span>Capture a thought or add a task when something comes to mind.</span></div>';
     return;
   }
   items.forEach(item=>{
-    const menu=(item.itemType==='todo'||item.itemType==='step')?v54aeR3MenuFor(item):'';
-    const row=makeV10Row(item,{menu});
-    if(v54aeR3IsOverdue(item.dueDate))row.classList.add('overdue-row');
-    if((item.itemType==='todo'||item.itemType==='step') && !item.completed){
-      const trigger=row.querySelector('.item-menu-trigger');
-      const control=v54aeR3PendingControl(item.itemType,item.id,item.parentId,item.pending);
-      if(trigger)row.insertBefore(control,trigger); else row.appendChild(control);
-    }
-    area.appendChild(row);
+    try{
+      const menu=(item.itemType==='todo'||item.itemType==='step')?v54aeR5Menu(item):'';
+      const row=makeV10Row(item,{menu});
+      if(v54aeR5Overdue(item.dueDate))row.classList.add('overdue-row');
+      if((item.itemType==='todo'||item.itemType==='step')&&!item.completed){
+        const trigger=row.querySelector('.item-menu-trigger');
+        const control=v54aeR5PendingControl(item.itemType,item.id,item.parentId,item.pending);
+        if(trigger)row.insertBefore(control,trigger);else row.appendChild(control);
+      }
+      area.appendChild(row);
+    }catch(error){console.warn('v54aeR5 Needs Attention row skipped',item?.id,error);}
   });
 };
 
-/* Lists → Projects: put Pending checkbox directly into each incomplete step row. */
+/* Lists → Projects: visible Pending checkbox in every incomplete project step. */
+const v54aeR5RenderProjectsBase=renderProjects;
 renderProjects=function(){
+  v54aeR5RenderProjectsBase();
   const area=document.getElementById('projectsArea');
   if(!area)return;
-  area.innerHTML='';
-  const projects=Array.isArray(data.projects)?data.projects:[];
-  if(!projects.length){
-    area.innerHTML='<div class="empty-state">No projects are saved yet.</div>';
-    return;
-  }
-  const openStates=getProjectStepStates();
-  [...projects].sort(sortByDueDate).forEach(project=>{
-    const steps=Array.isArray(project.steps)?project.steps:[];
-    const complete=steps.length>0&&steps.every(step=>step.completed);
-    project.completed=complete;
-    const completedCount=steps.filter(step=>step.completed).length;
-    const nextStep=steps.find(step=>!step.completed&&!step.pending);
-    const hasIncomplete=steps.some(step=>!step.completed);
-    const nextMeta=nextStep
-      ? `Next: ${escapeHtml(nextStep.name||'Untitled step')}${nextStep.dueDate?' · '+formatDate(nextStep.dueDate):''}`
-      : (hasIncomplete?'No active next step':(steps.length?'All steps complete':'No steps'));
-
-    const row=document.createElement('div');
-    row.className=`compact-manage-row project-compact-row ${complete?'completed-row':''}`;
-    const actions=
-      `<button onclick="closeAnchoredMenu();openAddDialog('step','${project.id}')">Add step</button>`+
-      `<button onclick="closeAnchoredMenu();editProject('${project.id}')">Edit project</button>`+
-      `<button class="danger-text" onclick="closeAnchoredMenu();deleteProject('${project.id}');refreshListsImmediately()">Delete project</button>`;
-    row.innerHTML=
-      `<button type="button" class="project-expand-button" onclick="toggleProjectSteps('${project.id}')" aria-expanded="${Boolean(openStates[project.id])}">${openStates[project.id]?'▾':'▸'}</button>`+
-      `<button type="button" class="compact-row-main" onclick="toggleProjectSteps('${project.id}')">`+
-      `<span class="compact-row-title">${escapeHtml(project.name||'Untitled project')}</span>`+
-      `<span class="compact-row-meta">${steps.length?`${completedCount} of ${steps.length} steps`:'No steps'}${project.dueDate?' · Deadline '+formatDate(project.dueDate):''}</span>`+
-      `<span class="compact-row-next">${nextMeta}</span></button>${compactMenu(actions,project.name||'project')}`;
-    area.appendChild(row);
-
-    const group=document.createElement('div');
-    group.className='project-steps-group';
-    group.dataset.projectId=project.id;
-    group.hidden=!openStates[project.id];
-
-    steps.forEach((step,index)=>{
-      const sr=document.createElement('div');
-      sr.className=`compact-manage-row nested-compact-row project-step-manage-row ${step.completed?'completed-row':''}`;
-      const stepActions=
-        `<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>`+
-        `${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}`+
-        `${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}`+
-        `${!step.completed?`<button onclick="closeAnchoredMenu();toggleProjectStepPending('${project.id}','${step.id}')">${step.pending?'Mark active':'Mark pending'}</button>`:''}`+
-        `<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button>`+
-        `<button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
-
-      const pendingMeta=step.pending
-        ? ` · Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}`
-        : '';
-
-      sr.innerHTML=
-        `<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')">`+
-        `<span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span>`+
-        `<span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}${pendingMeta} · Tap to edit</span></button>`+
-        compactMenu(stepActions,step.name||'project step');
-
-      if(!step.completed){
-        const trigger=sr.querySelector('.item-menu-trigger');
-        const control=v54aeR3PendingControl('step',step.id,project.id,step.pending);
-        if(trigger)sr.insertBefore(control,trigger); else sr.appendChild(control);
-      }
-      group.appendChild(sr);
+  (Array.isArray(data.projects)?data.projects:[]).forEach(project=>{
+    (Array.isArray(project.steps)?project.steps:[]).forEach(step=>{
+      if(!step||step.completed)return;
+      const group=area.querySelector(`.project-steps-group[data-project-id="${CSS.escape(String(project.id))}"]`);
+      if(!group)return;
+      const rows=[...group.querySelectorAll('.project-step-manage-row')];
+      const row=rows.find(r=>{
+        const btn=r.querySelector('.compact-row-main');
+        return btn&&btn.getAttribute('onclick')&&btn.getAttribute('onclick').includes(`'${step.id}'`);
+      });
+      if(!row||row.querySelector('.pending-inline-toggle'))return;
+      const trigger=row.querySelector('.item-menu-trigger');
+      const control=v54aeR5PendingControl('step',step.id,project.id,step.pending);
+      if(trigger)row.insertBefore(control,trigger);else row.appendChild(control);
     });
-    area.appendChild(group);
   });
 };
 
-try{
-  renderProjects();
-  renderProjectNextActions();
-  renderFocusToday();
-  renderTodayReminders();
-}catch(error){
-  console.error('v54aeR3 Pending repair refresh',error);
+/* Repaint after all legacy overrides have loaded. */
+function v54aeR5RefreshHome(){
+  try{renderProjects();}catch(error){console.error('v54aeR5 projects refresh',error);}
+  try{renderProjectNextActions();}catch(error){console.error('v54aeR5 next actions refresh',error);}
+  try{renderFocusToday();}catch(error){console.error('v54aeR5 Needs Attention refresh',error);}
+  try{renderTodayReminders();}catch(error){console.error('v54aeR5 Today refresh',error);}
 }
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(v54aeR5RefreshHome,0));
+}else{
+  setTimeout(v54aeR5RefreshHome,0);
+}
+window.addEventListener('pageshow',()=>setTimeout(v54aeR5RefreshHome,0));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54aeR5RefreshHome,0);});
