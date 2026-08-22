@@ -1,3 +1,7 @@
+## v54aj — Visible Pending Status
+- Added a dedicated Pending/reason line beneath normal text/date for ordinary to-dos and project steps across Home, Lists and Timeline.
+- Pending remains controlled only from the three-dot menu.
+
 ## v54aiR1 — Pending Menu Repair
 - Corrected Home menu selector from nonexistent `.item-menu-wrap` to the actual `.item-menu-anchor` emitted by compactMenu().
 

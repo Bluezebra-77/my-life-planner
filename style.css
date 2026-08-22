@@ -1664,3 +1664,8 @@ body.timer-minimised .quick-add-fab{
 .v10-row.overdue-row,.compact-reminder-row.overdue-row{border-color:#d78b8b;background:#fff7f7;border-left:4px solid #b42318}
 .v10-row.overdue-row .v10-row-title,.v10-row.overdue-row .v10-row-meta,.compact-reminder-row.overdue-row strong,.compact-reminder-row.overdue-row span{color:#b42318}
 @media(max-width:520px){.pending-inline-toggle span{display:none}.pending-inline-toggle{max-width:30px;padding:3px}.compact-manage-row,.project-step-manage-row,.nested-compact-row{max-width:100%;box-sizing:border-box;overflow:visible}.compact-row-main,.v10-row-main,.compact-copy{min-width:0;overflow:hidden}}
+
+/* v54aj visible Pending status */
+.pending-status-line{display:block;margin-top:5px;font-size:.86rem;font-weight:800;line-height:1.25;color:#8a641a;}
+.overdue-row .pending-status-line{color:inherit;}
+.timeline-copy .pending-status-line,.compact-copy .pending-status-line,.compact-row-main .pending-status-line,.v10-row-main .pending-status-line{width:100%;}

@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54aiR1";
+const APP_VERSION="54aj";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1942,8 +1942,8 @@ function renderProjectNextActions(){
     if(!steps.length){body.innerHTML=`<div class="empty-state">No steps yet. Use Manage to add the first step.</div>`;}
     else steps.forEach(step=>{
       const row=document.createElement('div');row.className=`v10-row home-project-step ${step.completed?'completed-row':''}`;
-      const pendingText=step.pending?` · Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}`:'';
-      row.innerHTML=`<button type="button" class="complete-dot" onclick="toggleStep('${project.id}','${step.id}')" aria-label="${step.completed?'Reinstate':'Complete'} ${escapeHtml(step.name||'step')}">${step.completed?'✓':''}</button><button type="button" class="v10-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="v10-row-title">${escapeHtml(step.name||'Untitled step')}</span><span class="v10-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}${pendingText} · Tap text to edit</span></button>`;
+      const pendingLine=step.pending?`<span class="pending-status-line">Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}</span>`:'';
+      row.innerHTML=`<button type="button" class="complete-dot" onclick="toggleStep('${project.id}','${step.id}')" aria-label="${step.completed?'Reinstate':'Complete'} ${escapeHtml(step.name||'step')}">${step.completed?'✓':''}</button><button type="button" class="v10-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="v10-row-title">${escapeHtml(step.name||'Untitled step')}</span><span class="v10-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap text to edit</span>${pendingLine}</button>`;
       body.appendChild(row);
     });
     card.appendChild(body);area.appendChild(card);
@@ -2400,10 +2400,10 @@ function renderTodos() {
     row.className = `compact-manage-row ${todo.completed ? 'completed-row' : ''}`;
     const timing = escapeHtml(getTimingText(todo) || 'No date');
     const details = todo.details ? ` · ${escapeHtml(todo.details)}` : '';
-    const pendingMeta = todo.pending ? ` · Pending${todo.pendingReason ? ' — '+escapeHtml(todo.pendingReason) : ''}` : '';
+    const pendingLine = todo.pending ? `<span class="pending-status-line">Pending${todo.pendingReason ? ' — '+escapeHtml(todo.pendingReason) : ''}</span>` : '';
     const pendingAction = !todo.completed ? `<button onclick="closeAnchoredMenu();toggleTodoPending('${todo.id}')">${todo.pending ? 'Mark active' : 'Mark pending'}</button>` : '';
     const actions = `<button onclick="closeAnchoredMenu();toggleTodo('${todo.id}');refreshListsImmediately()">${todo.completed ? 'Mark incomplete' : 'Complete'}</button>${pendingAction}<button onclick="closeAnchoredMenu();editTodo('${todo.id}')">Edit</button><button class="danger-text" onclick="closeAnchoredMenu();deleteTodo('${todo.id}');refreshListsImmediately()">Delete</button>`;
-    row.innerHTML = `<button type="button" class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name || 'Untitled to-do')}</span><span class="compact-row-meta">${timing}${pendingMeta}${details}</span></button>${compactMenu(actions,todo.name || 'to-do')}`;
+    row.innerHTML = `<button type="button" class="compact-row-main" onclick="editTodo('${todo.id}')"><span class="compact-row-title">${escapeHtml(todo.name || 'Untitled to-do')}</span><span class="compact-row-meta">${timing}${details}</span>${pendingLine}</button>${compactMenu(actions,todo.name || 'to-do')}`;
     area.appendChild(row);
 
     const steps = Array.isArray(todo.steps) ? todo.steps : [];
@@ -3903,8 +3903,8 @@ renderProjects=function(){
     steps.forEach((step,index)=>{
       const sr=document.createElement('div');sr.className=`compact-manage-row nested-compact-row project-step-manage-row ${step.completed?'completed-row':''}`;
       const sa=`<button onclick="closeAnchoredMenu();editStep('${project.id}','${step.id}')">Edit step</button>${index>0?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',-1)">Move up</button>`:''}${index<steps.length-1?`<button onclick="closeAnchoredMenu();moveProjectStep('${project.id}','${step.id}',1)">Move down</button>`:''}${!step.completed?`<button onclick="closeAnchoredMenu();toggleProjectStepPending('${project.id}','${step.id}')">${step.pending?'Mark active':'Mark pending'}</button>`:''}<button onclick="closeAnchoredMenu();toggleStep('${project.id}','${step.id}');refreshListsImmediately()">${step.completed?'Mark incomplete':'Complete step'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteStep('${project.id}','${step.id}');refreshListsImmediately()">Delete step</button>`;
-      const pendingMeta=step.pending?` · Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}`:'';
-      sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'}${pendingMeta} · Tap to edit</span></button>${compactMenu(sa,step.name||'project step')}`;
+      const pendingLine=step.pending?`<span class="pending-status-line">Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}</span>`:'';
+      sr.innerHTML=`<button type="button" class="compact-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="compact-row-title">${index+1}. ${escapeHtml(step.name||'Untitled step')}</span><span class="compact-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap to edit</span>${pendingLine}</button>${compactMenu(sa,step.name||'project step')}`;
       group.appendChild(sr);
     });
     area.appendChild(group);
@@ -5120,11 +5120,11 @@ focusCandidateRows=function(){
   const rows=[];const today=v54agToday();const todayIds=new Set();
   try{(getTodayReminderItems()||[]).forEach(item=>{if(item.itemType==='todo')todayIds.add(`todo:${item.id}`);if(item.itemType==='todoStep')todayIds.add(`todoParent:${item.parentId}`);if(item.itemType==='step'&&!item.pending)todayIds.add(`project:${item.parentId}`);if(item.itemType==='cleaning')todayIds.add(`cleaning:${item.id}`);});}catch(_){}
   (data.todos||[]).filter(x=>x&&!x.completed&&!x.pending&&!todayIds.has(`todo:${x.id}`)&&!todayIds.has(`todoParent:${x.id}`)).forEach(x=>rows.push({id:x.id,itemType:'todo',pending:false,name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
-  (data.todos||[]).filter(x=>x&&!x.completed&&x.pending&&v54agDue(x.dueDate)).forEach(x=>rows.push({id:x.id,itemType:'todo',pending:true,name:x.name,meta:`To-do · ${v54agPendingText(x)}${v54agOverdue(x.dueDate)?' · OVERDUE':''}`,dueDate:x.dueDate,kind:'To-do',open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
+  (data.todos||[]).filter(x=>x&&!x.completed&&x.pending&&v54agDue(x.dueDate)).forEach(x=>rows.push({id:x.id,itemType:'todo',pending:true,name:x.name,meta:`${getTimingText(x)||'To-do'}${v54agOverdue(x.dueDate)?' · OVERDUE':''}`,dueDate:x.dueDate,kind:'To-do',open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
   (data.cleaningTasks||[]).filter(x=>x&&isDueTodayOrEarlier(x.nextDue)&&!todayIds.has(`cleaning:${x.id}`)).forEach(x=>rows.push({id:x.id,itemType:'cleaning',name:x.name,meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,kind:'Cleaning',open:()=>editCleaning(x.id),score:-2}));
   (data.projects||[]).filter(p=>p&&!p.completed).forEach(p=>{
     if(!todayIds.has(`project:${p.id}`)){const next=(p.steps||[]).find(x=>x&&!x.completed&&!x.pending);if(next)rows.push({id:next.id,parentId:p.id,itemType:'step',pending:false,name:next.name,meta:`Next action · ${p.name}`,dueDate:next.dueDate,kind:'Project',open:()=>editStep(p.id,next.id),score:next.dueDate?daysBetween(today,dateOnly(next.dueDate)):12});}
-    (p.steps||[]).filter(x=>x&&!x.completed&&x.pending&&v54agDue(x.dueDate)).forEach(x=>rows.push({id:x.id,parentId:p.id,itemType:'step',pending:true,name:x.name,meta:`Project: ${p.name} · ${v54agPendingText(x)}${v54agOverdue(x.dueDate)?' · OVERDUE':''}`,dueDate:x.dueDate,kind:'Project',open:()=>editStep(p.id,x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
+    (p.steps||[]).filter(x=>x&&!x.completed&&x.pending&&v54agDue(x.dueDate)).forEach(x=>rows.push({id:x.id,parentId:p.id,itemType:'step',pending:true,name:x.name,meta:`Project: ${p.name}${x.dueDate?' · '+formatDate(x.dueDate):''}${v54agOverdue(x.dueDate)?' · OVERDUE':''}`,dueDate:x.dueDate,kind:'Project',open:()=>editStep(p.id,x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
   });
   (data.waiting||[]).filter(x=>x&&!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({id:x.id,itemType:'waiting',name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
@@ -5137,13 +5137,16 @@ renderTodayReminders=function(){
   items.forEach(item=>{try{
     const overdue=item.itemType!=='annual'&&v54agOverdue(item.dueDate);
     const timePart=item.itemType==='appointment'&&item.time?` · ${item.time}`:'';
-    const pendingPart=item.pending?` · ${v54agPendingText(item)}`:'';
-    const meta=`${item.source||''}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${pendingPart}${overdue?' · OVERDUE':''}`;
+    const meta=`${item.source||''}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${overdue?' · OVERDUE':''}`;
     const row=item.itemType==='recurring'?v54jTodayRecurringRow(item,meta):v54jReminderRow(item,meta);
     if(item.itemType==='todo'||item.itemType==='step'){
       const old=row.querySelector('.item-menu-anchor');
       const html=v54agMenu(item);
       if(old&&html)old.outerHTML=html;
+    }
+    if(item.pending){
+      const copy=row.querySelector('.compact-copy,.v10-row-main');
+      if(copy){const line=document.createElement('span');line.className='pending-status-line';line.textContent=v54agPendingText(item);copy.appendChild(line);}
     }
     if(overdue)row.classList.add('overdue-row');
     area.appendChild(row);
@@ -5155,6 +5158,7 @@ renderFocusToday=function(){
   if(!items.length){area.innerHTML='<div class="empty-state calm-empty"><strong>You are clear for now.</strong><span>Capture a thought or add a task when something comes to mind.</span></div>';return;}
   items.forEach(item=>{try{
     const row=makeV10Row(item,{menu:(item.itemType==='todo'||item.itemType==='step')?v54agMenu(item):''});
+    if(item.pending){const main=row.querySelector('.v10-row-main');if(main){const line=document.createElement('span');line.className='pending-status-line';line.textContent=v54agPendingText(item);main.appendChild(line);}}
     if(v54agOverdue(item.dueDate))row.classList.add('overdue-row');
     area.appendChild(row);
   }catch(error){console.warn('v54ai Needs Attention row skipped',item?.id,error);}});
@@ -5175,3 +5179,59 @@ function v54agRefresh(){try{renderTodayReminders();}catch(e){console.error(e);}t
 setTimeout(v54agRefresh,250);
 window.addEventListener('pageshow',()=>setTimeout(v54agRefresh,50));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54agRefresh,50);});
+
+
+/* ===== v54aj visible Pending status =====
+   Display-only repair. Pending remains controlled from the three-dot menu.
+   A separate status line is shown beneath normal item metadata on Home, Lists
+   and Timeline for ordinary to-dos and project steps. */
+const v54ajTimelineItemsBase=timelineItems;
+timelineItems=function(){
+  return (v54ajTimelineItemsBase()||[]).map(item=>{
+    if(item.type==='todo'){
+      const todo=(data.todos||[]).find(x=>String(x.id)===String(item.id));
+      if(todo?.pending)return {...item,pending:true,pendingReason:todo.pendingReason||''};
+    }
+    if(item.type==='projectStep'){
+      const parts=String(item.id||'').split(':');
+      const project=(data.projects||[]).find(x=>String(x.id)===String(parts[0]));
+      const step=(project?.steps||[]).find(x=>String(x.id)===String(parts.slice(1).join(':')));
+      if(step?.pending)return {...item,pending:true,pendingReason:step.pendingReason||''};
+    }
+    return item;
+  });
+};
+
+renderTimeline=function(){
+  const area=document.getElementById('timelineArea'),summary=document.getElementById('timelineSummary');if(!area)return;
+  const {start,end}=timelineDateBounds(timelineRange),today=dateOnly(localDateKey());
+  const allItems=timelineItems();
+  const includeOverdue=['today','week','month','all'].includes(timelineRange);
+  const overdue=includeOverdue?allItems.filter(x=>dateOnly(x.date)<today):[];
+  const dated=allItems.filter(x=>{const d=dateOnly(x.date);return d>=start&&d<=end;});
+  const seen=new Set(),items=[...overdue,...dated].filter(x=>{const k=`${x.type}:${x.id}:${x.date}`;if(seen.has(k))return false;seen.add(k);return true;});
+  area.innerHTML='';
+  const labels={today:'today including overdue',tomorrow:'tomorrow',week:'in the next 7 days including overdue',month:'this month including overdue',all:'in the next year including overdue'};
+  if(summary)summary.textContent=`${items.length} ${items.length===1?'item':'items'} ${labels[timelineRange]}.`;
+  if(!items.length){area.innerHTML='<div class="empty-state">Nothing dated for this period.</div>';return;}
+  const appendRow=(item)=>{
+    const type=TIMELINE_TYPES[item.type]||{icon:'•',label:'Planner item'},row=document.createElement('button');row.type='button';row.className=`timeline-item timeline-${item.type}`;row.onclick=item.open;
+    const pendingLine=item.pending?`<span class="pending-status-line">Pending${item.pendingReason?' — '+escapeHtml(item.pendingReason):''}</span>`:'';
+    row.innerHTML=`<span class="timeline-icon" aria-hidden="true">${type.icon}</span><span class="timeline-copy"><strong>${escapeHtml(item.name)}</strong><span class="timeline-meta">${escapeHtml(type.label)}${item.time?' · '+escapeHtml(item.time):''}${item.detail?' · '+escapeHtml(item.detail):''}</span>${pendingLine}</span><span class="timeline-chevron" aria-hidden="true">›</span>`;
+    area.appendChild(row);
+  };
+  if(overdue.length){const h=document.createElement('h3');h.className='timeline-date-heading timeline-overdue-heading';h.textContent='Overdue';area.appendChild(h);overdue.forEach(appendRow);}
+  let current='';
+  dated.forEach(item=>{if(item.date!==current){current=item.date;const h=document.createElement('h3');h.className='timeline-date-heading';h.textContent=formatDate(item.date);area.appendChild(h);}appendRow(item);});
+};
+
+function v54ajRefreshVisiblePending(){
+  try{renderTodayReminders();}catch(e){console.error('v54aj Today refresh',e);}
+  try{renderFocusToday();}catch(e){console.error('v54aj Needs Attention refresh',e);}
+  try{renderTodos();}catch(e){console.error('v54aj To-do list refresh',e);}
+  try{renderProjects();}catch(e){console.error('v54aj Project list refresh',e);}
+  try{renderProjectNextActions();}catch(e){console.error('v54aj Project Home refresh',e);}
+  try{renderTimeline();}catch(e){console.error('v54aj Timeline refresh',e);}
+}
+setTimeout(v54ajRefreshVisiblePending,300);
+window.addEventListener('pageshow',()=>setTimeout(v54ajRefreshVisiblePending,80));
