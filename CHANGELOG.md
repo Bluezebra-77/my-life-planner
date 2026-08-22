@@ -1,5 +1,7 @@
-## v54aeR5 — Pending Home Robust Repair
-- Rebuilt Home Today/Needs Attention from stable v54ad with defensive local-data handling and consistent Pending surfacing.
+## v54af — Pending Stabilisation
+- Rebuilt Pending/Home changes from the last accepted v54ad baseline instead of the failed v54ae repair chain.
+- Pending actions are exposed consistently for ordinary to-dos and project steps in Lists and relevant Home rows.
+- Due/overdue Pending items surface in Today — Time Sensitive and Needs Attention with overdue red treatment.
 
 ## v54ad — Timeline Naming Consistency
 - Renamed the bottom Planner tab to Timeline so both routes to the same screen use the same name.
