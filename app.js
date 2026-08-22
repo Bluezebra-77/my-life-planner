@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ag";
+const APP_VERSION="54ah";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1418,7 +1418,10 @@ let waitingServiceWorker = null;
 let plannerServiceWorkerRegistration = null;
 let plannerReloadingForUpdate = false;
 const PLANNER_VERSION_URL = './version.json';
-const PLANNER_WORKER_URL = './service-worker.js';
+
+function plannerWorkerUrl(version=APP_VERSION) {
+  return `./service-worker.js?v=${encodeURIComponent(version)}`;
+}
 
 async function fetchPublishedPlannerVersion() {
   const response = await fetch(`${PLANNER_VERSION_URL}?t=${Date.now()}`, {
@@ -1438,30 +1441,79 @@ function setUpdateButtonState(label, disabled=false) {
   button.classList.remove('hidden');
 }
 
-function waitForWorkerInstall(registration, timeoutMs=20000) {
+function waitForWorkerState(worker, timeoutMs=15000) {
   return new Promise(resolve => {
-    if (registration.waiting) return resolve(registration.waiting);
+    if (!worker) return resolve(null);
+    if (worker.state === 'installed' || worker.state === 'activated') return resolve(worker);
     let settled=false;
-    const finish=worker=>{if(settled)return;settled=true;clearTimeout(timer);resolve(worker||registration.waiting||null);};
-    const watch=worker=>{
-      if(!worker)return;
-      if(worker.state==='installed'||worker.state==='activated')return finish(worker);
-      worker.addEventListener('statechange',()=>{
-        if(worker.state==='installed'||worker.state==='activated')finish(worker);
-      });
+    let timer=null;
+    const finish=()=>{
+      if(settled)return;
+      settled=true;
+      if(timer)clearTimeout(timer);
+      worker.removeEventListener('statechange',onState);
+      resolve(worker);
     };
-    watch(registration.installing);
-    const onFound=()=>watch(registration.installing);
-    registration.addEventListener('updatefound',onFound,{once:true});
-    const timer=setTimeout(()=>finish(registration.waiting||registration.installing),timeoutMs);
+    const onState=()=>{
+      if(worker.state==='installed'||worker.state==='activated'||worker.state==='redundant')finish();
+    };
+    worker.addEventListener('statechange',onState);
+    timer=setTimeout(finish,timeoutMs);
   });
+}
+
+async function registerPlannerWorker(version=APP_VERSION) {
+  if (!("serviceWorker" in navigator)) return null;
+  const requestedUrl=plannerWorkerUrl(version);
+  const registration=await navigator.serviceWorker.register(requestedUrl,{
+    scope:'./',
+    updateViaCache:'none'
+  });
+  plannerServiceWorkerRegistration=registration;
+  return registration;
 }
 
 async function ensurePlannerServiceWorker() {
   if (!("serviceWorker" in navigator)) return null;
   if (plannerServiceWorkerRegistration) return plannerServiceWorkerRegistration;
-  plannerServiceWorkerRegistration = await navigator.serviceWorker.register(PLANNER_WORKER_URL, { updateViaCache: 'none' });
-  return plannerServiceWorkerRegistration;
+  return registerPlannerWorker(APP_VERSION);
+}
+
+function plannerReloadFresh(version='') {
+  if (plannerReloadingForUpdate) return;
+  plannerReloadingForUpdate=true;
+  const url=new URL('./index.html',window.location.href);
+  url.searchParams.set('updated',version||APP_VERSION);
+  url.searchParams.set('_',Date.now().toString());
+  window.location.replace(url.toString());
+
+  // If navigation is interrupted by an older controller/browser cache, permit
+  // another reload attempt rather than leaving the tab permanently locked.
+  setTimeout(()=>{plannerReloadingForUpdate=false;},5000);
+}
+
+async function activatePublishedPlanner(version) {
+  sessionStorage.setItem('myLifePlannerPendingVersion',version||'new');
+
+  // Register the worker using the PUBLISHED VERSION in the script URL. This
+  // forces an old desktop tab to request the actual new worker instead of
+  // depending on the browser's previous service-worker script URL/cache state.
+  const registration=await registerPlannerWorker(version);
+  try{await registration.update();}catch(_){}
+
+  const candidate=registration.waiting||registration.installing;
+  if(candidate){
+    await waitForWorkerState(candidate);
+    const worker=registration.waiting||candidate;
+    waitingServiceWorker=worker;
+    try{worker.postMessage({type:'SKIP_WAITING'});}catch(_){}
+  }
+
+  // Do not rely solely on controllerchange: Chromium/Safari timing differs.
+  // A cache-busted navigation is a deterministic fallback and the SW serves
+  // navigations network-first/no-store.
+  setTimeout(()=>plannerReloadFresh(version),600);
+  return registration;
 }
 
 async function checkForAppUpdates({silent=false}={}) {
@@ -1471,90 +1523,87 @@ async function checkForAppUpdates({silent=false}={}) {
   }
   try {
     if(!silent)setUpdateButtonState('Checking…',true);
-    const [publishedVersion, registration] = await Promise.all([
-      fetchPublishedPlannerVersion(),
-      ensurePlannerServiceWorker()
-    ]);
-    if (!publishedVersion) throw new Error('Published version is missing.');
+    const publishedVersion=await fetchPublishedPlannerVersion();
+    if(!publishedVersion)throw new Error('Published version is missing.');
 
-    if (publishedVersion === APP_VERSION) {
+    if(publishedVersion===APP_VERSION){
+      await ensurePlannerServiceWorker();
       setUpdateButtonState('Check for updates',false);
-      if(!silent) alert(`You already have the latest version (v${APP_VERSION}).`);
+      if(!silent)alert(`You already have the latest version (v${APP_VERSION}).`);
       return false;
     }
 
-    setUpdateButtonState(`Update to v${publishedVersion}`,false);
-    sessionStorage.setItem('myLifePlannerPendingVersion', publishedVersion);
-    await registration.update();
-    const candidate = registration.waiting || await waitForWorkerInstall(registration);
-    waitingServiceWorker = registration.waiting || candidate || waitingServiceWorker;
+    setUpdateButtonState(`Updating to v${publishedVersion}…`,true);
 
-    if (!silent) {
-      const proceed = confirm(`My Life Planner v${publishedVersion} is available. Apply it now?`);
-      if (proceed) applyAppUpdate(publishedVersion);
+    if(!silent){
+      const proceed=confirm(`My Life Planner v${publishedVersion} is available. Apply it now?`);
+      if(!proceed){
+        setUpdateButtonState(`Update to v${publishedVersion}`,false);
+        return true;
+      }
     }
+
+    // Silent checks now APPLY the published update automatically. Previously
+    // desktop could discover a new version but stay on the old build.
+    await activatePublishedPlanner(publishedVersion);
     return true;
-  } catch (error) {
-    console.error('Update check failed', error);
+  } catch(error) {
+    console.error('Update check failed',error);
     setUpdateButtonState('Check for updates',false);
-    if(!silent) alert('The update check could not be completed. Please check your connection and try again.');
+    if(!silent)alert('The update check could not be completed. Please check your connection and try again.');
     return false;
   }
 }
 
 function applyAppUpdate(targetVersion='') {
-  const worker = plannerServiceWorkerRegistration?.waiting || waitingServiceWorker;
-  if (worker) {
-    sessionStorage.setItem('myLifePlannerPendingVersion', targetVersion || 'new');
-    worker.postMessage({ type: 'SKIP_WAITING' });
+  const version=targetVersion||sessionStorage.getItem('myLifePlannerPendingVersion')||'';
+  if(version){
+    activatePublishedPlanner(version).catch(error=>{
+      console.error('Apply update failed',error);
+      plannerReloadFresh(version);
+    });
     return;
   }
-  plannerReloadFresh(targetVersion);
-}
-
-function plannerReloadFresh(version='') {
-  if (plannerReloadingForUpdate) return;
-  plannerReloadingForUpdate=true;
-  const url=new URL('./index.html', window.location.href);
-  url.searchParams.set('updated', version || Date.now().toString());
-  url.searchParams.set('_', Date.now().toString());
-  window.location.replace(url.toString());
+  plannerReloadFresh();
 }
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      const registration = await ensurePlannerServiceWorker();
-      if (registration?.waiting) {
+  window.addEventListener('load',async()=>{
+    try{
+      const registration=await ensurePlannerServiceWorker();
+      if(registration?.waiting){
         waitingServiceWorker=registration.waiting;
         setUpdateButtonState('Update available');
       }
-      registration?.addEventListener('updatefound', () => {
+
+      registration?.addEventListener('updatefound',()=>{
         const worker=registration.installing;
         worker?.addEventListener('statechange',()=>{
-          if(worker.state==='installed' && navigator.serviceWorker.controller){
+          if(worker.state==='installed'&&navigator.serviceWorker.controller){
             waitingServiceWorker=registration.waiting||worker;
             setUpdateButtonState('Update available');
           }
         });
       });
-      // Network-only version check means Home Screen PWAs do not depend on a stale cached app shell to discover releases.
+
+      // One network-only comparison on every load. If the deployment is newer,
+      // apply it rather than merely advertising it.
       setTimeout(()=>checkForAppUpdates({silent:true}),800);
-    } catch (error) {
-      console.warn('Offline app registration failed', error);
+    }catch(error){
+      console.warn('Offline app registration failed',error);
     }
   });
 
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
     const target=sessionStorage.getItem('myLifePlannerPendingVersion')||'';
     sessionStorage.removeItem('myLifePlannerPendingVersion');
     plannerReloadFresh(target);
   });
 
-  navigator.serviceWorker.addEventListener('message', event => {
+  navigator.serviceWorker.addEventListener('message',event=>{
     if(event.data?.type==='PLANNER_WORKER_ACTIVE'){
       const activeVersion=String(event.data.version||'');
-      if(activeVersion && activeVersion!==APP_VERSION) plannerReloadFresh(activeVersion);
+      if(activeVersion&&activeVersion!==APP_VERSION)plannerReloadFresh(activeVersion);
     }
   });
 }

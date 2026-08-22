@@ -1,3 +1,8 @@
+## v54ah — Desktop Update Repair
+- Fixed desktop tabs remaining on an older version after a newer deployment was detected.
+- Update checks now apply published versions automatically using a version-addressed worker and reload fallback.
+- No planner feature/rendering logic changed from v54ag.
+
 ## v54ag — Stabilised Pending/Home
 - Rebuilt from accepted v54ad; consolidates Pending availability and Home surfacing while aligning PWA asset/cache versions.
 
