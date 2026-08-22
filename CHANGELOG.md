@@ -1,3 +1,8 @@
+## v54ai — Pending Menu Consistency
+- Removed extra inline Pending checkboxes/circles added by the repair chain.
+- Restored Pending to the established three-dot menu workflow with optional reason prompt for ordinary to-dos and project steps.
+- Preserved v54ah desktop/PWA update repair and Home data/rendering behaviour.
+
 ## v54ah — Desktop Update Repair
 - Fixed desktop tabs remaining on an older version after a newer deployment was detected.
 - Update checks now apply published versions automatically using a version-addressed worker and reload fallback.

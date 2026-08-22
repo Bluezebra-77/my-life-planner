@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ah";
+const APP_VERSION="54ai";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5132,31 +5132,40 @@ focusCandidateRows=function(){
 
 renderTodayReminders=function(){
   const area=document.getElementById('todayRemindersArea');if(!area)return;area.innerHTML='';
-  let items=[];try{items=[...(getTodayReminderItems()||[])].sort(v54vCompareTodayItems);}catch(error){console.error('v54ag Today failed',error);area.innerHTML='<div class="empty-state">Today could not refresh.</div>';return;}
+  let items=[];try{items=[...(getTodayReminderItems()||[])].sort(v54vCompareTodayItems);}catch(error){console.error('v54ai Today failed',error);area.innerHTML='<div class="empty-state">Today could not refresh.</div>';return;}
   if(!items.length){area.innerHTML='<div class="empty-state">Nothing time-sensitive needs attention today.</div>';return;}
   items.forEach(item=>{try{
-    const overdue=item.itemType!=='annual'&&v54agOverdue(item.dueDate);const timePart=item.itemType==='appointment'&&item.time?` · ${item.time}`:'';const pendingPart=item.pending?` · ${v54agPendingText(item)}`:'';const meta=`${item.source||''}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${pendingPart}${overdue?' · OVERDUE':''}`;
-    let row=item.itemType==='recurring'?v54jTodayRecurringRow(item,meta):v54jReminderRow(item,meta);
+    const overdue=item.itemType!=='annual'&&v54agOverdue(item.dueDate);
+    const timePart=item.itemType==='appointment'&&item.time?` · ${item.time}`:'';
+    const pendingPart=item.pending?` · ${v54agPendingText(item)}`:'';
+    const meta=`${item.source||''}${timePart} · ${formatDate(item.dueDate,item.itemType!=='annual')}${pendingPart}${overdue?' · OVERDUE':''}`;
+    const row=item.itemType==='recurring'?v54jTodayRecurringRow(item,meta):v54jReminderRow(item,meta);
     if(item.itemType==='todo'||item.itemType==='step'){
-      const old=row.querySelector('.item-menu-wrap');const html=v54agMenu(item);if(old&&html)old.outerHTML=html;
-      const current=item.itemType==='todo'?(data.todos||[]).find(x=>String(x.id)===String(item.id)):(data.projects||[]).find(x=>String(x.id)===String(item.parentId))?.steps?.find(x=>String(x.id)===String(item.id));
-      if(current&&!current.completed){const menuWrap=row.querySelector('.item-menu-wrap');const control=v54agPendingControl(item.itemType,item.id,item.parentId,current.pending);if(menuWrap)row.insertBefore(control,menuWrap);else row.appendChild(control);}
+      const old=row.querySelector('.item-menu-wrap');
+      const html=v54agMenu(item);
+      if(old&&html)old.outerHTML=html;
     }
-    if(overdue)row.classList.add('overdue-row');area.appendChild(row);
-  }catch(error){console.warn('v54ag Today row skipped',item?.id,error);}});
+    if(overdue)row.classList.add('overdue-row');
+    area.appendChild(row);
+  }catch(error){console.warn('v54ai Today row skipped',item?.id,error);}});
 };
 renderFocusToday=function(){
-  const area=document.getElementById('focusTodayArea');if(!area)return;area.innerHTML='';let items=[];try{items=focusCandidateRows()||[];}catch(error){console.error('v54ag Needs Attention failed',error);area.innerHTML='<div class="empty-state">Needs Attention could not refresh.</div>';return;}
+  const area=document.getElementById('focusTodayArea');if(!area)return;area.innerHTML='';
+  let items=[];try{items=focusCandidateRows()||[];}catch(error){console.error('v54ai Needs Attention failed',error);area.innerHTML='<div class="empty-state">Needs Attention could not refresh.</div>';return;}
   if(!items.length){area.innerHTML='<div class="empty-state calm-empty"><strong>You are clear for now.</strong><span>Capture a thought or add a task when something comes to mind.</span></div>';return;}
-  items.forEach(item=>{try{const row=makeV10Row(item,{menu:(item.itemType==='todo'||item.itemType==='step')?v54agMenu(item):''});if(v54agOverdue(item.dueDate))row.classList.add('overdue-row');if(item.itemType==='todo'||item.itemType==='step'){const current=item.itemType==='todo'?(data.todos||[]).find(x=>String(x.id)===String(item.id)):(data.projects||[]).find(x=>String(x.id)===String(item.parentId))?.steps?.find(x=>String(x.id)===String(item.id));if(current&&!current.completed){const menuWrap=row.querySelector('.item-menu-wrap');const control=v54agPendingControl(item.itemType,item.id,item.parentId,current.pending);if(menuWrap)row.insertBefore(control,menuWrap);else row.appendChild(control);}}area.appendChild(row);}catch(error){console.warn('v54ag Needs Attention row skipped',item?.id,error);}});
+  items.forEach(item=>{try{
+    const row=makeV10Row(item,{menu:(item.itemType==='todo'||item.itemType==='step')?v54agMenu(item):''});
+    if(v54agOverdue(item.dueDate))row.classList.add('overdue-row');
+    area.appendChild(row);
+  }catch(error){console.warn('v54ai Needs Attention row skipped',item?.id,error);}});
 };
 
 /* Lists: final renderers keep the accepted portrait-safe row/menu layout and add
    a compact Pending checkbox next to the existing menu. */
 const v54agTodosBase=renderTodos;
-renderTodos=function(){v54agTodosBase();const area=document.getElementById('todoArea');if(!area)return;const top=[...area.children].filter(r=>r.classList.contains('compact-manage-row')&&!r.classList.contains('nested-compact-row'));const sorted=[...(data.todos||[])].sort(sortByDueDate);sorted.forEach((todo,i)=>{const row=top[i];if(!row||todo.completed||row.querySelector('.pending-inline-toggle'))return;const menuWrap=row.querySelector('.item-menu-wrap');const c=v54agPendingControl('todo',todo.id,null,todo.pending);if(menuWrap)row.insertBefore(c,menuWrap);else row.appendChild(c);});};
+renderTodos=function(){v54agTodosBase();};
 const v54agProjectsBase=renderProjects;
-renderProjects=function(){v54agProjectsBase();const area=document.getElementById('projectsArea');if(!area)return;(data.projects||[]).forEach(project=>{const group=[...area.querySelectorAll('.project-steps-group')].find(g=>String(g.dataset.projectId)===String(project.id));if(!group)return;const rows=[...group.querySelectorAll('.project-step-manage-row')];(project.steps||[]).forEach((step,i)=>{const row=rows[i];if(!row||step.completed||row.querySelector('.pending-inline-toggle'))return;const menuWrap=row.querySelector('.item-menu-wrap');const c=v54agPendingControl('step',step.id,project.id,step.pending);if(menuWrap)row.insertBefore(c,menuWrap);else row.appendChild(c);});});};
+renderProjects=function(){v54agProjectsBase();};
 
 /* Make the edit-form reason field respond immediately. */
 document.getElementById('itemPending')?.addEventListener('change',updateFormVisibility);
