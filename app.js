@@ -15,7 +15,7 @@ function tagsMarkup(item){const tags=normaliseTags(item?.tags);return tags.lengt
 var timelineRange='today';
 var TIMELINE_TYPES={
   appointment:{icon:'📅',label:'Appointment'},todo:{icon:'✅',label:'To-do'},project:{icon:'📁',label:'Project'},
-  cleaning:{icon:'🧹',label:'Cleaning'},annual:{icon:'🎂',label:'Birthday / annual date'},waiting:{icon:'⏳',label:'Waiting For'}
+  cleaning:{icon:'🧹',label:'Cleaning'},annual:{icon:'🎂',label:'Birthday / annual date'},waiting:{icon:'⏳',label:'Pending note'}
 };
 
 const dailyTasks = [
@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54aj";
+const APP_VERSION="54ak";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1906,7 +1906,7 @@ function focusCandidateRows(){
   data.todos.filter(x=>!x.completed).forEach(x=>rows.push({name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
   data.cleaningTasks.filter(x=>isDueTodayOrEarlier(x.nextDue)).forEach(x=>rows.push({name:x.name,meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,kind:'Cleaning',action:()=>completeCleaning(x.id),open:()=>editCleaning(x.id),score:-2}));
   data.projects.filter(x=>!x.completed).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed && !x.pending);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});});
-  data.waiting.filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
+  data.waiting.filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({name:x.name,meta:'Pending note · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
 }
 function makeV10Row(item,{complete=true,menu='' }={}){
@@ -1952,7 +1952,7 @@ function renderProjectNextActions(){
 function openCaptureDialog(type='inbox',id=''){
  const item=(data[type]||[]).find(x=>x.id===id);
  document.getElementById('captureType').value=type;document.getElementById('captureId').value=id;
- document.getElementById('captureTitle').textContent=type==='waiting'?(id?'Edit waiting item':'Add Waiting For'):(id?'Edit Brain Inbox item':'Capture to Brain Inbox');
+ document.getElementById('captureTitle').textContent=type==='waiting'?(id?'Edit pending note':'Add Pending note'):(id?'Edit Brain Inbox item':'Capture to Brain Inbox');
  document.getElementById('captureName').value=item?.name||'';document.getElementById('captureNote').value=item?.note||'';
  document.getElementById('captureTags').value=tagsInputValue(item);document.getElementById('captureDate').value=item?.reviewDate||'';
  document.getElementById('captureCategory').value=item?.category||'';document.getElementById('captureStatus').value=item?.status||'new';
@@ -1982,13 +1982,13 @@ function saveCapture(targetType=''){
  else if(type==='project')data.projects.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],createdAt:new Date().toISOString()});
  else {const list=data[type]||(data[type]=[]),existing=list.find(x=>x.id===d.id);const record={id:existing?.id||uid(),name:d.name,note:d.note,reviewDate:type==='waiting'?d.reviewDate:'',category:type==='inbox'?d.category:'',status:type==='inbox'?d.status:'new',url:type==='inbox'?d.url:'',attachment:type==='inbox'?d.attachment:null,completed:existing?.completed||false,createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(existing)Object.assign(existing,record);else list.unshift(record);}
  if(targetType&&d.type==='inbox'&&sourceItem)data.inbox=data.inbox.filter(x=>x.id!==d.id);
- saveData();closeCaptureDialog();renderAll();showSaved(targetType?`Saved as ${targetType==='waiting'?'Waiting For':targetType}`:'Saved');return true;
+ saveData();closeCaptureDialog();renderAll();showSaved(targetType?`Saved as ${targetType==='waiting'?'Pending note':targetType}`:'Saved');return true;
 }
 function saveCaptureAs(type){saveCapture(type);}
 function inboxStatusLabel(status){return status==='processed'?'Processed':status==='progress'?'In progress':'New';}
 function inboxMeta(x){const parts=[];parts.push(inboxStatusLabel(x.status));if(x.category)parts.push(x.category);if(x.url)parts.push('🔗 Website');if(x.attachment)parts.push(`${x.attachment.type?.startsWith('image/')?'🖼️':'📄'} ${x.attachment.name||'Attachment'}`);if(x.createdAt)parts.push(`Captured ${new Date(x.createdAt).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}`);if(x.note)parts.push(x.note);return parts.join(' · ');}
 function toggleInboxProcessed(id){const x=data.inbox.find(item=>item.id===id);if(!x)return;x.status=x.status==='processed'?'new':'processed';x.updatedAt=new Date().toISOString();saveData();renderAll();showSaved(x.status==='processed'?'Marked processed':'Returned to inbox');}
-function renderInbox(){const full=document.getElementById('inboxArea'),preview=document.getElementById('inboxPreviewArea');[full,preview].forEach(area=>{if(!area)return;area.innerHTML='';const sorted=[...data.inbox].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));const items=area===preview?sorted.filter(x=>x.status!=='processed').slice(0,3):sorted;if(!items.length){area.innerHTML='<div class="empty-state">Your Brain Inbox is clear.</div>';return;}items.forEach(x=>{const processed=x.status==='processed';const row=makeV10Row({name:x.name,meta:inboxMeta(x),open:()=>editCapture('inbox',x.id)},{complete:false,menu:compactMenu(`<button onclick="closeAnchoredMenu();editCapture('inbox','${x.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleInboxProcessed('${x.id}')">${processed?'Mark as new':'Mark processed'}</button>${x.url?`<button onclick="closeAnchoredMenu();openBrainLink('${x.id}')">Open website</button>`:''}${x.attachment?`<button onclick="closeAnchoredMenu();openBrainAttachment('${x.id}')">Open attachment</button>`:''}<button onclick="closeAnchoredMenu();convertInbox('${x.id}','todo')">Make a to-do</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','project')">Make a project</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','appointment')">Make an appointment</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','waiting')">Move to Waiting For</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('inbox','${x.id}')">Delete</button>`,x.name)});if(processed)row.classList.add('processed-inbox-row');area.appendChild(row);});});}
+function renderInbox(){const full=document.getElementById('inboxArea'),preview=document.getElementById('inboxPreviewArea');[full,preview].forEach(area=>{if(!area)return;area.innerHTML='';const sorted=[...data.inbox].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));const items=area===preview?sorted.filter(x=>x.status!=='processed').slice(0,3):sorted;if(!items.length){area.innerHTML='<div class="empty-state">Your Brain Inbox is clear.</div>';return;}items.forEach(x=>{const processed=x.status==='processed';const row=makeV10Row({name:x.name,meta:inboxMeta(x),open:()=>editCapture('inbox',x.id)},{complete:false,menu:compactMenu(`<button onclick="closeAnchoredMenu();editCapture('inbox','${x.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleInboxProcessed('${x.id}')">${processed?'Mark as new':'Mark processed'}</button>${x.url?`<button onclick="closeAnchoredMenu();openBrainLink('${x.id}')">Open website</button>`:''}${x.attachment?`<button onclick="closeAnchoredMenu();openBrainAttachment('${x.id}')">Open attachment</button>`:''}<button onclick="closeAnchoredMenu();convertInbox('${x.id}','todo')">Make a to-do</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','project')">Make a project</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','appointment')">Make an appointment</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','waiting')">Move to Pending note</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('inbox','${x.id}')">Delete</button>`,x.name)});if(processed)row.classList.add('processed-inbox-row');area.appendChild(row);});});}
 function renderWaiting(){const area=document.getElementById('waitingArea');if(!area)return;area.innerHTML='';if(!data.waiting.length){area.innerHTML='<div class="empty-state">Nothing is currently waiting for a reply or follow-up.</div>';return;}data.waiting.forEach(x=>area.appendChild(makeV10Row({name:x.name,meta:x.reviewDate?`Review ${formatDate(x.reviewDate)}`:(x.note||'No review date'),dueDate:x.reviewDate,action:()=>completeWaiting(x.id),open:()=>editCapture('waiting',x.id)},{menu:compactMenu(`<button onclick="closeAnchoredMenu();editCapture('waiting','${x.id}')">Edit</button><button onclick="closeAnchoredMenu();completeWaiting('${x.id}')">${x.completed?'Mark active':'Complete'}</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('waiting','${x.id}')">Delete</button>`,x.name)})));}
 window.pendingBrainAttachment=null;
 function normaliseBrainUrl(value){const text=String(value||'').trim();if(!text)return '';try{return new URL(/^https?:\/\//i.test(text)?text:`https://${text}`).href;}catch(error){return text;}}
@@ -2787,12 +2787,12 @@ function convertTodayFocus(id,type){
     openRecurringTaskDialog();document.getElementById('recurringTaskName').value=name;document.getElementById('recurringTaskNotes').value=details;document.getElementById('recurringTaskUnit').value='month';document.getElementById('recurringTaskInterval').value=1;updateRecurringRuleControls();
   }else if(type==='appointment')openAppointmentDialog('',name,details);
   else if(type==='waiting'){
-    data.waiting.unshift({id:uid(),name,details,status:'waiting',createdAt:new Date().toISOString()});saveData();renderAll();deleteTodayFocusItem(id);showSaved('Moved to Waiting For');return;
+    data.waiting.unshift({id:uid(),name,details,status:'waiting',createdAt:new Date().toISOString()});saveData();renderAll();deleteTodayFocusItem(id);showSaved('Moved to Pending note');return;
   }
   item.conversionPending=type;saveData();
   alert('The new item is pre-filled. Save it, then remove the original Focus item when you are happy it is in the right place.');
 }
-function todayFocusConvertMenu(id){return `<div class="convert-menu-label">Convert to…</div><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','todo')">To-do</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','cleaning')">Cleaning task</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','recurring')">Recurring task</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','appointment')">Appointment</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','project')">Project</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','waiting')">Waiting For</button>`;}
+function todayFocusConvertMenu(id){return `<div class="convert-menu-label">Convert to…</div><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','todo')">To-do</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','cleaning')">Cleaning task</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','recurring')">Recurring task</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','appointment')">Appointment</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','project')">Project</button><button onclick="closeAnchoredMenu();convertTodayFocus('${id}','waiting')">Pending note</button>`;}
 renderTodayFocus=function(){
   ensureTodayFocusFields();const area=document.getElementById('todayFocusArea');if(!area)return;area.innerHTML='';
   const items=[...(data.todayFocus||[])].sort((a,b)=>Number(a.completed)-Number(b.completed)||Number(b.pinned)-Number(a.pinned)||Number(a.order)-Number(b.order)||String(a.createdAt||'').localeCompare(String(b.createdAt||'')));
@@ -3043,7 +3043,7 @@ function plannerHealthSuggestions(){
  const suggestions=[];
  (data.projects||[]).filter(x=>!x.completed).forEach(x=>{const age=ageInDays(x.updatedAt||x.createdAt);if(age!==null&&age>=7){suggestions.push({key:`project:${x.id}`,severity:Math.min(3,1+Math.floor(age/14)),title:'Project needs a look',copy:`${x.name||'A project'} has not been updated for ${age} days.`,open:()=>{showAppView('home');setTimeout(()=>{document.getElementById('homeProjectsPanel')?.scrollIntoView({behavior:'smooth',block:'start'});editProject(x.id);},120);}});}});
  (data.inbox||[]).filter(x=>x.status!=='processed').forEach(x=>{const age=ageInDays(x.updatedAt||x.createdAt);if(age!==null&&age>=7)suggestions.push({key:`inbox:${x.id}`,severity:1,title:'Brain Inbox item waiting',copy:`${x.name||'An inbox item'} has been waiting for ${age} days.`,open:()=>{showAppView('tasks');setTimeout(()=>editCapture('inbox',x.id),100);}});});
- (data.waiting||[]).filter(x=>!x.completed).forEach(x=>{const age=ageInDays(x.updatedAt||x.createdAt);if(age!==null&&age>=10)suggestions.push({key:`waiting:${x.id}`,severity:2,title:'Waiting For follow-up',copy:`${x.name||'A waiting item'} has been pending for ${age} days.`,open:()=>{showAppView('tasks');setTimeout(()=>editCapture('waiting',x.id),100);}});});
+ (data.waiting||[]).filter(x=>!x.completed).forEach(x=>{const age=ageInDays(x.updatedAt||x.createdAt);if(age!==null&&age>=10)suggestions.push({key:`waiting:${x.id}`,severity:2,title:'Pending follow-up',copy:`${x.name||'A pending note'} has been pending for ${age} days.`,open:()=>{showAppView('tasks');setTimeout(()=>editCapture('waiting',x.id),100);}});});
  (data.cleaningTasks||[]).filter(x=>!x.completed&&x.nextDue&&x.nextDue<localDateKey()).forEach(x=>{const days=Math.abs(daysBetween(new Date(),dateOnly(x.nextDue)));suggestions.push({key:`clean:${x.id}`,severity:2,title:'Cleaning task overdue',copy:`${x.name||'A cleaning task'} is overdue${days?` by ${days} day${days===1?'':'s'}`:''}.`,open:()=>editCleaning(x.id)});});
  return suggestions.filter(x=>!healthHidden(x.key)).sort((a,b)=>b.severity-a.severity);
 }
@@ -3105,7 +3105,7 @@ const V52A_SECTION_HELP = {
   'Appointments and events':'Every appointment appears here. Select an item to edit it.',
   'Recurring tasks':'Repeating responsibilities remain due or overdue until completed. Paused tasks stay saved but do not appear on Home.',
   'Brain Inbox':'Capture anything without deciding where it belongs. Convert it later when its proper home becomes clear.',
-  'Waiting For':'Things that are not yours to do but still need watching and following up.',
+  'Waiting For':'Legacy label retained for compatibility.','Pending':'All items currently paused or waiting, gathered from their original lists.',
   'Birthdays and memorable dates list':'Annual reminders for birthdays and other dates you want to remember.',
   'Projects list':'Projects and their steps appear here for full editing and management.',
   'Cleaning task list':'Cleaning jobs can repeat daily, weekly, fortnightly or monthly. Completing one schedules its next due date.',
@@ -3159,7 +3159,7 @@ function focusCandidateRows(){
   data.todos.filter(x=>!x.completed&&!alreadyShown.has(`todo:${x.id}`)&&!alreadyShown.has(`todoParent:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:getTimingText(x),dueDate:x.dueDate,kind:'To-do',action:()=>toggleTodo(x.id),open:()=>editTodo(x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate)):40}));
   data.cleaningTasks.filter(x=>isDueTodayOrEarlier(x.nextDue)&&!alreadyShown.has(`cleaning:${x.id}`)).forEach(x=>rows.push({name:x.name,meta:`Cleaning · ${x.room||'Home'}`,dueDate:x.nextDue,kind:'Cleaning',action:()=>completeCleaning(x.id),open:()=>editCleaning(x.id),score:-2}));
   data.projects.filter(x=>!x.completed&&!alreadyShown.has(`project:${x.id}`)).forEach(p=>{const s=(p.steps||[]).find(x=>!x.completed && !x.pending);if(s)rows.push({name:s.name,meta:`Next action · ${p.name}`,dueDate:s.dueDate,kind:'Project',action:()=>toggleStep(p.id,s.id),open:()=>editStep(p.id,s.id),score:s.dueDate?daysBetween(today,dateOnly(s.dueDate)):12});});
-  data.waiting.filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
+  data.waiting.filter(x=>!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({name:x.name,meta:'Pending note · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
 }
 function optimiseHomeOrder(){
@@ -3233,7 +3233,7 @@ function plannerHealthSuggestions(){
  (data.projects||[]).filter(x=>!x.completed).forEach(x=>{const age=ageInDays(x.updatedAt||x.createdAt);if(age!==null&&age>=7)suggestions.push({key:`project:${x.id}`,severity:Math.min(3,1+Math.floor(age/14)),title:'A project may need a little momentum',copy:`${x.name||'This project'} has not recorded progress for ${age} days. Would opening the next step help?`,actionLabel:'Open project',open:()=>{showAppView('home');setTimeout(()=>{document.getElementById('homeProjectsPanel')?.scrollIntoView({behavior:'smooth',block:'start'});editProject(x.id);},120);}});});
  const oldInbox=(data.inbox||[]).filter(x=>x.status!=='processed'&&ageInDays(x.updatedAt||x.createdAt)>=7);
  if(oldInbox.length)suggestions.push({key:`inbox-group:${oldInbox.map(x=>x.id).sort().join(',')}`,severity:oldInbox.length>=5?2:1,title:'Some captured thoughts are ready for a decision',copy:`${oldInbox.length} Brain Inbox item${oldInbox.length===1?' has':'s have'} been waiting for more than a week. A short review may clear useful ideas.`,actionLabel:'Review Brain Inbox',open:()=>{showAppView('tasks');setTimeout(()=>document.getElementById('inboxListSection')?.scrollIntoView({behavior:'smooth',block:'start'}),100);}});
- (data.waiting||[]).filter(x=>!x.completed).forEach(x=>{const age=ageInDays(x.updatedAt||x.createdAt);if(age!==null&&age>=10)suggestions.push({key:`waiting:${x.id}`,severity:age>=21?3:2,title:'A follow-up may be useful',copy:`${x.name||'This Waiting For item'} has been pending for ${age} days.`,actionLabel:'Open item',open:()=>{showAppView('tasks');setTimeout(()=>editCapture('waiting',x.id),100);}});});
+ (data.waiting||[]).filter(x=>!x.completed).forEach(x=>{const age=ageInDays(x.updatedAt||x.createdAt);if(age!==null&&age>=10)suggestions.push({key:`waiting:${x.id}`,severity:age>=21?3:2,title:'A follow-up may be useful',copy:`${x.name||'This pending note'} has been pending for ${age} days.`,actionLabel:'Open item',open:()=>{showAppView('tasks');setTimeout(()=>editCapture('waiting',x.id),100);}});});
  (data.cleaningTasks||[]).filter(x=>!x.completed&&x.nextDue&&x.nextDue<localDateKey()).forEach(x=>{const days=Math.abs(daysBetween(new Date(),dateOnly(x.nextDue)));suggestions.push({key:`clean:${x.id}`,severity:days>=7?3:2,title:'A cleaning task is still waiting',copy:`${x.name||'This cleaning task'} is overdue${days?` by ${days} day${days===1?'':'s'}`:''}.`,actionLabel:'Open task',open:()=>editCleaning(x.id)});});
  Object.values(v52bPatterns()).filter(x=>Number(x.count||0)>=3&&!v52bPatternAlreadyStructured(x.name)).sort((a,b)=>Number(b.count)-Number(a.count)).slice(0,3).forEach(x=>suggestions.push({key:`pattern:${v52bNormaliseName(x.name)}`,severity:1,title:'Would you like the planner to remember this?',copy:`You have added “${x.name}” ${x.count} times. It may work better as a recurring task.`,actionLabel:'Make recurring',open:()=>v52bSuggestRecurring(x.name)}));
  return suggestions.filter(x=>!healthHidden(x.key)).sort((a,b)=>b.severity-a.severity);
@@ -3383,7 +3383,7 @@ function v52dGentleMessage(done,remaining,hour=new Date().getHours()){
 }
 function renderEveningReflection(){const panel=document.getElementById('eveningReflectionPanel'),area=document.getElementById('eveningReflectionArea');if(!panel||!area)return;const now=new Date(),dismiss=v52dDismissals();if(now.getHours()<18||dismiss.evening===localDateKey()){panel.classList.add('hidden');return;}const start=new Date();start.setHours(0,0,0,0);const events=v52dEventsSince(start);const focusCompleted=(data.todayFocus||[]).filter(x=>x.completed&&x.completedAt&&new Date(x.completedAt)>=start).length;const tasks=v52dCount(events,'todo')+v52dCount(events,'todoStep')+focusCompleted;const steps=v52dCount(events,'projectStep');const cleaning=v52dCount(events,'cleaning');const organised=v52dCount(events,'inboxProcessed');const remaining=v52cActiveFocus().length+v52cUrgentItems().length+v52cDueRecurring().length;area.innerHTML=`<div class="reflection-summary"><p class="reflection-intro">A calm record of what moved today.</p><div class="reflection-metrics">${v52dMetric(tasks,'tasks completed')}${v52dMetric(steps,'project steps')}${v52dMetric(cleaning,'cleaning jobs')}${v52dMetric(organised,'inbox items organised')}</div><div class="reflection-note">${escapeHtml(v52dGentleMessage(tasks+steps+cleaning+organised,remaining))}</div>${remaining?`<div class="reflection-note"><strong>${remaining}</strong> item${remaining===1?'':'s'} remain visible for attention. They do not all have to be done tonight.</div>`:''}</div>`;panel.classList.remove('hidden');}
 function v52dWeeklyWindow(){const end=new Date();end.setHours(23,59,59,999);const start=new Date(end);start.setDate(start.getDate()-6);start.setHours(0,0,0,0);return {start,end};}
-function renderWeeklyReflection(){const panel=document.getElementById('weeklyReflectionPanel'),area=document.getElementById('weeklyReflectionArea');if(!panel||!area)return;const now=new Date(),pref=v52dPrefs().weeklyTiming,dismiss=v52dDismissals();const show=(pref==='sunday'&&now.getDay()===0&&now.getHours()>=17)||(pref==='monday'&&now.getDay()===1&&now.getHours()<12);if(!show||dismiss.week===v52dWeekKey()){panel.classList.add('hidden');return;}const {start}=v52dWeeklyWindow(),events=v52dEventsSince(start);const tasks=v52dCount(events,'todo')+v52dCount(events,'todoStep')+v52dCount(events,'focus');const steps=v52dCount(events,'projectStep');const cleaning=v52dCount(events,'cleaning');const waiting=(data.waiting||[]).filter(x=>!x.completed).length;const inactive=(data.projects||[]).filter(x=>!x.completed&&ageInDays(x.updatedAt||x.createdAt)>=7).length;let note=steps?'At least one project moved forward this week.':'No project step was recorded this week. That may be perfectly appropriate, or one project might deserve a small next action.';if(inactive)note+=` ${inactive} project${inactive===1?' has':'s have'} been quiet for at least a week.`;area.innerHTML=`<div class="reflection-summary"><p class="reflection-intro">A brief view of the last seven days, without judgement.</p><div class="reflection-metrics">${v52dMetric(tasks,'tasks completed')}${v52dMetric(steps,'project steps')}${v52dMetric(cleaning,'cleaning jobs')}${v52dMetric(waiting,'Waiting For open')}</div><div class="reflection-note">${escapeHtml(note)}</div></div>`;panel.classList.remove('hidden');}
+function renderWeeklyReflection(){const panel=document.getElementById('weeklyReflectionPanel'),area=document.getElementById('weeklyReflectionArea');if(!panel||!area)return;const now=new Date(),pref=v52dPrefs().weeklyTiming,dismiss=v52dDismissals();const show=(pref==='sunday'&&now.getDay()===0&&now.getHours()>=17)||(pref==='monday'&&now.getDay()===1&&now.getHours()<12);if(!show||dismiss.week===v52dWeekKey()){panel.classList.add('hidden');return;}const {start}=v52dWeeklyWindow(),events=v52dEventsSince(start);const tasks=v52dCount(events,'todo')+v52dCount(events,'todoStep')+v52dCount(events,'focus');const steps=v52dCount(events,'projectStep');const cleaning=v52dCount(events,'cleaning');const waiting=(data.waiting||[]).filter(x=>!x.completed).length;const inactive=(data.projects||[]).filter(x=>!x.completed&&ageInDays(x.updatedAt||x.createdAt)>=7).length;let note=steps?'At least one project moved forward this week.':'No project step was recorded this week. That may be perfectly appropriate, or one project might deserve a small next action.';if(inactive)note+=` ${inactive} project${inactive===1?' has':'s have'} been quiet for at least a week.`;area.innerHTML=`<div class="reflection-summary"><p class="reflection-intro">A brief view of the last seven days, without judgement.</p><div class="reflection-metrics">${v52dMetric(tasks,'tasks completed')}${v52dMetric(steps,'project steps')}${v52dMetric(cleaning,'cleaning jobs')}${v52dMetric(waiting,'Pending notes open')}</div><div class="reflection-note">${escapeHtml(note)}</div></div>`;panel.classList.remove('hidden');}
 function v52dPeriodStart(period){const d=new Date();d.setHours(0,0,0,0);if(period==='week'){d.setDate(d.getDate()-6);}else if(period==='month'){d.setDate(1);}else return new Date(0);return d;}
 function renderHiddenStatistics(){const area=document.getElementById('hiddenStatisticsArea');if(!area)return;const period=document.getElementById('statisticsPeriod')?.value||'week',events=v52dEventsSince(v52dPeriodStart(period));const completed=events.filter(e=>['todo','todoStep','focus','projectStep','cleaning','recurring'].includes(e.type)).length;const projects=new Set(events.filter(e=>e.type==='projectStep').map(e=>e.projectId).filter(Boolean)).size;const cleaning=v52dCount(events,'cleaning');const inbox=v52dCount(events,'inboxProcessed');const days=[0,0,0,0,0,0,0];events.forEach(e=>days[Number(e.weekday)||0]++);const names=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];const max=Math.max(...days);const active=max?names[days.indexOf(max)]:'Not enough data yet';area.innerHTML=`<div class="stat-card"><span>Recorded completions</span><strong>${completed}</strong></div><div class="stat-card"><span>Projects progressed</span><strong>${projects}</strong></div><div class="stat-card"><span>Cleaning jobs completed</span><strong>${cleaning}</strong></div><div class="stat-card"><span>Brain Inbox organised</span><strong>${inbox}</strong></div><div class="stat-card"><span>Most active weekday</span><strong>${escapeHtml(active)}</strong></div><div class="stat-card"><span>Activity records available</span><strong>${events.length}</strong></div>`;}
 function v52dPatternSuggestions(){const events=v52dEventsSince(v52dDateStart(60)).filter(e=>['focus','cleaning','todo'].includes(e.type)&&e.name);const grouped={};events.forEach(e=>{const key=v52bNormaliseName(e.name);if(!key)return;(grouped[key]??={name:e.name,days:[],count:0}).count++;grouped[key].days.push(e.weekday);});return Object.entries(grouped).filter(([key,g])=>g.count>=3&&!v52bPatternAlreadyStructured(g.name)).map(([key,g])=>{const counts=[0,0,0,0,0,0,0];g.days.forEach(d=>counts[d]++);const best=Math.max(...counts),weekday=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][counts.indexOf(best)];return {key:`memory:${key}`,severity:1,title:'A routine may be forming',copy:`You have completed “${g.name}” ${g.count} times${best>=2?`, often on ${weekday}`:''}. Would you like to make it recurring?`,actionLabel:'Make recurring',open:()=>v52bSuggestRecurring(g.name)};});}
@@ -4027,7 +4027,7 @@ renderInbox=function(){
     const expanded=v54cR22Bool(V54C_HOME_INBOX_EXPANDED);
     const items=area===preview?(expanded?activeOldest:activeOldest.slice(0,3)):fullSorted;
     if(!items.length){area.innerHTML='<div class="empty-state">Your Brain Inbox is clear.</div>';return;}
-    items.forEach(x=>{const processed=x.status==='processed';const row=makeV10Row({name:x.name,meta:inboxMeta(x),open:()=>editCapture('inbox',x.id)},{complete:false,menu:compactMenu(`<button onclick="closeAnchoredMenu();editCapture('inbox','${x.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleInboxProcessed('${x.id}')">${processed?'Mark as new':'Mark processed'}</button>${x.url?`<button onclick="closeAnchoredMenu();openBrainLink('${x.id}')">Open website</button>`:''}${x.attachment?`<button onclick="closeAnchoredMenu();openBrainAttachment('${x.id}')">Open attachment</button>`:''}<button onclick="closeAnchoredMenu();convertInbox('${x.id}','todo')">Make a to-do</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','project')">Make a project</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','appointment')">Make an appointment</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','waiting')">Move to Waiting For</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('inbox','${x.id}')">Delete</button>`,x.name)});if(processed)row.classList.add('processed-inbox-row');area.appendChild(row);});
+    items.forEach(x=>{const processed=x.status==='processed';const row=makeV10Row({name:x.name,meta:inboxMeta(x),open:()=>editCapture('inbox',x.id)},{complete:false,menu:compactMenu(`<button onclick="closeAnchoredMenu();editCapture('inbox','${x.id}')">Edit</button><button onclick="closeAnchoredMenu();toggleInboxProcessed('${x.id}')">${processed?'Mark as new':'Mark processed'}</button>${x.url?`<button onclick="closeAnchoredMenu();openBrainLink('${x.id}')">Open website</button>`:''}${x.attachment?`<button onclick="closeAnchoredMenu();openBrainAttachment('${x.id}')">Open attachment</button>`:''}<button onclick="closeAnchoredMenu();convertInbox('${x.id}','todo')">Make a to-do</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','project')">Make a project</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','appointment')">Make an appointment</button><button onclick="closeAnchoredMenu();convertInbox('${x.id}','waiting')">Move to Pending note</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('inbox','${x.id}')">Delete</button>`,x.name)});if(processed)row.classList.add('processed-inbox-row');area.appendChild(row);});
     if(area===preview&&activeOldest.length>3){const wrap=document.createElement('div');wrap.className='home-preview-actions';wrap.innerHTML=v54cR22PreviewButton(`Show all ${activeOldest.length}`,expanded,'toggleHomeInboxPreview()');area.appendChild(wrap);}
   });
 };
@@ -5016,7 +5016,7 @@ function v54abDeleteTimelineItem(item){
     data.annualDates=(data.annualDates||[]).filter(x=>String(x.id)!==String(item.id));
   }else if(type==='waiting'){
     target=(data.waiting||[]).find(x=>String(x.id)===String(item.id));if(!target)return;
-    if(!confirm(`Delete “${target.name||'this Waiting For item'}”?`))return;
+    if(!confirm(`Delete “${target.name||'this pending note'}”?`))return;
     data.waiting=(data.waiting||[]).filter(x=>String(x.id)!==String(item.id));
   }else return;
   saveData();v54abCloseOpenDialog();renderAll();showSaved('Deleted');
@@ -5126,7 +5126,7 @@ focusCandidateRows=function(){
     if(!todayIds.has(`project:${p.id}`)){const next=(p.steps||[]).find(x=>x&&!x.completed&&!x.pending);if(next)rows.push({id:next.id,parentId:p.id,itemType:'step',pending:false,name:next.name,meta:`Next action · ${p.name}`,dueDate:next.dueDate,kind:'Project',open:()=>editStep(p.id,next.id),score:next.dueDate?daysBetween(today,dateOnly(next.dueDate)):12});}
     (p.steps||[]).filter(x=>x&&!x.completed&&x.pending&&v54agDue(x.dueDate)).forEach(x=>rows.push({id:x.id,parentId:p.id,itemType:'step',pending:true,name:x.name,meta:`Project: ${p.name}${x.dueDate?' · '+formatDate(x.dueDate):''}${v54agOverdue(x.dueDate)?' · OVERDUE':''}`,dueDate:x.dueDate,kind:'Project',open:()=>editStep(p.id,x.id),score:x.dueDate?daysBetween(today,dateOnly(x.dueDate))-20:-20}));
   });
-  (data.waiting||[]).filter(x=>x&&!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({id:x.id,itemType:'waiting',name:x.name,meta:'Waiting for · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
+  (data.waiting||[]).filter(x=>x&&!x.completed&&x.reviewDate&&dateOnly(x.reviewDate)<=today).forEach(x=>rows.push({id:x.id,itemType:'waiting',name:x.name,meta:'Pending note · review due',dueDate:x.reviewDate,kind:'Waiting',open:()=>editCapture('waiting',x.id),score:0}));
   return rows.sort((a,b)=>a.score-b.score).slice(0,7);
 };
 
@@ -5235,3 +5235,107 @@ function v54ajRefreshVisiblePending(){
 }
 setTimeout(v54ajRefreshVisiblePending,300);
 window.addEventListener('pageshow',()=>setTimeout(v54ajRefreshVisiblePending,80));
+
+
+/* ===== v54ak consolidated Pending view =====
+   Waiting For is now presented as Pending: a consolidated view/filter of all
+   current Pending ordinary to-dos, Pending project steps and existing standalone
+   Waiting For records (shown as Pending notes). The underlying `waiting` data key
+   is retained unchanged for safe backwards-compatible data/backup handling. */
+function v54akPendingEntries(){
+  const entries=[];
+  (data.todos||[]).forEach(todo=>{
+    if(!todo||todo.completed||!todo.pending)return;
+    entries.push({
+      kind:'todo',itemType:'todo',id:todo.id,name:todo.name||'Untitled to-do',
+      source:'To-do',date:todo.dueDate||'',pendingReason:todo.pendingReason||'',
+      open:()=>editTodo(todo.id)
+    });
+  });
+  (data.projects||[]).forEach(project=>{
+    if(!project||project.completed)return;
+    (project.steps||[]).forEach(step=>{
+      if(!step||step.completed||!step.pending)return;
+      entries.push({
+        kind:'step',itemType:'step',id:step.id,parentId:project.id,
+        name:step.name||'Untitled step',source:`Project: ${project.name||'Untitled project'}`,
+        date:step.dueDate||'',pendingReason:step.pendingReason||'',
+        open:()=>editStep(project.id,step.id)
+      });
+    });
+  });
+  (data.waiting||[]).forEach(note=>{
+    if(!note||note.completed)return;
+    entries.push({
+      kind:'note',itemType:'waiting',id:note.id,name:note.name||'Untitled pending note',
+      source:'Pending note',date:note.reviewDate||'',note:note.note||note.details||'',
+      open:()=>editCapture('waiting',note.id)
+    });
+  });
+  return entries.sort((left,right)=>{
+    const ld=String(left.date||'9999-12-31'),rd=String(right.date||'9999-12-31');
+    if(ld!==rd)return ld.localeCompare(rd);
+    if(left.source!==right.source)return left.source.localeCompare(right.source);
+    return String(left.name||'').localeCompare(String(right.name||''));
+  });
+}
+function v54akPendingMenu(entry){
+  if(entry.kind==='todo')return v54agMenu({itemType:'todo',id:entry.id,name:entry.name});
+  if(entry.kind==='step')return v54agMenu({itemType:'step',id:entry.id,parentId:entry.parentId,name:entry.name});
+  return compactMenu(`<button onclick="closeAnchoredMenu();editCapture('waiting','${entry.id}')">Edit pending note</button><button onclick="closeAnchoredMenu();completeWaiting('${entry.id}')">Mark resolved</button><button class="danger-text" onclick="closeAnchoredMenu();deleteCapture('waiting','${entry.id}')">Delete</button>`,entry.name||'pending note');
+}
+function v54akPendingRow(entry){
+  const meta=[];
+  meta.push(entry.source);
+  if(entry.date)meta.push(entry.kind==='note'?`Review ${formatDate(entry.date)}`:`Due ${formatDate(entry.date)}`);
+  const row=makeV10Row({name:entry.name,meta:meta.join(' · '),dueDate:entry.date,open:entry.open},{complete:false,menu:v54akPendingMenu(entry)});
+  const main=row.querySelector('.v10-row-main');
+  if(main){
+    const line=document.createElement('span');line.className='pending-status-line';
+    if(entry.kind==='note')line.textContent=`Pending note${entry.note?` — ${entry.note}`:''}`;
+    else line.textContent=`Pending${entry.pendingReason?` — ${entry.pendingReason}`:''}`;
+    main.appendChild(line);
+  }
+  return row;
+}
+function openPendingList(){showView('tasks');setTimeout(()=>jumpToList('waitingListSection'),30);}
+openWaitingForList=openPendingList;
+renderWaiting=function(){
+  const area=document.getElementById('waitingArea');if(!area)return;area.innerHTML='';
+  const items=v54akPendingEntries();
+  if(!items.length){area.innerHTML='<div class="empty-state">Nothing is currently Pending.</div>';return;}
+  items.forEach(item=>area.appendChild(v54akPendingRow(item)));
+};
+renderWaitingHome=function(){
+  const area=document.getElementById('homeWaitingArea');if(!area)return;area.innerHTML='';
+  const items=v54akPendingEntries().slice(0,5);
+  if(!items.length){area.innerHTML='<div class="empty-state">Nothing is currently Pending.</div>';return;}
+  items.forEach(item=>area.appendChild(v54akPendingRow(item)));
+};
+
+/* The Daily Companion card uses the same consolidated count and opens the same
+   Pending view. The historic `waiting` target name is retained internally. */
+v52cWaitingFollowups=function(){return v54akPendingEntries();};
+const v54akDailyCompanionBase=renderDailyCompanion;
+renderDailyCompanion=function(){
+  v54akDailyCompanionBase();
+  const cards=[...document.querySelectorAll('#companionDashboardCards .companion-dashboard-card')];
+  const card=cards.find(node=>node.dataset.companionTarget==='waiting');
+  if(card){
+    const count=v54akPendingEntries().length;
+    const title=card.querySelector('span'),value=card.querySelector('strong'),detail=card.querySelector('small');
+    if(title)title.textContent='Pending';if(value)value.textContent=String(count);
+    if(detail)detail.textContent=count===1?'item pending':'items pending';
+  }
+};
+TIMELINE_TYPES.waiting={icon:'⏳',label:'Pending note'};
+try{V52A_SECTION_HELP.Pending='All current Pending work in one place: to-dos, project steps and standalone Pending notes.';}catch(_){}
+
+function v54akRefreshPendingView(){
+  try{renderWaiting();}catch(e){console.error('v54ak Pending list refresh',e);}
+  try{renderWaitingHome();}catch(e){console.error('v54ak Pending Home refresh',e);}
+  try{renderDailyCompanion();}catch(e){console.error('v54ak Pending dashboard refresh',e);}
+}
+setTimeout(v54akRefreshPendingView,360);
+window.addEventListener('pageshow',()=>setTimeout(v54akRefreshPendingView,100));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54akRefreshPendingView,100);});

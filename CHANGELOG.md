@@ -1,3 +1,7 @@
+## v54ak — Consolidated Pending
+- Replaced the separate Waiting For presentation with a consolidated Pending view of Pending to-dos, Pending project steps and preserved standalone Pending notes.
+- Kept the existing menu-based Pending workflow and underlying data format unchanged.
+
 ## v54aj — Visible Pending Status
 - Added a dedicated Pending/reason line beneath normal text/date for ordinary to-dos and project steps across Home, Lists and Timeline.
 - Pending remains controlled only from the three-dot menu.
