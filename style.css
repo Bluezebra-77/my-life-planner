@@ -1672,15 +1672,7 @@ body.timer-minimised .quick-add-fab{
 
 
 /* v54al daypart routine placement */
-.daypart-routine-host{
-  margin-top:12px;
-}
-.daypart-routine-host > .panel{
-  margin:0;
-}
-.v54al-routine-inactive{
-  display:none!important;
-}
-.daily-companion-panel .daypart-routine-host .home-collapsible{
-  box-shadow:none;
-}
+.daypart-routine-host{margin-top:12px;}
+.daypart-routine-host > .panel{margin:0;}
+.v54al-routine-inactive{display:none!important;}
+.daily-companion-panel .daypart-routine-host .home-collapsible{box-shadow:none;}

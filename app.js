@@ -5400,7 +5400,6 @@ function v54alPlaceDaypartRoutine(){
 function v54alPlaceHomeSections(){
   const quick=document.querySelector('.home-quick-actions');
   if(!quick)return;
-  const parent=quick.parentElement;
   const brief=document.getElementById('morningBriefPanel');
   const today=document.getElementById('homeTodayPanel');
   const focus=document.getElementById('todayFocusPanel');

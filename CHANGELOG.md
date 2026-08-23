@@ -1,7 +1,7 @@
 ## v54al — Daypart Routine + Home Priority Order
-- Reordered Home action sections to Time Sensitive → Today’s Focus → Needs Attention → Projects → Pending → Recurring → Brain Inbox.
-- Moved Daily Rhythm into the morning/afternoon companion and Evening Routine into the evening companion, with the active routine collapsed by default.
-- No planner workflow/data logic changed.
+- Reordered Home action sections.
+- Moved Daily Rhythm/Evening Routine into the existing daypart companion area.
+- Presentation only; no planner workflow logic changed.
 
 ## v54ak — Consolidated Pending
 - Replaced the separate Waiting For presentation with a consolidated Pending view of Pending to-dos, Pending project steps and preserved standalone Pending notes.
