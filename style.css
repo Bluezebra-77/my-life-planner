@@ -1702,3 +1702,14 @@ body.timer-minimised .quick-add-fab{
 .backup-verification-status.backup-warning{
   color:#b42318;
 }
+
+/* v54aq Brain Inbox / Project attachment viewing */
+.attachment-thumb-button,.attachment-file-open,.item-attachment-open{appearance:none;border:0;background:transparent;padding:0;margin:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.attachment-thumb-button{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.attachment-thumb-button img{display:block;max-width:120px;max-height:90px;border-radius:10px}
+.attachment-thumb-button>span,.attachment-file-open>span:last-child{font-size:.72rem;font-weight:800;text-decoration:underline}
+.item-attachment-preview{margin:4px 0 12px;padding:10px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft,#f4f7f5)}
+.item-attachment-open{display:flex;align-items:center;gap:10px;width:100%}
+.item-attachment-open img{width:72px;height:56px;object-fit:cover;border-radius:9px;flex:0 0 auto}
+.item-attachment-open>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.item-attachment-open small{text-decoration:underline}

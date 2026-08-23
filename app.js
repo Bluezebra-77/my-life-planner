@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ap";
+const APP_VERSION="54aq";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1207,7 +1207,7 @@ addForm.addEventListener("submit",event=>{
         const existing = oldSteps[index];
         return existing ? {...existing,name:entry.name,dueDate:entry.dueDate || existing.dueDate || null,order:index} : {id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:entry.leadDays || common.leadDays,completed:false,order:index};
       });
-      data.projects[data.projects.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,steps};
+      data.projects[data.projects.findIndex(x=>x.id===id)]={...common,completed:old?.completed||false,steps,attachment:old?.attachment||null};
     } else {
       const steps = enteredSteps.map((entry,index) => ({id:uid(),name:entry.name,details:"",timingType:entry.dueDate?"date":common.timingType,dueDate:entry.dueDate || common.dueDate,leadDays:entry.leadDays || common.leadDays,completed:false,order:index}));
       data.projects.push({...common,steps});
@@ -1979,7 +1979,7 @@ function saveCapture(targetType=''){
  }
  const type=targetType||d.type;
  if(type==='todo')data.todos.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],createdAt:new Date().toISOString()});
- else if(type==='project')data.projects.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],createdAt:new Date().toISOString()});
+ else if(type==='project')data.projects.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],attachment:d.attachment||null,createdAt:new Date().toISOString()});
  else {const list=data[type]||(data[type]=[]),existing=list.find(x=>x.id===d.id);const record={id:existing?.id||uid(),name:d.name,note:d.note,reviewDate:type==='waiting'?d.reviewDate:'',category:type==='inbox'?d.category:'',status:type==='inbox'?d.status:'new',url:type==='inbox'?d.url:'',attachment:type==='inbox'?d.attachment:null,completed:existing?.completed||false,createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(existing)Object.assign(existing,record);else list.unshift(record);}
  if(targetType&&d.type==='inbox'&&sourceItem)data.inbox=data.inbox.filter(x=>x.id!==d.id);
  saveData();closeCaptureDialog();renderAll();showSaved(targetType?`Saved as ${targetType==='waiting'?'Pending note':targetType}`:'Saved');return true;
@@ -2023,7 +2023,7 @@ async function prepareBrainImage(file){
  let size=dataUrlByteSize(data);if(size>650*1024)throw new Error('Compressed image remains too large');
  const base=(file.name||'image').replace(/\.[^.]+$/,'');return{name:`${base}-planner.jpg`,type:'image/jpeg',size,data,originalSize:file.size,width,height,compressed:true};
 }
-function renderBrainAttachmentPreview(){const area=document.getElementById('brainAttachmentPreview');if(!area)return;const attachment=window.pendingBrainAttachment;if(!attachment){area.classList.add('hidden');area.innerHTML='';return;}const size=formatFileSize(attachment.size||0);const reduction=attachment.originalSize&&attachment.originalSize>attachment.size?` <small class="attachment-reduction">(reduced from ${formatFileSize(attachment.originalSize)})</small>`:'';const thumb=attachment.type?.startsWith('image/')?`<img src="${attachment.data}" alt="Selected attachment preview">`:`<span class="attachment-file-icon" aria-hidden="true">📄</span>`;area.innerHTML=`${thumb}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${size}${reduction}</small></span><button type="button" onclick="removeBrainAttachment()" aria-label="Remove attachment">×</button>`;area.classList.remove('hidden');}
+function renderBrainAttachmentPreview(){const area=document.getElementById('brainAttachmentPreview');if(!area)return;const attachment=window.pendingBrainAttachment;if(!attachment){area.classList.add('hidden');area.innerHTML='';return;}const size=formatFileSize(attachment.size||0);const reduction=attachment.originalSize&&attachment.originalSize>attachment.size?` <small class="attachment-reduction">(reduced from ${formatFileSize(attachment.originalSize)})</small>`:'';const thumb=attachment.type?.startsWith('image/')?`<button type="button" class="attachment-thumb-button" onclick="showAttachmentViewer(window.pendingBrainAttachment)" aria-label="Open attached image"><img src="${attachment.data}" alt="Selected attachment preview"><span>Tap to view</span></button>`:`<button type="button" class="attachment-file-open" onclick="showAttachmentViewer(window.pendingBrainAttachment)"><span class="attachment-file-icon" aria-hidden="true">📄</span><span>Open attachment</span></button>`;area.innerHTML=`${thumb}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${size}${reduction}</small></span><button type="button" onclick="removeBrainAttachment()" aria-label="Remove attachment">×</button>`;area.classList.remove('hidden');}
 function removeBrainAttachment(){window.pendingBrainAttachment=null;const input=document.getElementById('brainAttachmentInput');if(input)input.value='';renderBrainAttachmentPreview();}
 function openBrainLink(id){const item=data.inbox.find(x=>x.id===id);if(!item?.url)return;window.open(normaliseBrainUrl(item.url),'_blank','noopener');}
 window.currentBrainAttachment=null;window.currentAttachmentObjectUrl='';
@@ -5784,3 +5784,33 @@ function v54apRenderBackupVerification(){
 setTimeout(()=>{v54apInitialiseBackups();v54apRenderBackupVerification();},700);
 window.addEventListener('pageshow',()=>setTimeout(()=>{v54apInitialiseBackups();v54apLoadBackupCache().then(()=>{renderDailyBackups();updateStorageStatus();v54apRenderBackupVerification();}).catch(error=>v54apSetBackupStatus(false,error?.message||String(error)));},180));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>v54apLoadBackupCache().then(()=>{renderDailyBackups();updateStorageStatus();v54apRenderBackupVerification();}).catch(error=>v54apSetBackupStatus(false,error?.message||String(error))),180);});
+
+
+/* ===== v54aq Brain Inbox image integrity ===== */
+window.currentItemAttachment=null;
+
+function v54aqRenderItemAttachment(item,type){
+  const area=document.getElementById('itemAttachmentPreview');
+  if(!area)return;
+  const attachment=(type==='project'&&item?.attachment?.data)?item.attachment:null;
+  window.currentItemAttachment=attachment;
+  if(!attachment){area.classList.add('hidden');area.innerHTML='';return;}
+  const image=attachment.type?.startsWith('image/');
+  const visual=image?`<img src="${attachment.data}" alt="${escapeHtml(attachment.name||'Project attachment')}">`:`<span class="attachment-file-icon" aria-hidden="true">📄</span>`;
+  area.innerHTML=`<button type="button" class="item-attachment-open" onclick="showAttachmentViewer(window.currentItemAttachment)" aria-label="Open project attachment">${visual}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${image?'Tap to view image':'Open attachment'}</small></span></button>`;
+  area.classList.remove('hidden');
+}
+
+const v54aqClearFormBase=clearForm;
+clearForm=function(){
+  v54aqClearFormBase();
+  window.currentItemAttachment=null;
+  const area=document.getElementById('itemAttachmentPreview');
+  if(area){area.classList.add('hidden');area.innerHTML='';}
+};
+
+const v54aqLoadCommonBase=loadCommon;
+loadCommon=function(item,type,parentId=''){
+  v54aqLoadCommonBase(item,type,parentId);
+  v54aqRenderItemAttachment(item,type);
+};

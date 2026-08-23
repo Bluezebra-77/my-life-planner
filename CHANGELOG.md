@@ -1,3 +1,8 @@
+## v54aq — Brain Inbox Image Integrity
+- Made Brain Inbox attachment previews directly openable.
+- Preserved Brain Inbox attachments through Project conversion and later Project edits.
+- Added Project attachment viewing using the existing viewer.
+
 ## v54ap — Reliable Daily Recovery
 - Moved automatic recovery snapshots from quota-prone localStorage to IndexedDB.
 - Added write/read verification, app-open snapshot creation, seven-day retention and visible failure status.
