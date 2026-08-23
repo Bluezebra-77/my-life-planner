@@ -1,3 +1,8 @@
+## v54ap — Reliable Daily Recovery
+- Moved automatic recovery snapshots from quota-prone localStorage to IndexedDB.
+- Added write/read verification, app-open snapshot creation, seven-day retention and visible failure status.
+- Preserved manual JSON Export/Share as the independent backup route.
+
 ## v54ao — Pending Visual Polish
 - Strengthened the visual treatment of Pending / Pending — reason text.
 - Presentation only; no workflow logic changed.

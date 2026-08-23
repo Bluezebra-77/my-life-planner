@@ -1693,3 +1693,12 @@ body.timer-minimised .quick-add-fab{
   color:#7a5b00;
   font-weight:800;
 }
+
+
+/* v54ap backup verification */
+.backup-verification-status{
+  font-weight:700;
+}
+.backup-verification-status.backup-warning{
+  color:#b42318;
+}

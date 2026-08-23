@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ao";
+const APP_VERSION="54ap";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5519,3 +5519,268 @@ setTimeout(v54anFinaliseHomePlacement,520);
 window.addEventListener('pageshow',()=>setTimeout(v54anFinaliseHomePlacement,160));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54anFinaliseHomePlacement,160);});
 window.addEventListener('resize',()=>setTimeout(v54anFinaliseHomePlacement,120));
+
+
+/* ===== v54ap reliable daily recovery =====
+   Replaces quota-prone localStorage daily snapshots with IndexedDB.
+   Existing localStorage recovery copies are migrated once, then removed only
+   after IndexedDB has successfully stored and read them back.
+   A verified snapshot is created on app start and updated on every normal save.
+   Manual Export / Share backup remains the independent off-device backup route. */
+
+const V54AP_BACKUP_DB='MyLifePlannerRecoveryV54ap';
+const V54AP_BACKUP_STORE='dailyBackups';
+const V54AP_BACKUP_LIMIT=7;
+const V54AP_BACKUP_VERIFIED_KEY='lifePlannerBackupVerifiedV54ap';
+let v54apBackupCache=[];
+let v54apBackupDbPromise=null;
+let v54apBackupInitialised=false;
+
+function v54apOpenBackupDb(){
+  if(v54apBackupDbPromise)return v54apBackupDbPromise;
+  v54apBackupDbPromise=new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window))return reject(new Error('IndexedDB is not available'));
+    const request=indexedDB.open(V54AP_BACKUP_DB,1);
+    request.onupgradeneeded=()=>{
+      const db=request.result;
+      if(!db.objectStoreNames.contains(V54AP_BACKUP_STORE)){
+        const store=db.createObjectStore(V54AP_BACKUP_STORE,{keyPath:'date'});
+        store.createIndex('savedAt','savedAt',{unique:false});
+      }
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error||new Error('Could not open backup storage'));
+  });
+  return v54apBackupDbPromise;
+}
+
+function v54apRequest(request){
+  return new Promise((resolve,reject)=>{
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error||new Error('Backup storage request failed'));
+  });
+}
+
+function v54apTransactionDone(tx){
+  return new Promise((resolve,reject)=>{
+    tx.oncomplete=()=>resolve();
+    tx.onabort=()=>reject(tx.error||new Error('Backup transaction aborted'));
+    tx.onerror=()=>reject(tx.error||new Error('Backup transaction failed'));
+  });
+}
+
+function v54apSnapshot(serialised=JSON.stringify(data)){
+  return {
+    date:localDateKey(),
+    savedAt:new Date().toISOString(),
+    data:serialised,
+    checks:collectChecks(),
+    settings:getSettings()
+  };
+}
+
+async function v54apLoadBackupCache(){
+  const db=await v54apOpenBackupDb();
+  const tx=db.transaction(V54AP_BACKUP_STORE,'readonly');
+  const store=tx.objectStore(V54AP_BACKUP_STORE);
+  const copies=await v54apRequest(store.getAll());
+  await v54apTransactionDone(tx);
+  v54apBackupCache=(Array.isArray(copies)?copies:[])
+    .sort((left,right)=>String(right.savedAt||right.date||'').localeCompare(String(left.savedAt||left.date||'')));
+  return v54apBackupCache;
+}
+
+async function v54apPruneBackups(){
+  const db=await v54apOpenBackupDb();
+  const copies=await v54apLoadBackupCache();
+  const remove=copies.slice(V54AP_BACKUP_LIMIT);
+  if(!remove.length)return;
+  const tx=db.transaction(V54AP_BACKUP_STORE,'readwrite');
+  const store=tx.objectStore(V54AP_BACKUP_STORE);
+  remove.forEach(copy=>store.delete(copy.date));
+  await v54apTransactionDone(tx);
+  await v54apLoadBackupCache();
+}
+
+function v54apSetBackupStatus(ok,message=''){
+  const payload={ok:Boolean(ok),message:String(message||''),at:new Date().toISOString()};
+  try{localStorage.setItem(V54AP_BACKUP_VERIFIED_KEY,JSON.stringify(payload));}catch(_){}
+  const indicator=document.getElementById('backupVerificationStatus');
+  if(indicator){
+    indicator.textContent=ok?`Last verified automatic recovery: ${new Date(payload.at).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}`:`Automatic recovery needs attention: ${payload.message||'write failed'}`;
+    indicator.classList.toggle('backup-warning',!ok);
+  }
+}
+
+async function v54apWriteBackup(serialised=JSON.stringify(data)){
+  try{
+    const snapshot=v54apSnapshot(serialised);
+    const db=await v54apOpenBackupDb();
+    const tx=db.transaction(V54AP_BACKUP_STORE,'readwrite');
+    tx.objectStore(V54AP_BACKUP_STORE).put(snapshot);
+    await v54apTransactionDone(tx);
+
+    /* Read-after-write verification: do not claim success until today's copy is
+       present and contains non-empty planner data. */
+    const verifyTx=db.transaction(V54AP_BACKUP_STORE,'readonly');
+    const saved=await v54apRequest(verifyTx.objectStore(V54AP_BACKUP_STORE).get(snapshot.date));
+    await v54apTransactionDone(verifyTx);
+    if(!saved||!saved.data)throw new Error('Backup verification failed');
+
+    await v54apPruneBackups();
+    v54apSetBackupStatus(true);
+    try{renderDailyBackups();}catch(_){}
+    try{renderDailyCompanion();}catch(_){}
+    return true;
+  }catch(error){
+    console.error('Automatic recovery backup failed',error);
+    v54apSetBackupStatus(false,error?.message||String(error));
+    return false;
+  }
+}
+
+async function v54apMigrateLegacyBackups(){
+  let legacy=[];
+  try{
+    const candidates=[RECOVERY_KEY,...LEGACY_RECOVERY_KEYS];
+    for(const key of candidates){
+      const parsed=JSON.parse(localStorage.getItem(key)||'[]');
+      if(Array.isArray(parsed))legacy.push(...parsed);
+    }
+  }catch(_){}
+  if(!legacy.length)return;
+
+  const byDate=new Map();
+  legacy.forEach(copy=>{
+    if(!copy?.date||!copy?.data)return;
+    const current=byDate.get(copy.date);
+    if(!current||String(copy.savedAt||'')>String(current.savedAt||''))byDate.set(copy.date,copy);
+  });
+
+  const db=await v54apOpenBackupDb();
+  const tx=db.transaction(V54AP_BACKUP_STORE,'readwrite');
+  const store=tx.objectStore(V54AP_BACKUP_STORE);
+  [...byDate.values()].forEach(copy=>store.put(copy));
+  await v54apTransactionDone(tx);
+
+  /* Verify migration before freeing the quota-heavy localStorage copies. */
+  await v54apLoadBackupCache();
+  const dates=new Set(v54apBackupCache.map(copy=>copy.date));
+  const allMigrated=[...byDate.keys()].every(date=>dates.has(date));
+  if(allMigrated){
+    try{
+      localStorage.removeItem(RECOVERY_KEY);
+      LEGACY_RECOVERY_KEYS.forEach(key=>localStorage.removeItem(key));
+    }catch(_){}
+  }
+}
+
+async function v54apInitialiseBackups(){
+  if(v54apBackupInitialised)return;
+  v54apBackupInitialised=true;
+  try{
+    await v54apMigrateLegacyBackups();
+    await v54apLoadBackupCache();
+
+    /* Always create/refresh today's verified recovery snapshot when the app is
+       opened. This fixes the old behaviour where a day only existed if a save
+       happened to occur. */
+    await v54apWriteBackup(JSON.stringify(normaliseData(data)));
+  }catch(error){
+    console.error('Backup initialisation failed',error);
+    v54apSetBackupStatus(false,error?.message||String(error));
+  }
+}
+
+/* Keep saveData synchronous for every existing caller. The primary planner save
+   remains localStorage; the recovery copy is queued independently in IndexedDB. */
+createRecoveryCopy=function(serialised){
+  void v54apWriteBackup(serialised);
+};
+
+/* Synchronous compatibility for existing renderers: cache is filled async and
+   renderDailyBackups refreshes as soon as IndexedDB loads. */
+getDailyBackups=function(){
+  if(v54apBackupCache.length)return v54apBackupCache.slice();
+  try{
+    const legacy=JSON.parse(localStorage.getItem(RECOVERY_KEY)||'[]');
+    return Array.isArray(legacy)?legacy:[];
+  }catch(_){return [];}
+};
+
+renderDailyBackups=function(){
+  const area=document.getElementById('dailyBackupsArea');if(!area)return;
+  const copies=getDailyBackups();
+  area.innerHTML='';
+  if(!copies.length){
+    area.innerHTML='<div class="empty-state">No verified automatic recovery snapshot is available yet.</div>';
+    return;
+  }
+  copies.slice(0,V54AP_BACKUP_LIMIT).forEach(copy=>{
+    const row=document.createElement('div');row.className='backup-row';
+    const date=new Date(`${copy.date}T12:00:00`).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+    const time=copy.savedAt?new Date(copy.savedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'';
+    row.innerHTML=`<div><strong>${escapeHtml(date)}</strong><div class="card-meta">Verified snapshot${time?` · latest save ${escapeHtml(time)}`:''}</div></div><button type="button" class="small-button">Restore</button>`;
+    row.querySelector('button').addEventListener('click',()=>restoreDailyBackup(copy.date));
+    area.appendChild(row);
+  });
+};
+
+restoreDailyBackup=async function(dateKey){
+  if(!v54apBackupCache.length)await v54apLoadBackupCache();
+  const copy=v54apBackupCache.find(item=>item.date===dateKey);
+  if(!copy)return alert('That automatic recovery snapshot is no longer available.');
+  const label=new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  if(!confirm(`Restore the recovery snapshot from ${label}? A verified safety snapshot of your current planner will be made first.`))return;
+  try{
+    const safetyOk=await v54apWriteBackup(JSON.stringify(data));
+    if(!safetyOk)throw new Error('Could not create the pre-restore safety snapshot');
+    data=normaliseData(JSON.parse(copy.data));
+    localStorage.setItem(DATA_KEY,JSON.stringify(data));
+    Object.entries(copy.checks||{}).forEach(([key,value])=>localStorage.setItem(key,value));
+    if(copy.settings)localStorage.setItem(SETTINGS_KEY,JSON.stringify(copy.settings));
+    applySettings();
+    renderAll();
+    showSaved('Recovery snapshot restored');
+    await v54apWriteBackup(JSON.stringify(data));
+  }catch(error){
+    console.error('Recovery restore failed',error);
+    alert('That recovery snapshot could not be restored safely.');
+  }
+};
+
+restoreLatestRecovery=async function(){
+  if(!v54apBackupCache.length)await v54apLoadBackupCache();
+  const latest=v54apBackupCache[0];
+  if(!latest)return alert('There is no automatic recovery snapshot available yet.');
+  return restoreDailyBackup(latest.date);
+};
+
+/* Keep storage information accurate now that recovery copies are in IndexedDB. */
+const v54apUpdateStorageStatusBase=updateStorageStatus;
+updateStorageStatus=function(){
+  v54apUpdateStorageStatusBase();
+  const status=document.getElementById('storageStatus');
+  if(!status)return;
+  const saved=localStorage.getItem(DATA_KEY)||LEGACY_DATA_KEYS.map(key=>localStorage.getItem(key)).find(Boolean);
+  status.textContent=saved
+    ? `Planner data saved privately on this device (${Math.max(1,Math.round(new Blob([saved]).size/1024))} KB) · ${v54apBackupCache.length} verified automatic recovery snapshot${v54apBackupCache.length===1?'':'s'}.`
+    :'No planner information has been saved yet.';
+};
+
+function v54apRenderBackupVerification(){
+  const box=document.getElementById('backupVerificationStatus');if(!box)return;
+  try{
+    const payload=JSON.parse(localStorage.getItem(V54AP_BACKUP_VERIFIED_KEY)||'null');
+    if(payload?.at){
+      box.textContent=payload.ok
+        ? `Last verified automatic recovery: ${new Date(payload.at).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}`
+        : `Automatic recovery needs attention: ${payload.message||'write failed'}`;
+      box.classList.toggle('backup-warning',!payload.ok);
+    }
+  }catch(_){}
+}
+
+setTimeout(()=>{v54apInitialiseBackups();v54apRenderBackupVerification();},700);
+window.addEventListener('pageshow',()=>setTimeout(()=>{v54apInitialiseBackups();v54apLoadBackupCache().then(()=>{renderDailyBackups();updateStorageStatus();v54apRenderBackupVerification();}).catch(error=>v54apSetBackupStatus(false,error?.message||String(error)));},180));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>v54apLoadBackupCache().then(()=>{renderDailyBackups();updateStorageStatus();v54apRenderBackupVerification();}).catch(error=>v54apSetBackupStatus(false,error?.message||String(error))),180);});
