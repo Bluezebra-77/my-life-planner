@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54am";
+const APP_VERSION="54an";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5486,3 +5486,36 @@ renderProjectNextActions=function(){
   });
 };
 try{renderProjectNextActions();}catch(error){console.error('v54am Project Next label refresh',error);}
+
+
+/* ===== v54an authoritative Home placement repair =====
+   Fixes desktop/iPhone divergence caused by legacy Home optimisers running after
+   the v54al layout. The v54al Home/daypart placement is now always the final
+   authority after optimiseHomeOrder() and v52cOptimiseHomeOrder() complete.
+   No Home data renderer, project/Pending/recurring/Timeline logic is changed. */
+
+const v54anLegacyOptimiseHomeOrder=optimiseHomeOrder;
+optimiseHomeOrder=function(){
+  const result=v54anLegacyOptimiseHomeOrder.apply(this,arguments);
+  try{v54alRefreshHomeLayout();}catch(error){console.error('v54an final Home placement after optimiseHomeOrder',error);}
+  setTimeout(()=>{try{v54alRefreshHomeLayout();}catch(error){console.error('v54an deferred Home placement',error);}},0);
+  return result;
+};
+
+const v54anLegacyV52cOptimiseHomeOrder=v52cOptimiseHomeOrder;
+v52cOptimiseHomeOrder=function(){
+  const result=v54anLegacyV52cOptimiseHomeOrder.apply(this,arguments);
+  try{v54alRefreshHomeLayout();}catch(error){console.error('v54an final Home placement after v52cOptimiseHomeOrder',error);}
+  setTimeout(()=>{try{v54alRefreshHomeLayout();}catch(error){console.error('v54an deferred companion placement',error);}},0);
+  return result;
+};
+
+/* Also enforce the final layout after the public refresh surfaces known to run
+   on both desktop browsers and the installed iPhone PWA. */
+function v54anFinaliseHomePlacement(){
+  try{v54alRefreshHomeLayout();}catch(error){console.error('v54an final Home placement',error);}
+}
+setTimeout(v54anFinaliseHomePlacement,520);
+window.addEventListener('pageshow',()=>setTimeout(v54anFinaliseHomePlacement,160));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54anFinaliseHomePlacement,160);});
+window.addEventListener('resize',()=>setTimeout(v54anFinaliseHomePlacement,120));

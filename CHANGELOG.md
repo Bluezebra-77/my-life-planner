@@ -1,3 +1,8 @@
+## v54an — Desktop Daypart Placement Repair
+- Made v54al Home/daypart placement authoritative after legacy Home-order optimisers.
+- Fixes Daily Rhythm / Evening Routine remaining at the bottom on desktop while iPhone was correct.
+- Preserves v54am Project Next label and all planner workflow logic.
+
 ## v54am — Home Project Next Label
 - Added a visible **Next** status to the first incomplete non-Pending step in expanded Home project cards.
 - Presentation only; project ordering and Pending/dependency logic are unchanged.
