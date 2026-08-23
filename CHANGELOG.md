@@ -1,3 +1,12 @@
+## v54as — Attachment Integrity + Completed To-do Cleanup
+- Added verified Brain Inbox attachment transfer for To-dos and Appointments.
+- Added Appointment attachment preview and list attachment cues.
+- Added explicit deletion of completed To-dos older than two calendar months.
+
+## v54ar — Attachment Consistency
+- Tidied Brain Inbox attachment preview on narrow iPhone screens.
+- Preserved attachments across Brain Inbox conversion to Project, To-do and Appointment.
+
 ## v54aq — Brain Inbox Image Integrity
 - Made Brain Inbox attachment previews directly openable.
 - Preserved Brain Inbox attachments through Project conversion and later Project edits.

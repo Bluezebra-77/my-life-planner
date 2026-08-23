@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54aq";
+const APP_VERSION="54as";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1190,7 +1190,7 @@ addForm.addEventListener("submit",event=>{
       common.pending=Boolean(document.getElementById('itemPending')?.checked);
       common.pendingReason=common.pending?String(document.getElementById('itemPendingReason')?.value||'').trim():'';
       common.steps=mergeEnteredSteps(old?.steps || [], parsedItemSteps, common);
-      data.todos[data.todos.findIndex(x=>x.id===id)]=common;
+      common.attachment=old?.attachment||null;data.todos[data.todos.findIndex(x=>x.id===id)]=common;
     } else {
       common.pending=Boolean(document.getElementById('itemPending')?.checked);
       common.pendingReason=common.pending?String(document.getElementById('itemPendingReason')?.value||'').trim():'';
@@ -1978,7 +1978,7 @@ function saveCapture(targetType=''){
    closeCaptureDialog();openAppointmentDialog('',d.name,d.note);return true;
  }
  const type=targetType||d.type;
- if(type==='todo')data.todos.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],createdAt:new Date().toISOString()});
+ if(type==='todo')data.todos.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],attachment:d.attachment||null,createdAt:new Date().toISOString()});
  else if(type==='project')data.projects.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],attachment:d.attachment||null,createdAt:new Date().toISOString()});
  else {const list=data[type]||(data[type]=[]),existing=list.find(x=>x.id===d.id);const record={id:existing?.id||uid(),name:d.name,note:d.note,reviewDate:type==='waiting'?d.reviewDate:'',category:type==='inbox'?d.category:'',status:type==='inbox'?d.status:'new',url:type==='inbox'?d.url:'',attachment:type==='inbox'?d.attachment:null,completed:existing?.completed||false,createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(existing)Object.assign(existing,record);else list.unshift(record);}
  if(targetType&&d.type==='inbox'&&sourceItem)data.inbox=data.inbox.filter(x=>x.id!==d.id);
@@ -2023,7 +2023,7 @@ async function prepareBrainImage(file){
  let size=dataUrlByteSize(data);if(size>650*1024)throw new Error('Compressed image remains too large');
  const base=(file.name||'image').replace(/\.[^.]+$/,'');return{name:`${base}-planner.jpg`,type:'image/jpeg',size,data,originalSize:file.size,width,height,compressed:true};
 }
-function renderBrainAttachmentPreview(){const area=document.getElementById('brainAttachmentPreview');if(!area)return;const attachment=window.pendingBrainAttachment;if(!attachment){area.classList.add('hidden');area.innerHTML='';return;}const size=formatFileSize(attachment.size||0);const reduction=attachment.originalSize&&attachment.originalSize>attachment.size?` <small class="attachment-reduction">(reduced from ${formatFileSize(attachment.originalSize)})</small>`:'';const thumb=attachment.type?.startsWith('image/')?`<button type="button" class="attachment-thumb-button" onclick="showAttachmentViewer(window.pendingBrainAttachment)" aria-label="Open attached image"><img src="${attachment.data}" alt="Selected attachment preview"><span>Tap to view</span></button>`:`<button type="button" class="attachment-file-open" onclick="showAttachmentViewer(window.pendingBrainAttachment)"><span class="attachment-file-icon" aria-hidden="true">📄</span><span>Open attachment</span></button>`;area.innerHTML=`${thumb}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${size}${reduction}</small></span><button type="button" onclick="removeBrainAttachment()" aria-label="Remove attachment">×</button>`;area.classList.remove('hidden');}
+function renderBrainAttachmentPreview(){const area=document.getElementById('brainAttachmentPreview');if(!area)return;const attachment=window.pendingBrainAttachment;if(!attachment){area.classList.add('hidden');area.innerHTML='';return;}const size=formatFileSize(attachment.size||0);const reduction=attachment.originalSize&&attachment.originalSize>attachment.size?` <small class="attachment-reduction">(reduced from ${formatFileSize(attachment.originalSize)})</small>`:'';const image=attachment.type?.startsWith('image/');const thumb=image?`<button type="button" class="attachment-thumb-button" onclick="showAttachmentViewer(window.pendingBrainAttachment)" aria-label="Open attached image"><img src="${attachment.data}" alt="Selected attachment preview"></button>`:`<button type="button" class="attachment-file-open" onclick="showAttachmentViewer(window.pendingBrainAttachment)"><span class="attachment-file-icon" aria-hidden="true">📄</span></button>`;area.innerHTML=`${thumb}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${size}${reduction}</small><small class="attachment-open-hint">${image?'Tap image to view':'Tap document to open'}</small></span><button type="button" onclick="removeBrainAttachment()" aria-label="Remove attachment">×</button>`;area.classList.remove('hidden');}
 function removeBrainAttachment(){window.pendingBrainAttachment=null;const input=document.getElementById('brainAttachmentInput');if(input)input.value='';renderBrainAttachmentPreview();}
 function openBrainLink(id){const item=data.inbox.find(x=>x.id===id);if(!item?.url)return;window.open(normaliseBrainUrl(item.url),'_blank','noopener');}
 window.currentBrainAttachment=null;window.currentAttachmentObjectUrl='';
@@ -2368,8 +2368,8 @@ function convertInbox(id,type){
     openAppointmentDialog('',x.name,x.note||'');
     return;
   }
-  if(type==='todo')data.todos.unshift({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[]});
-  else if(type==='project')data.projects.unshift({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[]});
+  if(type==='todo')data.todos.unshift({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[],attachment:x.attachment||null});
+  else if(type==='project')data.projects.unshift({id:uid(),name:x.name,details:x.note||'',timingType:'none',dueDate:'',completed:false,steps:[],attachment:x.attachment||null});
   else data.waiting.unshift({id:uid(),name:x.name,note:x.note||'',reviewDate:'',completed:false});
   data.inbox=data.inbox.filter(item=>item.id!==id);saveData();renderAll();showSaved('Thought converted');
 }
@@ -5792,12 +5792,12 @@ window.currentItemAttachment=null;
 function v54aqRenderItemAttachment(item,type){
   const area=document.getElementById('itemAttachmentPreview');
   if(!area)return;
-  const attachment=(type==='project'&&item?.attachment?.data)?item.attachment:null;
+  const attachment=(['project','todo','appointment'].includes(type)&&item?.attachment?.data)?item.attachment:null;
   window.currentItemAttachment=attachment;
   if(!attachment){area.classList.add('hidden');area.innerHTML='';return;}
   const image=attachment.type?.startsWith('image/');
-  const visual=image?`<img src="${attachment.data}" alt="${escapeHtml(attachment.name||'Project attachment')}">`:`<span class="attachment-file-icon" aria-hidden="true">📄</span>`;
-  area.innerHTML=`<button type="button" class="item-attachment-open" onclick="showAttachmentViewer(window.currentItemAttachment)" aria-label="Open project attachment">${visual}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${image?'Tap to view image':'Open attachment'}</small></span></button>`;
+  const visual=image?`<img src="${attachment.data}" alt="${escapeHtml(attachment.name||'Attachment')}">`:`<span class="attachment-file-icon" aria-hidden="true">📄</span>`;
+  area.innerHTML=`<button type="button" class="item-attachment-open" onclick="showAttachmentViewer(window.currentItemAttachment)" aria-label="Open item attachment">${visual}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${image?'Tap to view image':'Open attachment'}</small></span></button>`;
   area.classList.remove('hidden');
 }
 
@@ -5813,4 +5813,264 @@ const v54aqLoadCommonBase=loadCommon;
 loadCommon=function(item,type,parentId=''){
   v54aqLoadCommonBase(item,type,parentId);
   v54aqRenderItemAttachment(item,type);
+};
+
+
+/* ===== v54ar attachment consistency =====
+   Keep Brain Inbox attachments when converting to Project, To-do or Appointment.
+   Appointment conversion is dialog-based, so attachment transfer happens only
+   after a successful appointment save. */
+const v54arSaveAppointmentBase=saveAppointment;
+saveAppointment=function(){
+  const inboxId=String(pendingInboxAppointmentId||'');
+  const inboxSource=inboxId?(data.inbox||[]).find(x=>String(x.id)===inboxId):null;
+  const draftAttachment=pendingInboxDraft?.attachment||null;
+  const sourceAttachment=inboxSource?.attachment||draftAttachment||null;
+  const beforeIds=new Set((data.appointments||[]).map(x=>String(x.id)));
+  const result=v54arSaveAppointmentBase();
+  if(result&&sourceAttachment){
+    const newAppointment=(data.appointments||[]).find(x=>!beforeIds.has(String(x.id)))||(data.appointments||[])[0];
+    if(newAppointment&&!newAppointment.attachment){
+      newAppointment.attachment=sourceAttachment;
+      saveData();renderAll();
+    }
+  }
+  return result;
+};
+
+
+/* ===== v54as attachment integrity + completed To-do cleanup =====
+   - Uses verified attachment transfer for Brain Inbox -> To-do/Project/Appointment.
+   - Shows appointment attachments in the appointment editor.
+   - Adds explicit cleanup for completed To-dos older than two calendar months.
+   - No silent/automatic deletion. */
+
+function v54asCloneAttachment(attachment){
+  if(!attachment)return null;
+  try{return JSON.parse(JSON.stringify(attachment));}
+  catch(_){return attachment;}
+}
+
+function v54asAttachmentIntact(record,attachment){
+  if(!attachment)return true;
+  return Boolean(record?.attachment?.data && record.attachment.data===attachment.data);
+}
+
+function v54asCreateConvertedRecord(type,draft){
+  const attachment=v54asCloneAttachment(draft.attachment);
+  const id=uid();
+  if(type==='todo'){
+    data.todos.unshift({id,name:draft.name,details:draft.note||'',timingType:'none',dueDate:'',completed:false,steps:[],attachment,createdAt:new Date().toISOString()});
+    return {id,list:'todos'};
+  }
+  if(type==='project'){
+    data.projects.unshift({id,name:draft.name,details:draft.note||'',timingType:'none',dueDate:'',completed:false,steps:[],attachment,createdAt:new Date().toISOString()});
+    return {id,list:'projects'};
+  }
+  return null;
+}
+
+function v54asFinishVerifiedInboxConversion(sourceId,type,draft){
+  const created=v54asCreateConvertedRecord(type,draft);
+  if(!created)return false;
+  saveData();
+  const saved=(data[created.list]||[]).find(x=>String(x.id)===String(created.id));
+  if(!v54asAttachmentIntact(saved,draft.attachment)){
+    data[created.list]=(data[created.list]||[]).filter(x=>String(x.id)!==String(created.id));
+    saveData();
+    alert('The attachment could not be preserved, so the Brain Inbox item was left in place. Please try again.');
+    return false;
+  }
+  data.inbox=(data.inbox||[]).filter(x=>String(x.id)!==String(sourceId));
+  saveData();
+  return true;
+}
+
+/* Capture-dialog conversion path. */
+const v54asSaveCaptureBase=saveCapture;
+saveCapture=function(targetType=''){
+  if(targetType==='todo'||targetType==='project'){
+    const d=captureDraft();
+    if(d.type==='inbox'){
+      if(!d.name){document.getElementById('captureName')?.focus();return false;}
+      if(v54asFinishVerifiedInboxConversion(d.id,targetType,d)){
+        closeCaptureDialog();renderAll();showSaved(`Saved as ${targetType}`);return true;
+      }
+      return false;
+    }
+  }
+  return v54asSaveCaptureBase(targetType);
+};
+
+/* Three-dot Brain Inbox conversion path. */
+convertInbox=function(id,type){
+  const x=(data.inbox||[]).find(item=>String(item.id)===String(id));if(!x)return;
+  const draft={name:x.name,note:x.note||'',attachment:x.attachment||null};
+  if(type==='appointment'){
+    pendingInboxAppointmentId=id;
+    pendingInboxDraft={...draft,id,type:'inbox'};
+    openAppointmentDialog('',x.name,x.note||'');
+    v54asRenderAppointmentAttachment(x.attachment||null);
+    return;
+  }
+  if(type==='todo'||type==='project'){
+    if(v54asFinishVerifiedInboxConversion(id,type,draft)){
+      renderAll();showSaved('Thought converted');
+    }
+    return;
+  }
+  data.waiting.unshift({id:uid(),name:x.name,note:x.note||'',reviewDate:'',completed:false});
+  data.inbox=data.inbox.filter(item=>String(item.id)!==String(id));
+  saveData();renderAll();showSaved('Thought converted');
+};
+
+/* Appointment attachment preview. */
+window.v54asAppointmentAttachment=null;
+function v54asRenderAppointmentAttachment(attachment){
+  const area=document.getElementById('appointmentAttachmentPreview');
+  if(!area)return;
+  window.v54asAppointmentAttachment=attachment?.data?attachment:null;
+  if(!window.v54asAppointmentAttachment){
+    area.classList.add('hidden');area.innerHTML='';return;
+  }
+  const image=attachment.type?.startsWith('image/');
+  const visual=image
+    ? `<img src="${attachment.data}" alt="${escapeHtml(attachment.name||'Appointment attachment')}">`
+    : `<span class="attachment-file-icon" aria-hidden="true">📄</span>`;
+  area.innerHTML=`<button type="button" class="item-attachment-open" onclick="showAttachmentViewer(window.v54asAppointmentAttachment)" aria-label="Open appointment attachment">${visual}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${image?'Tap to view image':'Open attachment'}</small></span></button>`;
+  area.classList.remove('hidden');
+}
+
+const v54asOpenAppointmentBase=openAppointmentDialog;
+openAppointmentDialog=function(id='',prefillName='',prefillNotes=''){
+  const result=v54asOpenAppointmentBase(id,prefillName,prefillNotes);
+  const existing=id?(data.appointments||[]).find(x=>String(x.id)===String(id)):null;
+  const pending=pendingInboxDraft?.attachment||null;
+  v54asRenderAppointmentAttachment(existing?.attachment||pending||null);
+  return result;
+};
+
+const v54asCloseAppointmentBase=closeAppointmentDialog;
+closeAppointmentDialog=function(){
+  window.v54asAppointmentAttachment=null;
+  const area=document.getElementById('appointmentAttachmentPreview');
+  if(area){area.classList.add('hidden');area.innerHTML='';}
+  return v54asCloseAppointmentBase();
+};
+
+/* Outermost appointment save guard. Capture the attachment before earlier
+   wrappers clear pendingInboxDraft/pendingInboxAppointmentId. */
+const v54asSaveAppointmentBase=saveAppointment;
+saveAppointment=function(){
+  const sourceId=String(pendingInboxAppointmentId||'');
+  const source=(data.inbox||[]).find(x=>String(x.id)===sourceId);
+  const pendingAttachment=v54asCloneAttachment(source?.attachment||pendingInboxDraft?.attachment||window.v54asAppointmentAttachment||null);
+  const existingId=String(document.getElementById('appointmentId')?.value||'');
+  const beforeIds=new Set((data.appointments||[]).map(x=>String(x.id)));
+  const result=v54asSaveAppointmentBase();
+  if(!result)return result;
+
+  let savedAppointment=null;
+  if(existingId)savedAppointment=(data.appointments||[]).find(x=>String(x.id)===existingId);
+  if(!savedAppointment)savedAppointment=(data.appointments||[]).find(x=>!beforeIds.has(String(x.id)))||(data.appointments||[])[0];
+
+  if(pendingAttachment&&savedAppointment){
+    savedAppointment.attachment=pendingAttachment;
+    saveData();
+    if(!v54asAttachmentIntact(savedAppointment,pendingAttachment)){
+      alert('The appointment saved, but its attachment could not be verified. The original Brain Inbox item has not been intentionally removed by this repair.');
+    }
+  }
+  renderAll();
+  return result;
+};
+
+/* List-level attachment cues. */
+function v54asAttachmentCue(item){
+  if(!item?.attachment?.data)return '';
+  return item.attachment.type?.startsWith('image/')?' · 🖼 Image':' · 📎 Attachment';
+}
+
+const v54asRenderTodosBase=renderTodos;
+renderTodos=function(){
+  v54asRenderTodosBase();
+  const area=document.getElementById('todoArea');
+  if(area){
+    const topRows=[...area.children].filter(row=>row.classList.contains('compact-manage-row')&&!row.classList.contains('nested-compact-row'));
+    const sorted=[...(data.todos||[])].sort(sortByDueDate);
+    sorted.forEach((todo,index)=>{
+      const meta=topRows[index]?.querySelector('.compact-row-meta');
+      if(meta&&todo.attachment?.data&&!meta.textContent.includes('🖼')&&!meta.textContent.includes('📎')){
+        meta.textContent+=v54asAttachmentCue(todo);
+      }
+    });
+  }
+  v54asUpdateTodoCleanup();
+};
+
+const v54asRenderAppointmentsBase=renderAppointments;
+renderAppointments=function(){
+  v54asRenderAppointmentsBase();
+  const cards=[...document.querySelectorAll('#appointmentsArea .appointment-card')];
+  const sorted=[...(data.appointments||[])].sort((a,b)=>((a.date||'')+(a.time||'')).localeCompare((b.date||'')+(b.time||'')));
+  sorted.forEach((appt,index)=>{
+    const meta=cards[index]?.querySelector('.appointment-meta');
+    if(meta&&appt.attachment?.data&&!meta.textContent.includes('🖼')&&!meta.textContent.includes('📎')){
+      meta.textContent+=v54asAttachmentCue(appt);
+    }
+  });
+};
+
+/* Completed To-do retention/cleanup. */
+function v54asTodoCleanupCutoff(now=new Date()){
+  const cutoff=new Date(now);
+  cutoff.setHours(23,59,59,999);
+  cutoff.setMonth(cutoff.getMonth()-2);
+  return cutoff;
+}
+function v54asOldCompletedTodos(){
+  const cutoff=v54asTodoCleanupCutoff();
+  return (data.todos||[]).filter(todo=>{
+    if(!todo?.completed||!todo.completedAt)return false;
+    const when=new Date(todo.completedAt);
+    return !Number.isNaN(when.getTime())&&when<cutoff;
+  });
+}
+function v54asUpdateTodoCleanup(){
+  const button=document.getElementById('deleteOldCompletedTodosButton');
+  const status=document.getElementById('oldCompletedTodosStatus');
+  if(!button||!status)return;
+  const eligible=v54asOldCompletedTodos();
+  button.disabled=!eligible.length;
+  button.textContent=eligible.length
+    ? `Delete completed older than 2 months (${eligible.length})`
+    : 'Delete completed older than 2 months';
+  status.textContent=eligible.length
+    ? `${eligible.length} completed to-do${eligible.length===1?' is':'s are'} eligible for cleanup.`
+    : 'No completed to-dos with a recorded completion date are older than 2 months.';
+}
+function deleteCompletedTodosOlderThanTwoMonths(){
+  const eligible=v54asOldCompletedTodos();
+  if(!eligible.length){v54asUpdateTodoCleanup();return;}
+  const names=eligible.slice(0,4).map(x=>x.name||'Untitled to-do');
+  const more=eligible.length>4?` and ${eligible.length-4} more`:'';
+  if(!confirm(`Delete ${eligible.length} completed to-do${eligible.length===1?'':'s'} older than 2 months?\n\n${names.join('\n')}${more}\n\nThis removes them from the planner and future recovery snapshots. Existing recovery snapshots will age out normally.`))return;
+  const ids=new Set(eligible.map(x=>String(x.id)));
+  data.todos=(data.todos||[]).filter(x=>!ids.has(String(x.id)));
+  saveData();renderAll();showSaved(`${eligible.length} old completed to-do${eligible.length===1?'':'s'} deleted`);
+}
+
+/* Ensure future completed ordinary To-dos always carry a usable completion date. */
+const v54asToggleTodoBase=toggleTodo;
+toggleTodo=function(id){
+  const item=(data.todos||[]).find(x=>String(x.id)===String(id));
+  const was=Boolean(item?.completed);
+  v54asToggleTodoBase(id);
+  if(item&&!was&&item.completed&&!item.completedAt){
+    item.completedAt=new Date().toISOString();saveData();
+  }
+  if(item&&was&&!item.completed&&item.completedAt){
+    item.completedAt=null;saveData();
+  }
+  v54asUpdateTodoCleanup();
 };

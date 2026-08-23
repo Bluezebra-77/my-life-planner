@@ -1,13 +1,13 @@
-const APP_VERSION = '54aq';
+const APP_VERSION = '54as';
 const CACHE = `my-life-planner-v${APP_VERSION}-transition-safe`;
 
 // Keep installation deliberately small. Optional guides/documents are NOT pre-cached:
 // one missing optional file must never prevent a new service worker from activating.
 const CORE_ASSETS = [
   './index.html',
-  './style.css?v=54aq',
-  './app.js?v=54aq',
-  './manifest.json?v=54aq',
+  './style.css?v=54as',
+  './app.js?v=54as',
+  './manifest.json?v=54as',
   './version.json',
   './icon-192.png',
   './icon-512.png'

@@ -1713,3 +1713,37 @@ body.timer-minimised .quick-add-fab{
 .item-attachment-open img{width:72px;height:56px;object-fit:cover;border-radius:9px;flex:0 0 auto}
 .item-attachment-open>span{display:flex;flex-direction:column;gap:3px;min-width:0}
 .item-attachment-open small{text-decoration:underline}
+
+
+/* v54ar attachment consistency / mobile preview tidy */
+#brainAttachmentPreview{align-items:center;gap:10px}
+#brainAttachmentPreview .attachment-thumb-button{flex:0 0 auto;width:96px}
+#brainAttachmentPreview .attachment-thumb-button img{display:block;width:96px;height:72px;object-fit:cover;border-radius:10px}
+#brainAttachmentPreview>span{min-width:0;flex:1 1 auto}
+#brainAttachmentPreview>span strong,#brainAttachmentPreview>span small{display:block;overflow-wrap:anywhere}
+#brainAttachmentPreview .attachment-open-hint{margin-top:4px;font-weight:800;text-decoration:underline}
+@media (max-width:480px){
+  #brainAttachmentPreview{display:grid;grid-template-columns:96px minmax(0,1fr) auto;align-items:center}
+  #brainAttachmentPreview>button:last-child{align-self:center}
+}
+
+
+/* v54as completed To-do cleanup */
+.todo-cleanup-tools{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin:8px 0 12px;
+}
+.todo-cleanup-tools .card-meta{
+  margin:0;
+}
+@media (max-width:480px){
+  .todo-cleanup-tools{
+    align-items:stretch;
+  }
+  .todo-cleanup-tools button{
+    width:100%;
+  }
+}
