@@ -1686,3 +1686,10 @@ body.timer-minimised .quick-add-fab{
   font-weight:800;
   letter-spacing:.02em;
 }
+
+
+/* v54ao Pending visual polish */
+.pending-status-line{
+  color:#7a5b00;
+  font-weight:800;
+}

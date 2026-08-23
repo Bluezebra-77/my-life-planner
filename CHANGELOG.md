@@ -1,3 +1,7 @@
+## v54ao — Pending Visual Polish
+- Strengthened the visual treatment of Pending / Pending — reason text.
+- Presentation only; no workflow logic changed.
+
 ## v54an — Desktop Daypart Placement Repair
 - Made v54al Home/daypart placement authoritative after legacy Home-order optimisers.
 - Fixes Daily Rhythm / Evening Routine remaining at the bottom on desktop while iPhone was correct.
