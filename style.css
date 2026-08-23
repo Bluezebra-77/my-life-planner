@@ -1669,3 +1669,18 @@ body.timer-minimised .quick-add-fab{
 .pending-status-line{display:block;margin-top:5px;font-size:.86rem;font-weight:800;line-height:1.25;color:#8a641a;}
 .overdue-row .pending-status-line{color:inherit;}
 .timeline-copy .pending-status-line,.compact-copy .pending-status-line,.compact-row-main .pending-status-line,.v10-row-main .pending-status-line{width:100%;}
+
+
+/* v54al daypart routine placement */
+.daypart-routine-host{
+  margin-top:12px;
+}
+.daypart-routine-host > .panel{
+  margin:0;
+}
+.v54al-routine-inactive{
+  display:none!important;
+}
+.daily-companion-panel .daypart-routine-host .home-collapsible{
+  box-shadow:none;
+}

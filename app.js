@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ak";
+const APP_VERSION="54al";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5339,3 +5339,111 @@ function v54akRefreshPendingView(){
 setTimeout(v54akRefreshPendingView,360);
 window.addEventListener('pageshow',()=>setTimeout(v54akRefreshPendingView,100));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54akRefreshPendingView,100);});
+
+
+/* ===== v54al Home priority order + daypart routine placement =====
+   Presentation-only build from stable v54ak.
+   - Daily Rhythm appears inside the Daily Companion during morning/afternoon.
+   - Evening Routine appears there when the existing daypart says Good evening.
+   - Active routine defaults collapsed once, then respects the user's saved state.
+   - Inactive routine is hidden instead of occupying permanent Home space.
+   - Main Home order: Today -> Today's Focus -> Needs Attention -> Projects ->
+     Pending -> Recurring -> Brain Inbox -> Planner Health -> reflections.
+   No task/project/pending/recurring/timeline data logic is changed.
+*/
+const V54AL_ROUTINE_INIT_KEY='myLifePlannerDaypartRoutineInitialisedV54al';
+
+function v54alEnsureRoutineInitialState(key,panel){
+  if(!panel)return;
+  const saved=getHomePanelStates();
+  const init=(()=>{try{return JSON.parse(localStorage.getItem(V54AL_ROUTINE_INIT_KEY)||'{}')}catch(_){return {}}})();
+  if(!init[key] && saved[key]===undefined){
+    saved[key]=true;
+    saveHomePanelStates(saved);
+    init[key]=true;
+    try{localStorage.setItem(V54AL_ROUTINE_INIT_KEY,JSON.stringify(init));}catch(_){}
+  }
+  applyHomePanelState(panel,Boolean(getHomePanelStates()[key]));
+}
+
+function v54alPlaceDaypartRoutine(){
+  const brief=document.getElementById('morningBriefPanel');
+  const daily=document.getElementById('homeDailyRhythmPanel');
+  const evening=document.getElementById('homeEveningPanel');
+  if(!brief||!daily||!evening)return;
+
+  const part=v52cDaypart(new Date());
+  const active=part.key==='evening'?evening:daily;
+  const inactive=part.key==='evening'?daily:evening;
+  const activeKey=part.key==='evening'?'eveningRoutine':'dailyRhythm';
+
+  inactive.classList.add('v54al-routine-inactive');
+  inactive.setAttribute('aria-hidden','true');
+  active.classList.remove('v54al-routine-inactive');
+  active.removeAttribute('aria-hidden');
+
+  let host=document.getElementById('daypartRoutineHost');
+  if(!host){
+    host=document.createElement('div');
+    host.id='daypartRoutineHost';
+    host.className='daypart-routine-host';
+    const message=document.getElementById('dailyCompanionMessage');
+    if(message)message.insertAdjacentElement('afterend',host);
+    else brief.appendChild(host);
+  }
+  if(active.parentElement!==host)host.appendChild(active);
+  if(inactive.parentElement===host)brief.parentElement?.appendChild(inactive);
+
+  v54alEnsureRoutineInitialState(activeKey,active);
+}
+
+function v54alPlaceHomeSections(){
+  const quick=document.querySelector('.home-quick-actions');
+  if(!quick)return;
+  const parent=quick.parentElement;
+  const brief=document.getElementById('morningBriefPanel');
+  const today=document.getElementById('homeTodayPanel');
+  const focus=document.getElementById('todayFocusPanel');
+  const needs=document.getElementById('needsAttentionPanel');
+  const projects=document.getElementById('homeProjectsPanel');
+  const pending=document.getElementById('homeWaitingPanel');
+  const recurring=document.getElementById('homeRecurringPanel');
+  const inbox=document.getElementById('homeBrainInboxPanel');
+  const health=document.getElementById('plannerHealthPanel');
+  const eveningReflection=document.getElementById('eveningReflectionPanel');
+  const weeklyReflection=document.getElementById('weeklyReflectionPanel');
+
+  v54alPlaceDaypartRoutine();
+
+  let after=brief||quick;
+  [today,focus,needs,projects,pending,recurring,inbox,health,eveningReflection,weeklyReflection]
+    .filter(Boolean)
+    .forEach(node=>{
+      const actual=(node.id==='homeTodayPanel'&&node.closest('.dashboard-grid'))?node.closest('.dashboard-grid'):node;
+      if(actual!==after){
+        after.insertAdjacentElement('afterend',actual);
+        after=actual;
+      }
+    });
+
+  document.querySelectorAll('.dashboard-grid').forEach(grid=>{
+    if(!grid.children.length)grid.remove();
+  });
+}
+
+const v54alRenderDailyCompanionBase=renderDailyCompanion;
+renderDailyCompanion=function(){
+  v54alRenderDailyCompanionBase();
+  v54alPlaceDaypartRoutine();
+  v54alPlaceHomeSections();
+};
+
+function v54alRefreshHomeLayout(){
+  try{v54alPlaceDaypartRoutine();}catch(error){console.error('v54al daypart routine placement',error);}
+  try{v54alPlaceHomeSections();}catch(error){console.error('v54al Home order placement',error);}
+}
+
+setTimeout(v54alRefreshHomeLayout,420);
+window.addEventListener('pageshow',()=>setTimeout(v54alRefreshHomeLayout,120));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54alRefreshHomeLayout,120);});
+window.addEventListener('resize',()=>setTimeout(v54alRefreshHomeLayout,80));
