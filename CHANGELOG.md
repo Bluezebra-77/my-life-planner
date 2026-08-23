@@ -1,3 +1,7 @@
+## v54am — Home Project Next Label
+- Added a visible **Next** status to the first incomplete non-Pending step in expanded Home project cards.
+- Presentation only; project ordering and Pending/dependency logic are unchanged.
+
 ## v54al — Daypart Routine + Home Priority Order
 - Reordered Home action sections.
 - Moved Daily Rhythm/Evening Routine into the existing daypart companion area.

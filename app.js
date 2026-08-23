@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54al";
+const APP_VERSION="54am";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5446,3 +5446,43 @@ setTimeout(v54alRefreshHomeLayout,420);
 window.addEventListener('pageshow',()=>setTimeout(v54alRefreshHomeLayout,120));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54alRefreshHomeLayout,120);});
 window.addEventListener('resize',()=>setTimeout(v54alRefreshHomeLayout,80));
+
+
+/* ===== v54am Home Project "Next" label =====
+   Presentation-only change from stable v54al.
+   The first incomplete non-Pending project step is visibly labelled "Next"
+   in the expanded Home -> Projects card. Project ordering, Pending, completion,
+   Timeline and Next-step selection logic are unchanged. */
+const v54amProjectNextActionsBase=renderProjectNextActions;
+renderProjectNextActions=function(){
+  const area=document.getElementById('projectNextActionsArea');if(!area)return;area.innerHTML='';
+  const projects=(data.projects||[]).filter(p=>!p.completed);
+  if(!projects.length){area.innerHTML='<div class="empty-state">No active projects need your attention.</div>';return;}
+  const openStates=getHomeProjectStates();
+  [...projects].sort(sortByDueDate).forEach(project=>{
+    const steps=Array.isArray(project.steps)?project.steps:[];
+    const completedCount=steps.filter(step=>step.completed).length;
+    const nextStep=steps.find(step=>!step.completed&&!step.pending);
+
+    const card=document.createElement('section');card.className='home-project-card';
+    const heading=document.createElement('div');heading.className='home-project-heading';
+    heading.innerHTML=`<button type="button" class="home-project-toggle" onclick="toggleHomeProject('${project.id}')" aria-expanded="${Boolean(openStates[project.id])}"><span aria-hidden="true">${openStates[project.id]?'▾':'▸'}</span><span><strong>${escapeHtml(project.name||'Untitled project')}</strong><small>${steps.length?`${completedCount} of ${steps.length} steps`:'No steps yet'}</small></span></button><button type="button" class="small-button secondary-button home-project-manage" onclick="editProject('${project.id}')">Manage</button>`;
+    card.appendChild(heading);
+
+    const body=document.createElement('div');body.className='home-project-steps';body.hidden=!openStates[project.id];
+    if(!steps.length){
+      body.innerHTML='<div class="empty-state">No steps yet. Use Manage to add the first step.</div>';
+    }else{
+      steps.forEach(step=>{
+        const row=document.createElement('div');row.className=`v10-row home-project-step ${step.completed?'completed-row':''}`;
+        const pendingLine=step.pending?`<span class="pending-status-line">Pending${step.pendingReason?' — '+escapeHtml(step.pendingReason):''}</span>`:'';
+        const nextLine=nextStep&&String(nextStep.id)===String(step.id)?'<span class="project-next-status-line">Next</span>':'';
+        row.innerHTML=`<button type="button" class="complete-dot" onclick="toggleStep('${project.id}','${step.id}')" aria-label="${step.completed?'Reinstate':'Complete'} ${escapeHtml(step.name||'step')}">${step.completed?'✓':''}</button><button type="button" class="v10-row-main" onclick="editStep('${project.id}','${step.id}')"><span class="v10-row-title">${escapeHtml(step.name||'Untitled step')}</span><span class="v10-row-meta">${step.dueDate?'Due '+formatDate(step.dueDate):'No date'} · Tap text to edit</span>${nextLine}${pendingLine}</button>`;
+        body.appendChild(row);
+      });
+    }
+    card.appendChild(body);
+    area.appendChild(card);
+  });
+};
+try{renderProjectNextActions();}catch(error){console.error('v54am Project Next label refresh',error);}

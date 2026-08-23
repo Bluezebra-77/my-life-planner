@@ -1676,3 +1676,13 @@ body.timer-minimised .quick-add-fab{
 .daypart-routine-host > .panel{margin:0;}
 .v54al-routine-inactive{display:none!important;}
 .daily-companion-panel .daypart-routine-host .home-collapsible{box-shadow:none;}
+
+
+/* v54am Home Project Next label */
+.project-next-status-line{
+  display:block;
+  margin-top:3px;
+  font-size:.72rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
