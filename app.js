@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54as";
+const APP_VERSION="54at";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6074,3 +6074,94 @@ toggleTodo=function(id){
   }
   v54asUpdateTodoCleanup();
 };
+
+
+/* ===== v54at Home Recurring preview =====
+   Presentation-only Home change:
+   - overdue recurring tasks first
+   - due-today recurring tasks next
+   - then up to three upcoming active recurring tasks
+   Lists and recurrence calculations remain unchanged. */
+
+function v54atRecurringHomeBuckets(){
+  const today=localDateKey();
+  const active=(data.recurringTasks||[]).filter(item=>item && !item.paused && !item.completed && item.nextDueDate);
+  const overdue=active
+    .filter(item=>item.nextDueDate<today)
+    .sort((a,b)=>String(a.nextDueDate).localeCompare(String(b.nextDueDate)));
+  const dueToday=active
+    .filter(item=>item.nextDueDate===today)
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  const upcoming=active
+    .filter(item=>item.nextDueDate>today)
+    .sort((a,b)=>{
+      const byDate=String(a.nextDueDate).localeCompare(String(b.nextDueDate));
+      return byDate||String(a.name||'').localeCompare(String(b.name||''));
+    })
+    .slice(0,3);
+  return {overdue,dueToday,upcoming};
+}
+
+function v54atRecurringHomeMeta(item){
+  const today=localDateKey();
+  if(item.nextDueDate<today)return `Overdue · ${formatDate(item.nextDueDate)}`;
+  if(item.nextDueDate===today)return 'Due today';
+  return `Upcoming · ${formatDate(item.nextDueDate)}`;
+}
+
+function v54atRenderRecurringHomeRow(item){
+  const row=makeV10Row(
+    {
+      name:item.name||'Untitled recurring task',
+      meta:v54atRecurringHomeMeta(item),
+      dueDate:item.nextDueDate||'',
+      open:()=>openRecurringDialog(item.id)
+    },
+    {
+      complete:true,
+      completed:false,
+      completeAction:()=>completeRecurringTask(item.id),
+      menu:typeof recurringTaskMenu==='function'?recurringTaskMenu(item):''
+    }
+  );
+  return row;
+}
+
+renderRecurringHome=function(){
+  const area=document.getElementById('homeRecurringArea');
+  if(!area)return;
+  area.innerHTML='';
+  const {overdue,dueToday,upcoming}=v54atRecurringHomeBuckets();
+
+  if(!overdue.length&&!dueToday.length&&!upcoming.length){
+    area.innerHTML='<div class="empty-state">No active recurring tasks.</div>';
+    return;
+  }
+
+  const appendSection=(title,items,className='')=>{
+    if(!items.length)return;
+    const section=document.createElement('div');
+    section.className=`home-recurring-group ${className}`.trim();
+    const heading=document.createElement('div');
+    heading.className='home-recurring-group-title';
+    heading.textContent=title;
+    section.appendChild(heading);
+    items.forEach(item=>section.appendChild(v54atRenderRecurringHomeRow(item)));
+    area.appendChild(section);
+  };
+
+  appendSection('Overdue',overdue,'home-recurring-overdue');
+  appendSection('Due today',dueToday,'home-recurring-today');
+  appendSection('Upcoming',upcoming,'home-recurring-upcoming');
+};
+
+const v54atRenderAllBase=renderAll;
+renderAll=function(){
+  const result=v54atRenderAllBase.apply(this,arguments);
+  try{renderRecurringHome();}catch(error){console.error('v54at recurring Home refresh',error);}
+  return result;
+};
+
+setTimeout(()=>{try{renderRecurringHome();}catch(error){console.error('v54at recurring Home initial render',error);}},520);
+window.addEventListener('pageshow',()=>setTimeout(()=>{try{renderRecurringHome();}catch(error){console.error('v54at recurring Home pageshow',error);}},150));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>{try{renderRecurringHome();}catch(error){console.error('v54at recurring Home visibility',error);}},150);});

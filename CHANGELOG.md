@@ -1,3 +1,7 @@
+## v54at — Upcoming Recurring Tasks on Home
+- Home Recurring now shows overdue, due today and the next three upcoming active recurring tasks.
+- Lists and recurrence logic are unchanged.
+
 ## v54as — Attachment Integrity + Completed To-do Cleanup
 - Added verified Brain Inbox attachment transfer for To-dos and Appointments.
 - Added Appointment attachment preview and list attachment cues.

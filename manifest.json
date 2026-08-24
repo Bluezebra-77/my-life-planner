@@ -1,8 +1,8 @@
 {
-  "name": "My Life Planner V54as",
+  "name": "My Life Planner V54at",
   "short_name": "Life Planner",
   "description": "A calm personal planner with a unified Timeline, Brain Inbox, lists, projects, routines and appointments.",
-  "start_url": "./index.html?v=54as",
+  "start_url": "./index.html?v=54at",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f8ff",
@@ -23,7 +23,7 @@
     }
   ],
   "id": "./",
-  "version": "54as",
+  "version": "54at",
   "shortcuts": [
     {
       "name": "Brain Inbox",

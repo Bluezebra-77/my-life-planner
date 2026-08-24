@@ -1747,3 +1747,22 @@ body.timer-minimised .quick-add-fab{
     width:100%;
   }
 }
+
+
+/* v54at Home Recurring preview */
+.home-recurring-group{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.home-recurring-group + .home-recurring-group{
+  margin-top:12px;
+}
+.home-recurring-group-title{
+  font-size:.76rem;
+  font-weight:800;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  opacity:.72;
+  padding:2px 2px 0;
+}
