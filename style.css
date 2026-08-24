@@ -1766,3 +1766,42 @@ body.timer-minimised .quick-add-fab{
   opacity:.72;
   padding:2px 2px 0;
 }
+
+
+/* v54av Lists refinement */
+.v54av-custom-list-section{
+  margin-bottom:10px;
+}
+.v54av-custom-list-header{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.v54av-custom-list-toggle{
+  appearance:none;
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  padding:8px 0;
+  flex:1 1 auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  text-align:left;
+  cursor:pointer;
+}
+.v54av-custom-list-toggle>span:last-child{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.v54av-custom-list-toggle small{
+  opacity:.7;
+}
+.v54av-custom-list-body{
+  margin-top:4px;
+}
+.v54av-custom-list-body[hidden]{
+  display:none!important;
+}
