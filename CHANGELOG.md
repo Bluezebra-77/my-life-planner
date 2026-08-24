@@ -1,3 +1,6 @@
+## v54au — Recurring Home Repair
+- Corrected Upcoming recurring Home preview to use the established recurring model.
+
 ## v54at — Upcoming Recurring Tasks on Home
 - Home Recurring now shows overdue, due today and the next three upcoming active recurring tasks.
 - Lists and recurrence logic are unchanged.

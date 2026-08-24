@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54at";
+const APP_VERSION="54au";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6165,3 +6165,81 @@ renderAll=function(){
 setTimeout(()=>{try{renderRecurringHome();}catch(error){console.error('v54at recurring Home initial render',error);}},520);
 window.addEventListener('pageshow',()=>setTimeout(()=>{try{renderRecurringHome();}catch(error){console.error('v54at recurring Home pageshow',error);}},150));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>{try{renderRecurringHome();}catch(error){console.error('v54at recurring Home visibility',error);}},150);});
+
+
+/* ===== v54au Recurring Home repair =====
+   Repairs v54at Upcoming recurring display by using the established recurring
+   task model: nextDue + status, with v54jRecurringIsActive() for compatibility.
+   Recurrence calculations and Lists rendering are unchanged. */
+function v54auRecurringHomeBuckets(){
+  const today=recurringDate(localDateKey());
+  const active=(data.recurringTasks||[]).filter(item=>
+    v54jRecurringIsActive(item) && item.nextDue && recurringDate(item.nextDue)
+  );
+  const overdue=active
+    .filter(item=>recurringDate(item.nextDue)<today)
+    .sort((a,b)=>String(a.nextDue).localeCompare(String(b.nextDue)));
+  const dueToday=active
+    .filter(item=>recurringDate(item.nextDue).getTime()===today.getTime())
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+  const upcoming=active
+    .filter(item=>recurringDate(item.nextDue)>today)
+    .sort((a,b)=>{
+      const byDate=String(a.nextDue).localeCompare(String(b.nextDue));
+      return byDate||String(a.name||'').localeCompare(String(b.name||''));
+    })
+    .slice(0,3);
+  return {overdue,dueToday,upcoming};
+}
+function v54auRecurringHomeMeta(item){
+  const today=recurringDate(localDateKey());
+  const due=recurringDate(item.nextDue);
+  if(due<today)return `${recurringPatternLabel(item)} · Overdue · ${formatDate(item.nextDue)}`;
+  if(due.getTime()===today.getTime())return `${recurringPatternLabel(item)} · Due today`;
+  return `${recurringPatternLabel(item)} · Upcoming · ${formatDate(item.nextDue)}`;
+}
+function v54auRenderRecurringHomeRow(item){
+  const menu=compactMenu(
+    `<button onclick="closeAnchoredMenu();openRecurringTaskDialog('${item.id}')">Edit</button>`+
+    `<button onclick="closeAnchoredMenu();completeRecurringTask('${item.id}')">Complete</button>`+
+    `<button onclick="closeAnchoredMenu();toggleRecurringPause('${item.id}')">Pause</button>`,
+    item.name||'recurring task'
+  );
+  return makeV10Row({
+    name:item.name||'Untitled recurring task',
+    meta:v54auRecurringHomeMeta(item),
+    dueDate:item.nextDue||'',
+    action:()=>completeRecurringTask(item.id),
+    open:()=>openRecurringTaskDialog(item.id)
+  },{menu});
+}
+renderRecurringHome=function(){
+  const area=document.getElementById('homeRecurringArea');
+  if(!area)return;
+  area.innerHTML='';
+  const {overdue,dueToday,upcoming}=v54auRecurringHomeBuckets();
+  if(!overdue.length&&!dueToday.length&&!upcoming.length){
+    area.innerHTML='<div class="empty-state">No active recurring tasks.</div>';
+    return;
+  }
+  const appendSection=(title,items,className='')=>{
+    if(!items.length)return;
+    const section=document.createElement('div');
+    section.className=`home-recurring-group ${className}`.trim();
+    const heading=document.createElement('div');
+    heading.className='home-recurring-group-title';
+    heading.textContent=title;
+    section.appendChild(heading);
+    items.forEach(item=>section.appendChild(v54auRenderRecurringHomeRow(item)));
+    area.appendChild(section);
+  };
+  appendSection('Overdue',overdue,'home-recurring-overdue');
+  appendSection('Due today',dueToday,'home-recurring-today');
+  appendSection('Upcoming',upcoming,'home-recurring-upcoming');
+};
+function v54auRefreshRecurringHome(){
+  try{renderRecurringHome();}catch(error){console.error('v54au recurring Home refresh',error);}
+}
+setTimeout(v54auRefreshRecurringHome,600);
+window.addEventListener('pageshow',()=>setTimeout(v54auRefreshRecurringHome,180));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54auRefreshRecurringHome,180);});
