@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ax";
+const APP_VERSION="54ay";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6426,3 +6426,105 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout
     }catch(error){console.error('v54ax desktop update repair',error);}
   },{once:true});
 })();
+
+
+/* ===== v54ay Today's Progress =====
+   Replaces the old all-time To-do + routine calculation with a deliberately
+   day-scoped measure. Appointments and routines are excluded.
+
+   Eligible today:
+   - ordinary To-dos due today/overdue and not Pending
+   - Today's Focus items for today
+   - project steps due today/overdue and not Pending
+   - recurring tasks due today/overdue
+   Completed-today records remain in the denominator so progress cannot shrink
+   simply because an item was completed. */
+const V54AY_PROGRESS_VISIBLE_KEY='myLifePlannerShowTodayProgress';
+function v54ayDateFromStamp(value){return value?String(value).slice(0,10):'';}
+function v54ayDueTodayOrEarlier(value){return Boolean(value)&&String(value).slice(0,10)<=localDateKey();}
+function v54ayCompletedToday(item){return Boolean(item?.completed)&&v54ayDateFromStamp(item?.completedAt)===localDateKey();}
+function v54ayProgressCounts(){
+  const today=localDateKey();
+  let total=0,completed=0;
+
+  (data.todos||[]).forEach(item=>{
+    if(item?.pending)return;
+    const eligibleOpen=!item.completed&&v54ayDueTodayOrEarlier(item.dueDate);
+    const eligibleDone=v54ayCompletedToday(item)&&v54ayDueTodayOrEarlier(item.dueDate);
+    if(eligibleOpen||eligibleDone){total++;if(eligibleDone)completed++;}
+  });
+
+  (data.todayFocus||[]).forEach(item=>{
+    if(String(item?.forDate||today)!==today)return;
+    total++;
+    if(item.completed)completed++;
+  });
+
+  (data.projects||[]).forEach(project=>{
+    (project.steps||[]).forEach(step=>{
+      if(step?.pending)return;
+      const eligibleOpen=!step.completed&&v54ayDueTodayOrEarlier(step.dueDate);
+      const eligibleDone=v54ayCompletedToday(step)&&v54ayDueTodayOrEarlier(step.dueDate);
+      if(eligibleOpen||eligibleDone){total++;if(eligibleDone)completed++;}
+    });
+  });
+
+  (data.recurringTasks||[]).forEach(task=>{
+    if(!v54jRecurringIsActive(task))return;
+    const doneToday=v54ayDateFromStamp(task.lastCompleted)===today;
+    const dueNow=v54ayDueTodayOrEarlier(task.nextDue);
+    if(dueNow||doneToday){total++;if(doneToday)completed++;}
+  });
+  return {completed,total};
+}
+function v54ayProgressVisible(){
+  try{return localStorage.getItem(V54AY_PROGRESS_VISIBLE_KEY)!=='false';}catch(_){return true;}
+}
+function v54aySetProgressVisible(visible){
+  try{localStorage.setItem(V54AY_PROGRESS_VISIBLE_KEY,String(Boolean(visible)));}catch(_){}
+  v54ayApplyProgressVisibility();
+}
+function v54ayApplyProgressVisibility(){
+  const panel=document.getElementById('todayProgressPanel');
+  const showButton=document.getElementById('showTodayProgressButton');
+  const visible=v54ayProgressVisible();
+  if(panel)panel.hidden=!visible;
+  if(showButton)showButton.hidden=visible;
+}
+window.v54aySetProgressVisible=v54aySetProgressVisible;
+
+updateProgress=function(){
+  const {completed,total}=v54ayProgressCounts();
+  const percent=total?Math.round(completed/total*100):0;
+  const bar=document.getElementById('progressBar');
+  const text=document.getElementById('progressText');
+  if(bar)bar.style.width=`${percent}%`;
+  if(text)text.textContent=`${completed} of ${total}`;
+  v54ayApplyProgressVisibility();
+};
+
+/* Ensure completion timestamps needed by the day-scoped calculation exist for
+   project steps, without changing their existing completion behaviour. */
+const v54ayToggleStepBase=toggleStep;
+toggleStep=function(projectId,stepId){
+  const project=(data.projects||[]).find(x=>String(x.id)===String(projectId));
+  const step=project?.steps?.find(x=>String(x.id)===String(stepId));
+  const was=Boolean(step?.completed);
+  v54ayToggleStepBase(projectId,stepId);
+  if(step&&!was&&step.completed&&!step.completedAt){step.completedAt=new Date().toISOString();saveData();}
+  if(step&&was&&!step.completed&&step.completedAt){step.completedAt=null;saveData();}
+  updateProgress();
+};
+
+const v54ayToggleTodayFocusBase=toggleTodayFocusItem;
+toggleTodayFocusItem=function(id){v54ayToggleTodayFocusBase(id);updateProgress();};
+const v54ayDeleteTodayFocusBase=deleteTodayFocusItem;
+deleteTodayFocusItem=function(id){v54ayDeleteTodayFocusBase(id);updateProgress();};
+const v54ayClearTodayFocusBase=clearCompletedTodayFocus;
+clearCompletedTodayFocus=function(){v54ayClearTodayFocusBase();updateProgress();};
+const v54ayCompleteRecurringBase=completeRecurringTask;
+completeRecurringTask=function(id){v54ayCompleteRecurringBase(id);updateProgress();};
+
+setTimeout(()=>{updateProgress();v54ayApplyProgressVisibility();},650);
+window.addEventListener('pageshow',()=>setTimeout(updateProgress,160));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(updateProgress,160);});

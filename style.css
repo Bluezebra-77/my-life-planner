@@ -1798,3 +1798,8 @@ body.timer-minimised .quick-add-fab{
 .v54aw-custom-list-body[hidden]{
   display:none!important;
 }
+
+/* v54ay Today’s Progress */
+.today-progress-line{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.progress-visibility-button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;opacity:.72;padding:2px 4px}
+#todayProgressPanel[hidden],#showTodayProgressButton[hidden]{display:none!important}

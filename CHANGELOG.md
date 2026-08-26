@@ -1,3 +1,7 @@
+## v54ay — Today’s Progress
+- Replaced misleading all-time progress formula with a day-scoped actionable formula.
+- Added persistent Show/Hide control.
+
 ## v54ax — Desktop Update Repair
 - Updater/cache-only repair from v54aw.
 
