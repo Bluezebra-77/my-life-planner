@@ -1,7 +1,8 @@
-## v54av — Lists Refinement
-- Full collapsible Custom List display.
-- Reversible Custom List completion.
-- Immediate Lists search reset on empty query.
+## v54aw — Corrected Lists Repair
+- Rebuilt from accepted v54au.
+- Removed the real Custom Lists five-item preview limit.
+- Added authoritative clear/reset to the real Lists search input.
+- Today/appointment code left unchanged from v54au.
 
 ## v54au — Recurring Home Repair
 - Corrected Upcoming recurring Home preview to use the established recurring model.

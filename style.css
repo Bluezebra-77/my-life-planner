@@ -1768,40 +1768,33 @@ body.timer-minimised .quick-add-fab{
 }
 
 
-/* v54av Lists refinement */
-.v54av-custom-list-section{
-  margin-bottom:10px;
-}
-.v54av-custom-list-header{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-.v54av-custom-list-toggle{
+/* v54aw complete collapsible Custom Lists */
+.v54aw-custom-list-toggle{
   appearance:none;
   border:0;
   background:transparent;
   color:inherit;
   font:inherit;
-  padding:8px 0;
-  flex:1 1 auto;
+  padding:0;
+  margin:0;
   display:flex;
   align-items:center;
   gap:8px;
   text-align:left;
   cursor:pointer;
+  flex:1 1 auto;
+  min-width:0;
 }
-.v54av-custom-list-toggle>span:last-child{
+.v54aw-custom-list-toggle>span:last-child{
   display:flex;
   flex-direction:column;
   gap:2px;
+  min-width:0;
 }
-.v54av-custom-list-toggle small{
+.v54aw-custom-list-toggle small{
+  font-size:.72rem;
   opacity:.7;
 }
-.v54av-custom-list-body{
-  margin-top:4px;
-}
-.v54av-custom-list-body[hidden]{
+.v54aw-custom-list-body[hidden]{
   display:none!important;
 }

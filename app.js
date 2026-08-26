@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54av";
+const APP_VERSION="54aw";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6245,178 +6245,160 @@ window.addEventListener('pageshow',()=>setTimeout(v54auRefreshRecurringHome,180)
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54auRefreshRecurringHome,180);});
 
 
-/* ===== v54av Lists refinement =====
-   1) Custom List normal view shows all items inside a collapsible section.
-   2) Custom List completion is reversible in Manage.
-   3) Clearing Lists search immediately restores the complete Lists view.
-   Scope is Lists/Custom Lists only. */
+/* ===== v54aw Lists repair =====
+   Built from accepted v54au, not rejected v54av.
+   - Replaces the actual renderCustomLists() five-item preview with a complete,
+     collapsible Custom List view.
+   - Makes empty globalListSearch authoritative and restores every Lists section.
+   - Does not alter Today / appointment logic. */
 
-const V54AV_CUSTOM_LIST_OPEN_KEY='myLifePlannerCustomListOpenV54av';
+const V54AW_CUSTOM_LIST_STATE_KEY='myLifePlannerCustomListExpandedV54aw';
 
-function v54avGetCustomListOpenStates(){
-  try{return JSON.parse(localStorage.getItem(V54AV_CUSTOM_LIST_OPEN_KEY)||'{}')||{};}
+function v54awCustomListStates(){
+  try{return JSON.parse(localStorage.getItem(V54AW_CUSTOM_LIST_STATE_KEY)||'{}')||{};}
   catch(_){return {};}
 }
-function v54avSetCustomListOpenState(id,isOpen){
-  const states=v54avGetCustomListOpenStates();
-  states[String(id)]=Boolean(isOpen);
-  try{localStorage.setItem(V54AV_CUSTOM_LIST_OPEN_KEY,JSON.stringify(states));}catch(_){}
+function v54awSetCustomListExpanded(id,expanded){
+  const states=v54awCustomListStates();
+  states[String(id)]=Boolean(expanded);
+  try{localStorage.setItem(V54AW_CUSTOM_LIST_STATE_KEY,JSON.stringify(states));}catch(_){}
 }
-function v54avToggleCustomListView(id){
-  const section=document.querySelector(`[data-v54av-custom-list="${CSS.escape(String(id))}"]`);
-  if(!section)return;
-  const body=section.querySelector('.v54av-custom-list-body');
-  const button=section.querySelector('.v54av-custom-list-toggle');
-  if(!body||!button)return;
+function v54awToggleCustomList(id){
+  const card=document.querySelector(`.custom-list-card[data-custom-list-id="${CSS.escape(String(id))}"]`);
+  if(!card)return;
+  const body=card.querySelector('.v54aw-custom-list-body');
+  const toggle=card.querySelector('.v54aw-custom-list-toggle');
+  if(!body||!toggle)return;
   const opening=body.hidden;
   body.hidden=!opening;
-  button.setAttribute('aria-expanded',String(opening));
-  const arrow=button.querySelector('.v54av-custom-list-arrow');
+  toggle.setAttribute('aria-expanded',String(opening));
+  const arrow=toggle.querySelector('.v54aw-custom-list-arrow');
   if(arrow)arrow.textContent=opening?'▾':'▸';
-  v54avSetCustomListOpenState(id,opening);
+  v54awSetCustomListExpanded(id,opening);
 }
-window.v54avToggleCustomListView=v54avToggleCustomListView;
+window.v54awToggleCustomList=v54awToggleCustomList;
 
-function v54avToggleCustomListItem(listId,itemId){
-  const list=(data.customLists||[]).find(x=>String(x.id)===String(listId));
-  const item=(list?.items||[]).find(x=>String(x.id)===String(itemId));
-  if(!item)return;
-  item.completed=!Boolean(item.completed);
-  item.completedAt=item.completed?new Date().toISOString():null;
-  saveData();
-  try{renderAll();}catch(_){}
-  try{renderLists();}catch(_){}
-  showSaved(item.completed?'List item completed':'List item reinstated');
-}
-window.v54avToggleCustomListItem=v54avToggleCustomListItem;
-
-function v54avRenderCustomListsExpanded(){
-  const area=document.getElementById('customListsArea')||document.getElementById('customListArea');
-  if(!area)return false;
+/* Authoritative Custom Lists renderer: no slice()/preview limit. */
+renderCustomLists=function(){
+  const area=document.getElementById('customListsArea');
+  if(!area)return;
+  area.innerHTML='';
   const lists=data.customLists||[];
   if(!lists.length){
-    area.innerHTML='<div class="empty-state">No custom lists yet.</div>';
-    return true;
+    area.innerHTML='<div class="empty-state">No custom lists yet. Create one for shopping, packing, ideas or anything else.</div>';
+    return;
   }
 
-  const openStates=v54avGetCustomListOpenStates();
-  area.innerHTML='';
-  lists.forEach(list=>{
-    const section=document.createElement('section');
-    section.className='managed-list-section v54av-custom-list-section';
-    section.dataset.v54avCustomList=String(list.id);
+  const states=v54awCustomListStates();
 
-    const open=openStates[String(list.id)]!==false;
-    const header=document.createElement('div');
-    header.className='v54av-custom-list-header';
-    header.innerHTML=`<button type="button" class="v54av-custom-list-toggle" aria-expanded="${open}" onclick="v54avToggleCustomListView('${list.id}')"><span class="v54av-custom-list-arrow" aria-hidden="true">${open?'▾':'▸'}</span><span><strong>${escapeHtml(list.name||'Untitled list')}</strong><small>${(list.items||[]).length} item${(list.items||[]).length===1?'':'s'}</small></span></button><button type="button" class="small-button secondary-button" onclick="manageCustomList('${list.id}')">Manage</button>`;
-    section.appendChild(header);
+  lists.forEach(list=>{
+    const items=[...(list.items||[])].sort((x,y)=>
+      Number(Boolean(x.completed))-Number(Boolean(y.completed)) ||
+      String(x.name||'').localeCompare(String(y.name||''))
+    );
+    const expanded=states[String(list.id)]!==false;
+
+    const card=document.createElement('article');
+    card.className='custom-list-card';
+    card.dataset.customListId=String(list.id);
+    card.dataset.listName=list.name||'';
+
+    const heading=document.createElement('div');
+    heading.className='custom-list-heading';
+    heading.innerHTML=
+      `<button type="button" class="v54aw-custom-list-toggle" aria-expanded="${expanded}" onclick="v54awToggleCustomList('${list.id}')">`+
+        `<span class="v54aw-custom-list-arrow" aria-hidden="true">${expanded?'▾':'▸'}</span>`+
+        `<span><strong>${escapeHtml(list.name||'Untitled list')}</strong><small>${items.length} item${items.length===1?'':'s'}</small></span>`+
+      `</button>`+
+      `<button type="button" class="small-button" onclick="openCustomListManager('${list.id}')">Manage</button>`;
+    card.appendChild(heading);
 
     const body=document.createElement('div');
-    body.className='v54av-custom-list-body stack-list';
-    body.hidden=!open;
-
-    const items=[...(list.items||[])].sort((x,y)=>{
-      const c=Number(Boolean(x.completed))-Number(Boolean(y.completed));
-      return c||String(x.name||'').localeCompare(String(y.name||''));
-    });
+    body.className='stack-list v54aw-custom-list-body';
+    body.hidden=!expanded;
 
     if(!items.length){
-      body.innerHTML='<div class="empty-state">No items in this list.</div>';
+      body.innerHTML='<div class="empty-state">This list is empty.</div>';
     }else{
       items.forEach(item=>{
-        const row=document.createElement('div');
-        row.className=`compact-manage-row ${item.completed?'completed-row':''}`;
-        row.innerHTML=`<button type="button" class="complete-dot" onclick="v54avToggleCustomListItem('${list.id}','${item.id}')" aria-label="${item.completed?'Mark incomplete':'Complete'} ${escapeHtml(item.name||'item')}">${item.completed?'✓':''}</button><button type="button" class="compact-row-main" onclick="manageCustomList('${list.id}')"><span class="compact-row-title">${escapeHtml(item.name||'Untitled item')}</span><span class="compact-row-meta">${item.completed?'Completed · tap circle to reinstate':'Active'}</span></button>`;
-        body.appendChild(row);
+        const button=document.createElement('button');
+        button.type='button';
+        button.className=`custom-preview-item ${item.completed?'completed-row':''}`;
+        button.onclick=()=>toggleCustomListItem(list.id,item.id);
+        button.setAttribute('aria-label',`${item.completed?'Mark active':'Complete'} ${item.name||'item'}`);
+        button.innerHTML=
+          `<span>${item.completed?'✓':'○'}</span>`+
+          `<span>${escapeHtml(item.name||'Untitled item')}</span>`;
+        body.appendChild(button);
       });
     }
 
-    section.appendChild(body);
-    area.appendChild(section);
+    card.appendChild(body);
+    area.appendChild(card);
   });
-  return true;
-}
+};
 
-/* Preserve the existing renderer, then replace only the custom-list area with
-   the full collapsible view. */
-const v54avRenderListsBase=typeof renderLists==='function'?renderLists:null;
-if(v54avRenderListsBase){
-  renderLists=function(){
-    const result=v54avRenderListsBase.apply(this,arguments);
-    try{v54avRenderCustomListsExpanded();}catch(error){console.error('v54av custom list render',error);}
-    return result;
-  };
-}
+/* Empty Lists search must always mean "show everything".
+   This runs after the older 90ms search debounce so stale filtering cannot win. */
+function v54awForceClearListsSearch(){
+  const search=document.getElementById('globalListSearch');
+  if(search && normaliseSearchText(search.value))return false;
+  if(search)search.value='';
 
-/* Manage dialog/list: make completed state reversible even if legacy UI only
-   supplied a one-way completion action. */
-const v54avRenderCustomListManageBase=typeof renderCustomListManager==='function'?renderCustomListManager:null;
-if(v54avRenderCustomListManageBase){
-  renderCustomListManager=function(){
-    const result=v54avRenderCustomListManageBase.apply(this,arguments);
-    try{
-      document.querySelectorAll('[data-custom-list-item-id]').forEach(row=>{
-        const itemId=row.getAttribute('data-custom-list-item-id');
-        const listId=row.getAttribute('data-custom-list-id')||document.getElementById('customListId')?.value;
-        const dot=row.querySelector('.complete-dot,.check-button,input[type="checkbox"]');
-        if(dot&&listId&&itemId){
-          if(dot.tagName==='INPUT'){
-            dot.disabled=false;
-            dot.onchange=()=>v54avToggleCustomListItem(listId,itemId);
-          }else{
-            dot.disabled=false;
-            dot.onclick=()=>v54avToggleCustomListItem(listId,itemId);
-          }
-        }
-      });
-    }catch(error){console.error('v54av custom list manager reversible completion',error);}
-    return result;
-  };
-}
+  const status=document.getElementById('listSearchStatus');
+  if(status)status.textContent='';
 
-/* Search reset: empty search is authoritative. Clear every known search state,
-   remove the result summary, and rerender immediately. */
-function v54avResetListsSearch(){
-  const input=document.getElementById('listsSearch')||document.getElementById('listSearch')||document.querySelector('input[type="search"][data-list-search]');
-  if(input && input.value!=='')return false;
+  const projectStates=typeof getProjectStepStates==='function'?getProjectStepStates():{};
 
-  if(typeof listSearchQuery!=='undefined')listSearchQuery='';
-  if(typeof listsSearchQuery!=='undefined')listsSearchQuery='';
-  if(typeof currentListSearch!=='undefined')currentListSearch='';
-  if(typeof activeListSearch!=='undefined')activeListSearch='';
-  try{sessionStorage.removeItem('lifePlannerListSearch');}catch(_){}
-  try{localStorage.removeItem('lifePlannerListSearch');}catch(_){}
+  document.querySelectorAll('.managed-list-section').forEach(section=>{
+    section.hidden=false;
+    section.classList.remove('list-search-hidden');
 
-  document.querySelectorAll('.lists-search-summary,.list-search-summary,#listsSearchSummary,#listSearchSummary,.search-results-count').forEach(el=>{
-    el.textContent='';
-    el.hidden=true;
+    section.querySelectorAll(
+      '.compact-manage-row,.annual-manage-row,.list-card,.v10-row,.custom-list-card,.custom-preview-item,.step-compact-row,.appointment-card'
+    ).forEach(row=>{
+      row.hidden=false;
+      row.classList.remove('list-search-hidden');
+      row.removeAttribute('data-search-score');
+    });
+
+    section.querySelectorAll('.project-steps-group').forEach(group=>{
+      group.hidden=!projectStates[group.dataset.projectId];
+    });
   });
 
-  try{
-    if(v54avRenderListsBase)v54avRenderListsBase();
-    if(typeof renderLists==='function')renderLists();
-    else if(typeof renderAll==='function')renderAll();
-  }catch(error){console.error('v54av Lists search reset render',error);}
   return true;
 }
-window.v54avResetListsSearch=v54avResetListsSearch;
+window.v54awForceClearListsSearch=v54awForceClearListsSearch;
 
-function v54avAttachListsSearchReset(){
-  const input=document.getElementById('listsSearch')||document.getElementById('listSearch')||document.querySelector('input[type="search"][data-list-search]');
-  if(!input||input.dataset.v54avResetAttached==='1')return;
-  input.dataset.v54avResetAttached='1';
-  const handler=()=>{
-    if(input.value.trim()===''){
-      queueMicrotask(v54avResetListsSearch);
-      setTimeout(v54avResetListsSearch,0);
-    }
+const v54awFilterMyListsBase=filterMyLists;
+filterMyLists=function(query=''){
+  const search=document.getElementById('globalListSearch');
+  const raw=String(query ?? search?.value ?? '');
+  if(!normaliseSearchText(raw)){
+    v54awForceClearListsSearch();
+    return;
+  }
+  return v54awFilterMyListsBase(raw);
+};
+
+function v54awAttachSearchClear(){
+  const search=document.getElementById('globalListSearch');
+  if(!search||search.dataset.v54awClearReady==='true')return;
+  search.dataset.v54awClearReady='true';
+
+  const clearIfEmpty=()=>{
+    if(normaliseSearchText(search.value))return;
+    v54awForceClearListsSearch();
+    setTimeout(v54awForceClearListsSearch,110);
+    setTimeout(v54awForceClearListsSearch,180);
   };
-  input.addEventListener('input',handler);
-  input.addEventListener('search',handler);
-  input.addEventListener('change',handler);
-  input.addEventListener('keyup',handler);
+
+  search.addEventListener('input',clearIfEmpty);
+  search.addEventListener('search',clearIfEmpty);
+  search.addEventListener('change',clearIfEmpty);
+  search.addEventListener('keyup',clearIfEmpty);
 }
-setTimeout(v54avAttachListsSearchReset,400);
-window.addEventListener('pageshow',()=>setTimeout(v54avAttachListsSearchReset,120));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54avAttachListsSearchReset,120);});
+setTimeout(v54awAttachSearchClear,350);
+window.addEventListener('pageshow',()=>setTimeout(v54awAttachSearchClear,120));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54awAttachSearchClear,120);});
