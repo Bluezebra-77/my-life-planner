@@ -1,3 +1,6 @@
+## v54ax — Desktop Update Repair
+- Updater/cache-only repair from v54aw.
+
 ## v54aw — Corrected Lists Repair
 - Rebuilt from accepted v54au.
 - Removed the real Custom Lists five-item preview limit.

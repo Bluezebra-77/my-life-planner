@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54aw";
+const APP_VERSION="54ax";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6402,3 +6402,27 @@ function v54awAttachSearchClear(){
 setTimeout(v54awAttachSearchClear,350);
 window.addEventListener('pageshow',()=>setTimeout(v54awAttachSearchClear,120));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54awAttachSearchClear,120);});
+
+
+/* ===== v54ax desktop updater/cache repair =====
+   Updater-only change. All v54aw planner feature code above is unchanged. */
+(function(){
+  const refreshKey=`mlp-controller-refresh-${APP_VERSION}`;
+  if(!('serviceWorker' in navigator))return;
+  function reloadOnce(){
+    try{
+      if(sessionStorage.getItem(refreshKey)==='1')return;
+      sessionStorage.setItem(refreshKey,'1');
+    }catch(_){}
+    location.reload();
+  }
+  window.addEventListener('load',async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register(plannerWorkerUrl(APP_VERSION),{updateViaCache:'none'});
+      await reg.update();
+      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
+      navigator.serviceWorker.addEventListener('controllerchange',reloadOnce,{once:true});
+      if(!navigator.serviceWorker.controller)setTimeout(reloadOnce,500);
+    }catch(error){console.error('v54ax desktop update repair',error);}
+  },{once:true});
+})();
