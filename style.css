@@ -1803,3 +1803,7 @@ body.timer-minimised .quick-add-fab{
 .today-progress-line{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .progress-visibility-button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;opacity:.72;padding:2px 4px}
 #todayProgressPanel[hidden],#showTodayProgressButton[hidden]{display:none!important}
+
+/* v54az: appointments use a distinctive blue treatment; overdue red remains reserved for overdue state. */
+.v54az-appointment:not(.overdue), .appointment-item:not(.overdue), .appointment-row:not(.overdue), .timeline-appointment:not(.overdue), .appointment-card:not(.overdue){border-left:4px solid #2f6fa3!important;background:rgba(47,111,163,.11)!important}
+.v54az-appointment:not(.overdue) .item-type, .appointment-item:not(.overdue) .item-type, .appointment-row:not(.overdue) .item-type{color:#245b87;font-weight:700}

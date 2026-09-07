@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54ay";
+const APP_VERSION="54az";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6528,3 +6528,16 @@ completeRecurringTask=function(id){v54ayCompleteRecurringBase(id);updateProgress
 setTimeout(()=>{updateProgress();v54ayApplyProgressVisibility();},650);
 window.addEventListener('pageshow',()=>setTimeout(updateProgress,160));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(updateProgress,160);});
+
+
+/* ===== v54az Appointment polish ===== */
+function v54azPolishAppointments(){
+  document.querySelectorAll('[data-type="appointment"], .appointment-item, .appointment-row, .timeline-appointment').forEach(row=>{
+    row.classList.add('v54az-appointment');
+    row.querySelectorAll('input[type="checkbox"], .item-check, .completion-check, [data-action="complete"], [onclick*="toggleAppointment"], [onclick*="completeAppointment"]').forEach(el=>el.remove());
+  });
+  document.querySelectorAll('.appointment-card').forEach(row=>row.classList.add('v54az-appointment'));
+}
+const v54azObserver=new MutationObserver(()=>v54azPolishAppointments());
+window.addEventListener('DOMContentLoaded',()=>{v54azPolishAppointments();v54azObserver.observe(document.body,{childList:true,subtree:true});});
+window.addEventListener('pageshow',()=>setTimeout(v54azPolishAppointments,100));

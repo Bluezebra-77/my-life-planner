@@ -1,3 +1,7 @@
+## v54az — Appointment polish
+- Distinct appointment colour treatment.
+- Removed unnecessary appointment completion tick from rendered appointment cards.
+
 ## v54ay — Today’s Progress
 - Replaced misleading all-time progress formula with a day-scoped actionable formula.
 - Added persistent Show/Hide control.
