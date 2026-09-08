@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54az";
+const APP_VERSION="54ba";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6529,15 +6529,30 @@ setTimeout(()=>{updateProgress();v54ayApplyProgressVisibility();},650);
 window.addEventListener('pageshow',()=>setTimeout(updateProgress,160));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(updateProgress,160);});
 
+/* ===== v54ba Appointment display repair =====
+   Built from confirmed v54ay, not rejected v54az.
 
-/* ===== v54az Appointment polish ===== */
-function v54azPolishAppointments(){
-  document.querySelectorAll('[data-type="appointment"], .appointment-item, .appointment-row, .timeline-appointment').forEach(row=>{
-    row.classList.add('v54az-appointment');
-    row.querySelectorAll('input[type="checkbox"], .item-check, .completion-check, [data-action="complete"], [onclick*="toggleAppointment"], [onclick*="completeAppointment"]').forEach(el=>el.remove());
-  });
-  document.querySelectorAll('.appointment-card').forEach(row=>row.classList.add('v54az-appointment'));
-}
-const v54azObserver=new MutationObserver(()=>v54azPolishAppointments());
-window.addEventListener('DOMContentLoaded',()=>{v54azPolishAppointments();v54azObserver.observe(document.body,{childList:true,subtree:true});});
-window.addEventListener('pageshow',()=>setTimeout(v54azPolishAppointments,100));
+   The actual Home/weekly appointment checkbox came from compactReminderRow():
+   v54jReminderRow() was passing appointments as actionable even though
+   completionFor(appointment) returns null. That created a checkbox which could
+   visually tick but never persisted any appointment state.
+
+   Make appointment reminder rows non-actionable at the shared renderer itself,
+   and give them a real class used for visual styling. This affects every
+   compact-reminder rendering route consistently, including Home Today and
+   weekly/reminder views. Timeline and Lists have their own appointment classes.
+*/
+const v54baCompactReminderRowBase=compactReminderRow;
+compactReminderRow=function(item,options={}){
+  const isAppointment=item?.itemType==='appointment';
+  const safeOptions=isAppointment
+    ? {...options, actionable:false, onComplete:null}
+    : options;
+  const row=v54baCompactReminderRowBase(item,safeOptions);
+  if(isAppointment) row.classList.add('appointment-reminder-row');
+  return row;
+};
+
+/* Re-render after the authoritative shared-row override is installed. */
+try{renderTodayReminders();}catch(error){console.error('v54ba appointment Home refresh',error);}
+try{renderWeekly();}catch(error){console.error('v54ba appointment weekly refresh',error);}

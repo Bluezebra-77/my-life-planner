@@ -1,6 +1,8 @@
-## v54az — Appointment polish
-- Distinct appointment colour treatment.
-- Removed unnecessary appointment completion tick from rendered appointment cards.
+## v54ba — Appointment Display Repair
+- Built from confirmed v54ay after rejecting v54az.
+- Removed the actual non-persistent appointment checkbox from shared reminder rows.
+- Added distinctive appointment styling to Home/reminder rows, Appointments list and Timeline.
+- Preserved overdue red styling.
 
 ## v54ay — Today’s Progress
 - Replaced misleading all-time progress formula with a day-scoped actionable formula.

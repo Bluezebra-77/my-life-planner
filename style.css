@@ -1804,6 +1804,42 @@ body.timer-minimised .quick-add-fab{
 .progress-visibility-button{appearance:none;border:0;background:transparent;color:inherit;font:inherit;text-decoration:underline;cursor:pointer;opacity:.72;padding:2px 4px}
 #todayProgressPanel[hidden],#showTodayProgressButton[hidden]{display:none!important}
 
-/* v54az: appointments use a distinctive blue treatment; overdue red remains reserved for overdue state. */
-.v54az-appointment:not(.overdue), .appointment-item:not(.overdue), .appointment-row:not(.overdue), .timeline-appointment:not(.overdue), .appointment-card:not(.overdue){border-left:4px solid #2f6fa3!important;background:rgba(47,111,163,.11)!important}
-.v54az-appointment:not(.overdue) .item-type, .appointment-item:not(.overdue) .item-type, .appointment-row:not(.overdue) .item-type{color:#245b87;font-weight:700}
+
+/* v54ba — distinctive appointment styling on the actual rendered classes.
+   Overdue styling remains red and takes precedence. */
+.appointment-reminder-row:not(.overdue-row){
+  border-color:#9fc3e2!important;
+  border-left:5px solid #2f6fa3!important;
+  background:#eef6fc!important;
+}
+.appointment-reminder-row:not(.overdue-row) strong{
+  color:#1f5682!important;
+}
+.appointment-reminder-row:not(.overdue-row) .compact-copy span{
+  color:#496d89!important;
+}
+
+.appointment-card{
+  border-color:#9fc3e2!important;
+  border-left:5px solid #2f6fa3!important;
+  background:#eef6fc!important;
+}
+.appointment-card .appointment-title{color:#1f5682!important;}
+.appointment-card .appointment-date,
+.appointment-card .appointment-meta{color:#496d89!important;opacity:1!important;}
+
+.timeline-appointment{
+  border-color:#9fc3e2!important;
+  border-left:5px solid #2f6fa3!important;
+  background:#eef6fc!important;
+}
+.timeline-appointment .timeline-copy strong{color:#1f5682!important;}
+.timeline-appointment .timeline-meta{color:#496d89!important;}
+.timeline-appointment:hover{background:#e4f1fa!important;}
+
+/* Preserve the planner's established overdue-red meaning. */
+.appointment-reminder-row.overdue-row{
+  border-color:#d78b8b!important;
+  border-left:4px solid #b42318!important;
+  background:#fff7f7!important;
+}
