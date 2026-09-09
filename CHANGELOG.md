@@ -1,3 +1,11 @@
+## Documentation housekeeping — 8 September 2026
+- Reconciled Feature Register, Bug Register, Roadmap, Strategic Review and Project History/Handover with confirmed v54ba.
+- Cleared stale active items that are already completed.
+- Recorded Time Sensitive ordering as an audit item.
+- Recorded Project Templates/Recurring Projects as redesign-from-scratch/on hold.
+- Recorded native iPhone/Android direction, separate Photography Hub, and possible Accounting App.
+- No runtime/application code changed.
+
 ## v54ba — Appointment Display Repair
 - Built from confirmed v54ay after rejecting v54az.
 - Removed the actual non-persistent appointment checkbox from shared reminder rows.
