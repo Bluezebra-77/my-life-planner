@@ -1,6 +1,6 @@
 # My Life Planner — Project History and Handover
 ## Current confirmed baseline
-**v54ba — Appointment Display Repair**, confirmed working 8 September 2026.
+**v54bc — Progress and Time Sensitive Repair**, confirmed working 8 September 2026.
 
 ## Current posture
 Use naturally; avoid speculative feature work. Preserve working behaviour and let real use identify changes.

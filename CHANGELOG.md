@@ -1,3 +1,7 @@
+## v54bc — Progress and Time Sensitive Repair
+- Repaired Show Today’s progress.
+- Enforced Time Sensitive category ordering.
+
 ## Documentation housekeeping — 8 September 2026
 - Reconciled Feature Register, Bug Register, Roadmap, Strategic Review and Project History/Handover with confirmed v54ba.
 - Cleared stale active items that are already completed.

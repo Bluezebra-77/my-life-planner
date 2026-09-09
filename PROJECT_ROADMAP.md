@@ -4,7 +4,7 @@
 
 ## Now
 - Continue natural use and record genuine issues/regressions.
-- Audit Today — Time Sensitive ordering: Overdue → Appointments → other due/time-sensitive items → Projects last.
+- Today — Time Sensitive ordering is implemented as: Overdue → Appointments → other due/time-sensitive items → Projects last.
 - Keep Home information density under natural-use review.
 
 ## Stable — leave alone unless a real issue appears

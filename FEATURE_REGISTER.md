@@ -1,5 +1,5 @@
 # My Life Planner — Feature Register
-**Current confirmed baseline:** v54ba — Appointment Display Repair
+**Current confirmed baseline:** v54bc — Progress and Time Sensitive Repair
 **Reconciled:** 8 September 2026
 
 ## Confirmed working
@@ -21,7 +21,7 @@
 
 ## Review — not confirmed bugs
 - Continue natural-use review of Home information density/duplication.
-- Explicitly audit Today — Time Sensitive full ordering: **Overdue → Appointments → other due/time-sensitive items → Projects last**.
+- Today — Time Sensitive full ordering is implemented as: **Overdue → Appointments → other due/time-sensitive items → Projects last**.
 
 ## On hold
 - **Project Templates / Recurring Projects:** keep the concept, but previous implementations are abandoned. If resumed, redesign from scratch.

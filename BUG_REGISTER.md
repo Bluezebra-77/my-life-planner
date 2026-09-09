@@ -1,5 +1,5 @@
 # My Life Planner — Bug Register
-**Current confirmed baseline:** v54ba — Appointment Display Repair
+**Current confirmed baseline:** v54bc — Progress and Time Sensitive Repair
 **Reconciled:** 8 September 2026
 
 ## Open confirmed functional bugs
