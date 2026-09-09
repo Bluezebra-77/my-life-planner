@@ -1,14 +1,8 @@
-## v54bc — Progress and Time Sensitive Repair
-- Repaired Show Today’s progress.
-- Enforced Time Sensitive category ordering.
-
-## Documentation housekeeping — 8 September 2026
-- Reconciled Feature Register, Bug Register, Roadmap, Strategic Review and Project History/Handover with confirmed v54ba.
-- Cleared stale active items that are already completed.
-- Recorded Time Sensitive ordering as an audit item.
-- Recorded Project Templates/Recurring Projects as redesign-from-scratch/on hold.
-- Recorded native iPhone/Android direction, separate Photography Hub, and possible Accounting App.
-- No runtime/application code changed.
+## v54bd — Progress and Time Sensitive Repair
+- Built from confirmed v54ba; rejected v54bc not used as a base.
+- Corrected the actual Hide/Show button function references.
+- Preserved the v54ba Today renderer and appointment inclusion.
+- Enforced Time Sensitive order by replacing only the existing sort key.
 
 ## v54ba — Appointment Display Repair
 - Built from confirmed v54ay after rejecting v54az.

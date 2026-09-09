@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bc";
+const APP_VERSION="54bd";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6557,30 +6557,35 @@ compactReminderRow=function(item,options={}){
 try{renderTodayReminders();}catch(error){console.error('v54ba appointment Home refresh',error);}
 try{renderWeekly();}catch(error){console.error('v54ba appointment weekly refresh',error);}
 
-/* ===== v54bc Progress Show/Hide + Time Sensitive ordering ===== */
-v54ayApplyProgressVisibility=function(){
-  const panel=document.getElementById('todayProgressPanel');
-  const showButton=document.getElementById('showTodayProgressButton');
-  const visible=v54ayProgressVisible();
-  if(panel){panel.classList.remove('hidden');panel.hidden=!visible;panel.style.display=visible?'':'none';}
-  if(showButton){showButton.hidden=visible;showButton.style.display=visible?'none':'';}
-};
-v54aySetProgressVisible=function(visible){
-  try{localStorage.setItem(V54AY_PROGRESS_VISIBLE_KEY,String(Boolean(visible)));}catch(_){}
-  v54ayApplyProgressVisibility();
-};
-window.v54aySetProgressVisible=v54aySetProgressVisible;
+/* ===== v54bd Progress controls + Time Sensitive ordering repair =====
+   Built from confirmed v54ba.
 
-const v54bcTodayCompareBase=v54vCompareTodayItems;
-v54vCompareTodayItems=function(a,b){
-  function group(item){
-    if(item?.overdue===true||item?.isOverdue===true)return 0;
-    if(item?.itemType==='appointment'||item?.type==='appointment')return 1;
-    if(item?.itemType==='project'||item?.type==='project'||item?.itemType==='projectStep'||item?.type==='projectStep')return 3;
-    return 2;
-  }
-  const ga=group(a),gb=group(b);
-  if(ga!==gb)return ga-gb;
-  return v54bcTodayCompareBase(a,b);
+   Progress root cause:
+   index.html was calling v54baSetProgressVisible(), but the real function is
+   v54aySetProgressVisible(). The handlers are corrected in index.html.
+
+   Time Sensitive:
+   preserve the confirmed v54ba renderer and appointment inclusion unchanged.
+   Only replace the sort key used by the existing comparator. */
+v54vTodaySortKey=function(item){
+  const todayKey=localDateKey();
+  const dueKey=item?.dueDate?recurringDateKey(dateOnly(item.dueDate)):'';
+
+  /* 0 = every overdue item, regardless of type */
+  if(dueKey && dueKey<todayKey) return [0,dueKey,''];
+
+  /* 1 = appointments due today, timed appointments ordered by saved time */
+  if(dueKey===todayKey && item?.itemType==='appointment')
+    return [1,dueKey,item?.time?String(item.time):'99:99'];
+
+  /* 3 = project steps due today; activeProjectDashboardItems identifies these
+     as itemType "step" with source "Project: …". */
+  if(dueKey===todayKey && item?.itemType==='step' &&
+     String(item?.source||'').startsWith('Project:'))
+    return [3,dueKey,''];
+
+  /* 2 = all other current time-sensitive items (and reminder-window items). */
+  return [2,dueKey,''];
 };
-setTimeout(()=>{v54ayApplyProgressVisibility();try{renderTodayReminders();}catch(error){console.error('v54bc Today refresh',error);}},180);
+
+try{renderTodayReminders();}catch(error){console.error('v54bd Today ordering refresh',error);}
