@@ -18,46 +18,17 @@ var TIMELINE_TYPES={
   cleaning:{icon:'🧹',label:'Cleaning'},annual:{icon:'🎂',label:'Birthday / annual date'},waiting:{icon:'⏳',label:'Pending note'}
 };
 
-const dailyTasks = [
-  { id: "wake", title: "Get up, wash and get dressed", time: "Around 7:00-8:00, depending on sleep and health" },
-  { id: "coffee", title: "Coffee, breakfast and medication", time: "About 30 minutes" },
-  { id: "emails", title: "Check important emails only", time: "15 minutes" },
-  { id: "plan", title: "Look at today and choose one main focus", time: "5 minutes" },
-  { id: "main", title: "Do one main morning task", time: "45-90 minutes while energy is best" },
-  { id: "break", title: "Take a proper break", time: "Tea, food, sit down or fresh air" },
-  { id: "computer", title: "Afternoon computer work", time: "30-60 minutes" },
-  { id: "small", title: "Complete one small household task", time: "10-20 minutes only" }
-];
+const dailyTasks = [];
 
-const eveningTasks = [
-  { id: "clear", title: "Clear one small surface", time: "5-10 minutes" },
-  { id: "tomorrow", title: "Note tomorrow's most important task", time: "2 minutes" },
-  { id: "stop", title: "Give myself permission to stop", time: "Rest counts" }
-];
+const eveningTasks = [];
 
-const defaultCategories = {
-  photography: ["Go out for a short photography trip", "Edit five photographs", "Practise ICM or multiple exposure", "Review images from the last outing", "Watch one photography lesson"],
-  decluttering: ["Declutter one drawer", "Sort one shelf", "Fill one charity bag", "Sort one small box", "Clear one visible surface"],
-  vinted: ["Choose three items to sell", "Photograph three items", "Write one listing", "Publish prepared listings", "Answer messages"],
-  admin: ["Sort one paperwork pile", "File five documents", "Reply to one important email", "Unsubscribe from unwanted emails", "Check one bill or appointment"],
-  house: ["Bathroom: one small decorating job", "Kitchen: clear one area", "Living room: tidy one zone", "Office room: clear one work area", "Front shed: sort one box"]
-};
+const defaultCategories = {};
 
-const categoryNames = {
-  photography: "Photography",
-  decluttering: "Decluttering",
-  vinted: "Vinted",
-  admin: "Admin",
-  house: "House"
-};
+const categoryNames = {};
 
-const choicePools = {
-  normal: ["Edit five photographs.", "Sort one drawer or shelf.", "Photograph three Vinted items.", "Deal with one important email or letter.", "Clear one small visible area.", "Take a short photo walk."],
-  low: ["Delete ten unwanted photographs.", "Put away five things.", "Unsubscribe from three unwanted emails.", "Choose one Vinted item to list later.", "Make a drink and note tomorrow's first task."],
-  quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
-};
+const choicePools = { normal: [], low: [], quick: [] };
 
-const APP_VERSION="54bj";
+const APP_VERSION="T1.0";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1588,7 +1559,7 @@ if ("serviceWorker" in navigator) {
 
       // One network-only comparison on every load. If the deployment is newer,
       // apply it rather than merely advertising it.
-      setTimeout(()=>checkForAppUpdates({silent:true}),800);
+      /* Tester channel: updates are deliberate releases; no silent Development updates. */
     }catch(error){
       console.warn('Offline app registration failed',error);
     }
