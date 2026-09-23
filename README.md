@@ -17,3 +17,7 @@ Use Lists → Projects → Templates to create reusable workflows.
 
 ## Protected Regression Gate
 From v54m onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54i.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.
+
+
+## Ideas for later review
+- **Multi-device sync:** local-first synchronization across iPhone, iPad and laptop while retaining offline use; cloud/iCloud-style sync to be reviewed later.
