@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bg";
+const APP_VERSION="54bh";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6590,22 +6590,20 @@ v54vTodaySortKey=function(item){
 
 try{renderTodayReminders();}catch(error){console.error('v54bd Today ordering refresh',error);}
 
-/* ===== v54be Daily Thought — offline, one quote per local day ===== */
-const V54BE_DAILY_THOUGHTS=[{"q": "Nothing great was ever achieved without enthusiasm.", "a": "Ralph Waldo Emerson", "s": "Essays: Second Series (1844)"}, {"q": "The only way to have a friend is to be one.", "a": "Ralph Waldo Emerson", "s": "Essays: First Series (1841)"}, {"q": "Adopt the pace of nature: her secret is patience.", "a": "Ralph Waldo Emerson", "s": "Essays: First Series (1841)"}, {"q": "Nothing can bring you peace but yourself.", "a": "Ralph Waldo Emerson", "s": "Essays: First Series (1841)"}, {"q": "Write it on your heart that every day is the best day in the year.", "a": "Ralph Waldo Emerson", "s": "Society and Solitude (1870)"}, {"q": "Well done is better than well said.", "a": "Benjamin Franklin", "s": "Poor Richard's Almanack (1737)"}, {"q": "Lost time is never found again.", "a": "Benjamin Franklin", "s": "Poor Richard's Almanack (1748)"}, {"q": "Dost thou love life? Then do not squander time.", "a": "Benjamin Franklin", "s": "Poor Richard's Almanack (1746)"}, {"q": "Rather than love, than money, than fame, give me truth.", "a": "Henry David Thoreau", "s": "Walden (1854)"}, {"q": "There is nothing either good or bad, but thinking makes it so.", "a": "William Shakespeare", "s": "Hamlet (c. 1600)"}, {"q": "Our doubts are traitors, and make us lose the good we oft might win.", "a": "William Shakespeare", "s": "Measure for Measure (c. 1604)"}, {"q": "Wisely, and slow. They stumble that run fast.", "a": "William Shakespeare", "s": "Romeo and Juliet (c. 1595)"}, {"q": "This above all: to thine own self be true.", "a": "William Shakespeare", "s": "Hamlet (c. 1600)"}, {"q": "Forever is composed of nows.", "a": "Emily Dickinson", "s": "Poem 690, published 1891"}, {"q": "If I can stop one heart from breaking, I shall not live in vain.", "a": "Emily Dickinson", "s": "Poem 919, published 1890"}, {"q": "Do anything, but let it produce joy.", "a": "Walt Whitman", "s": "Leaves of Grass (1855/1892)"}, {"q": "What do we live for, if it is not to make life less difficult to each other?", "a": "George Eliot", "s": "Middlemarch (1871–72)"}, {"q": "The art of being wise is the art of knowing what to overlook.", "a": "William James", "s": "The Principles of Psychology (1890)"}]
-function v54beDailyThoughtIndex(dateKey){
- let h=2166136261;for(const ch of String(dateKey||'')){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}
- return (h>>>0)%V54BE_DAILY_THOUGHTS.length;
+/* ===== v54bh Daily Thought stable-baseline test ===== */
+const V54BH_DAILY_THOUGHTS=[{"q": "Nothing great was ever achieved without enthusiasm.", "a": "Ralph Waldo Emerson", "s": "Essays: Second Series (1844)"}, {"q": "The only way to have a friend is to be one.", "a": "Ralph Waldo Emerson", "s": "Essays: First Series (1841)"}, {"q": "Nothing can bring you peace but yourself.", "a": "Ralph Waldo Emerson", "s": "Essays: First Series (1841)"}, {"q": "Well done is better than well said.", "a": "Benjamin Franklin", "s": "Poor Richard's Almanack (1737)"}, {"q": "Lost time is never found again.", "a": "Benjamin Franklin", "s": "Poor Richard's Almanack (1748)"}, {"q": "Rather than love, than money, than fame, give me truth.", "a": "Henry David Thoreau", "s": "Walden (1854)"}, {"q": "There is nothing either good or bad, but thinking makes it so.", "a": "William Shakespeare", "s": "Hamlet (c. 1600)"}, {"q": "Our doubts are traitors, and make us lose the good we oft might win.", "a": "William Shakespeare", "s": "Measure for Measure (c. 1604)"}, {"q": "Wisely, and slow. They stumble that run fast.", "a": "William Shakespeare", "s": "Romeo and Juliet (c. 1595)"}, {"q": "This above all: to thine own self be true.", "a": "William Shakespeare", "s": "Hamlet (c. 1600)"}, {"q": "Forever is composed of nows.", "a": "Emily Dickinson", "s": "Poem 690, published 1891"}, {"q": "If I can stop one heart from breaking, I shall not live in vain.", "a": "Emily Dickinson", "s": "Poem 919, published 1890"}, {"q": "Do anything, but let it produce joy.", "a": "Walt Whitman", "s": "Leaves of Grass (1855/1892)"}, {"q": "What do we live for, if it is not to make life less difficult to each other?", "a": "George Eliot", "s": "Middlemarch (1871–72)"}, {"q": "The art of being wise is the art of knowing what to overlook.", "a": "William James", "s": "The Principles of Psychology (1890)"}];
+function v54bhThoughtIndex(dateKey){
+ let hash=2166136261;for(const ch of String(dateKey||'')){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619);}
+ return (hash>>>0)%V54BH_DAILY_THOUGHTS.length;
 }
-function v54beDailyThought(){return V54BE_DAILY_THOUGHTS[v54beDailyThoughtIndex(localDateKey())];}
-function v54beEnsureDailyThought(){
- const greeting=document.getElementById('greetingCard'),rhythm=document.getElementById('homeDailyRhythmPanel');
- if(!greeting||!rhythm)return;
+function v54bhRenderDailyThought(){
+ const panel=document.getElementById('morningBriefPanel'); if(!panel)return;
  let card=document.getElementById('dailyThoughtCard');
- if(!card){card=document.createElement('div');card.id='dailyThoughtCard';card.className='daily-thought-card';}
- const thought=v54beDailyThought();
+ if(!card){card=document.createElement('div');card.id='dailyThoughtCard';card.className='daily-thought-card';panel.appendChild(card);}
+ const thought=V54BH_DAILY_THOUGHTS[v54bhThoughtIndex(localDateKey())];
  card.innerHTML=`<div class="daily-thought-label">Thought for the day</div><blockquote>“${escapeHtml(thought.q)}”</blockquote><div class="daily-thought-author">— ${escapeHtml(thought.a)}</div>`;
- card.hidden=false;rhythm.insertAdjacentElement('afterend',card); /* v54bg TEST: show Daily Thought all day */
+ card.hidden=false; /* TEST ONLY: visible all day */
 }
-const v54bePlaceDaypartBase=v54alPlaceDaypartRoutine;
-v54alPlaceDaypartRoutine=function(){const result=v54bePlaceDaypartBase.apply(this,arguments);v54beEnsureDailyThought();return result;};
-setTimeout(v54beEnsureDailyThought,220);
+const v54bhPlaceDaypartBase=v54alPlaceDaypartRoutine;
+v54alPlaceDaypartRoutine=function(){const result=v54bhPlaceDaypartBase.apply(this,arguments);v54bhRenderDailyThought();return result;};
+setTimeout(v54bhRenderDailyThought,220);
