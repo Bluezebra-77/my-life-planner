@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bh";
+const APP_VERSION="54bj";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6597,13 +6597,43 @@ function v54bhThoughtIndex(dateKey){
  return (hash>>>0)%V54BH_DAILY_THOUGHTS.length;
 }
 function v54bhRenderDailyThought(){
- const panel=document.getElementById('morningBriefPanel'); if(!panel)return;
+ const panel=document.getElementById('dailyThoughtAnchor'); if(!panel)return;
  let card=document.getElementById('dailyThoughtCard');
  if(!card){card=document.createElement('div');card.id='dailyThoughtCard';card.className='daily-thought-card';panel.appendChild(card);}
  const thought=V54BH_DAILY_THOUGHTS[v54bhThoughtIndex(localDateKey())];
  card.innerHTML=`<div class="daily-thought-label">Thought for the day</div><blockquote>“${escapeHtml(thought.q)}”</blockquote><div class="daily-thought-author">— ${escapeHtml(thought.a)}</div>`;
- card.hidden=false; /* TEST ONLY: visible all day */
+ card.hidden=false; /* Daily Thought stays visible all day */
 }
 const v54bhPlaceDaypartBase=v54alPlaceDaypartRoutine;
 v54alPlaceDaypartRoutine=function(){const result=v54bhPlaceDaypartBase.apply(this,arguments);v54bhRenderDailyThought();return result;};
 setTimeout(v54bhRenderDailyThought,220);
+
+/* ===== v54bj Home / Lists regression repair ===== */
+const V54BJ_LISTS_ONLY_SECTION_IDS=[
+  'todoListSection','appointmentsListSection','recurringTasksListSection',
+  'inboxListSection','waitingListSection','annualListSection',
+  'projectsListSection','cleaningListSection','customListsSection'
+];
+function v54bjEnforceHomeListsSeparation(){
+  const homeActive=document.getElementById('homeView')?.classList.contains('active') ||
+    document.querySelector('.app-view-section[data-view="home"]:not([hidden])');
+  if(!homeActive)return;
+  V54BJ_LISTS_ONLY_SECTION_IDS.forEach(id=>{
+    const section=document.getElementById(id);
+    if(section) section.hidden=true;
+  });
+}
+const v54bjShowAppViewBase=showAppView;
+showAppView=function(view){
+  const result=v54bjShowAppViewBase.apply(this,arguments);
+  if(view==='home'){
+    v54bjEnforceHomeListsSeparation();
+    requestAnimationFrame(v54bjEnforceHomeListsSeparation);
+    setTimeout(v54bjEnforceHomeListsSeparation,120);
+  }
+  return result;
+};
+window.showAppView=showAppView;
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)v54bjEnforceHomeListsSeparation();});
+window.addEventListener('pageshow',v54bjEnforceHomeListsSeparation);
+setTimeout(v54bjEnforceHomeListsSeparation,250);

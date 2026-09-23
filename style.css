@@ -1849,3 +1849,14 @@ body.timer-minimised .quick-add-fab{
 .daily-thought-label{font-size:.78rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;opacity:.72;margin-bottom:5px}
 .daily-thought-card blockquote{margin:0;font-size:.98rem;line-height:1.45;font-style:italic}
 .daily-thought-author{margin-top:5px;font-size:.84rem;opacity:.75;text-align:right}
+
+/* v54bj: hidden Lists-only sections must never be forced visible by legacy rules */
+#todoListSection[hidden]{display:none!important}
+#appointmentsListSection[hidden]{display:none!important}
+#recurringTasksListSection[hidden]{display:none!important}
+#inboxListSection[hidden]{display:none!important}
+#waitingListSection[hidden]{display:none!important}
+#annualListSection[hidden]{display:none!important}
+#projectsListSection[hidden]{display:none!important}
+#cleaningListSection[hidden]{display:none!important}
+#customListsSection[hidden]{display:none!important}
