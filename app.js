@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bf";
+const APP_VERSION="54bg";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6604,7 +6604,7 @@ function v54beEnsureDailyThought(){
  if(!card){card=document.createElement('div');card.id='dailyThoughtCard';card.className='daily-thought-card';}
  const thought=v54beDailyThought();
  card.innerHTML=`<div class="daily-thought-label">Thought for the day</div><blockquote>“${escapeHtml(thought.q)}”</blockquote><div class="daily-thought-author">— ${escapeHtml(thought.a)}</div>`;
- if(new Date().getHours()<12){card.hidden=false;rhythm.insertAdjacentElement('afterend',card);}else card.hidden=true;
+ card.hidden=false;rhythm.insertAdjacentElement('afterend',card); /* v54bg TEST: show Daily Thought all day */
 }
 const v54bePlaceDaypartBase=v54alPlaceDaypartRoutine;
 v54alPlaceDaypartRoutine=function(){const result=v54bePlaceDaypartBase.apply(this,arguments);v54beEnsureDailyThought();return result;};
