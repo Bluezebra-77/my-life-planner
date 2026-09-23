@@ -1,20 +1,14 @@
-# Installation and Update Guide
+# My Life Planner - Development Update & Backup Guide
 
-## GitHub Pages update
+## Development installation
+This package is for the private Development channel. It should not replace the separate Tester site until a development build has been accepted for promotion.
 
-1. Extract the v51 ZIP on your computer.
-2. In the GitHub repository, open the branch used by GitHub Pages, normally `main`.
-3. Choose **Add file -> Upload files**.
-4. Upload the individual files from the extracted folder, not the ZIP itself.
-5. Commit the changes.
-6. Wait for GitHub Pages to deploy.
-7. Open the installed planner and choose **Settings -> App maintenance -> Check for updates**.
-8. Confirm v51 in Header, About and Developer Dashboard.
+## Before an important update
+1. Open Settings -> Backup and restore.
+2. Create a manual export and keep it somewhere safe.
+3. Apply the Development update.
+4. Confirm the version shown in the planner.
+5. Check your existing information is still present.
 
-## iPhone refresh
-
-If the installed Home Screen app does not update immediately, open the website in Safari, refresh it, use Check for updates, then close and reopen the Home Screen app.
-
-## Data precautions
-
-Before a major update, create an export from **Settings -> Backup and restore**. The app also creates migration and daily safety records, but a user-held export is the strongest safeguard.
+## Tester releases
+Testers receive complete stable packages and do not need intermediate Development builds.

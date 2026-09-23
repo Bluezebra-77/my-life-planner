@@ -1,23 +1,15 @@
-> Current hardening baseline: **v54n**
+# My Life Planner - Development v54bl
 
-# My Life Planner v54a — Workflow & Stability
+Private development branch based on the confirmed v54bj stable planner.
 
-Upload every file in this folder to the root of the GitHub Pages repository, replacing the previous app files.
+## Current development change
+- Added a First Use & Quick Start guide for new users.
+- Quick Start is now an in-app HTML guide with a clear Return to My Life Planner control.
+- Refreshed the Help Centre to match the current Home / Lists / Timeline structure.
+- Corrected stale current-version wording in the manifest, About date and current documentation.
 
-Then open **Settings → App maintenance → Check for updates** and confirm **v54a** in the Header, About and Developer Dashboard.
+## Development rule
+Do not publish this branch to testers automatically. Changes are tested here first and promoted later as a complete Tester release.
 
-This release restores accepted Home ordering and collapse controls, recurring-task visibility and editing, Cleaning by Area entry controls, full project-step editing from Lists/search, consistent completion statistics and daily routine reset behaviour. Existing data keys and Convert-as-Move are preserved.
-
-Complete `TEST_CHECKLIST_v54a.md` before accepting the build.
-
-
-## v54a Project Templates
-Use Lists → Projects → Templates to create reusable workflows.
-
-
-## Protected Regression Gate
-From v54m onward, accepted workflows are behavioural contracts. Every release starts from the last accepted source, changes the minimum necessary code, and must pass `TEST_CHECKLIST_v54i.md` before it becomes the next golden baseline. Static syntax/package checks are necessary but are not sufficient for acceptance.
-
-
-## Ideas for later review
-- **Multi-device sync:** local-first synchronization across iPhone, iPad and laptop while retaining offline use; cloud/iCloud-style sync to be reviewed later.
+## Data safety
+Planner information is stored in the browser on the device in use. Use Settings -> Backup and restore for manual exports. Automatic daily recovery snapshots are also retained.

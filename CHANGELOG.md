@@ -1,3 +1,8 @@
+# Development v54bl - 23 September 2026
+- Added First Use & Quick Start HTML guide and consistent Return navigation.
+- Refreshed current Help wording and stale current-version documentation.
+- Recorded Tester 1.0 clean-install acceptance.
+
 ## v54be — Daily Thought
 - Added offline one-per-day Morning thought.
 - Added multi-device sync to ideas for later review.
