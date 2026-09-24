@@ -1,3 +1,8 @@
+## v54bm — Timeline Schedule view
+- Timeline now offers All | Schedule.
+- Schedule is a date-grouped commitments view containing Recurring Tasks first and Appointments second in chronological order.
+- To-dos and project work remain available in All and are deliberately excluded from Schedule.
+
 ## v54ab
 
 - Direct Delete is available for every item opened from Timeline.
@@ -162,3 +167,7 @@
 
 ## v54u
 - Recurring tasks: one-level Undo last completion from Lists → Recurring tasks.
+
+## v54bn — Safer Brain Inbox photo capture
+- Newly selected Brain Inbox photos are resized/compressed to a smaller on-device storage envelope.
+- Brain Inbox capture keeps the editor open and rolls back the attempted record if browser persistence fails.

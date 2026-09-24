@@ -1860,3 +1860,11 @@ body.timer-minimised .quick-add-fab{
 #projectsListSection[hidden]{display:none!important}
 #cleaningListSection[hidden]{display:none!important}
 #customListsSection[hidden]{display:none!important}
+
+
+/* v54bm Timeline All | Schedule */
+.timeline-mode-switch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 10px}
+.timeline-mode{padding:10px 14px;border-radius:14px;background:#f3f7f4;color:#425448;border:1px solid #b9c8bd;box-shadow:none}
+.timeline-mode.active{background:#5f7d68;color:#fff;border-color:#5f7d68}
+.schedule-date-heading{margin-top:20px;padding:9px 10px;border-radius:10px;background:#eef3ef;border-bottom:0}
+.schedule-group-gap{height:10px}

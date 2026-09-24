@@ -1,3 +1,11 @@
+## v54bm — Timeline All | Schedule
+- Added an All | Schedule view switch to Timeline.
+- All preserves the existing complete Timeline.
+- Schedule shows only Recurring Tasks and Appointments, grouped by date.
+- Within each date, Recurring Tasks appear first, followed by spacing and then Appointments in chronological order.
+- Ordinary to-dos and project work are excluded from Schedule.
+- Existing Timeline period filters, item editing/deletion and saved-data behaviour are unchanged.
+
 # Development v54bl - 23 September 2026
 - Added First Use & Quick Start HTML guide and consistent Return navigation.
 - Refreshed current Help wording and stale current-version documentation.
@@ -259,3 +267,9 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 
 ## v54u — Recurring-task Undo
 - Added one-level Undo last completion for recurring tasks, restoring the prior occurrence and reversing its activity/statistics record.
+
+## v54bn — Brain Inbox storage repair
+- Preserved the v54bm Timeline All / Schedule addition.
+- Reduced newly attached Brain Inbox photos to a safer storage envelope for Safari/iPhone.
+- Failed Brain Inbox storage writes now roll back the attempted data mutation and leave the capture dialog open for recovery/retry.
+- Added clearer storage-full guidance without changing the planner data schema.

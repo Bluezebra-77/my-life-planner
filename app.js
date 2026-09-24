@@ -347,11 +347,16 @@ function saveData() {
     localStorage.setItem("lifePlannerTodayFocus", JSON.stringify(data.todayFocus || []));
     updateStorageStatus();
     showSaved();
+    return true;
   } catch (error) {
     console.error("Could not save planner data", error);
     const indicator = document.getElementById("saveIndicator");
     if (indicator) indicator.textContent = "Save failed — export a backup";
-    alert("The planner could not save. Please use Export backup and check that Safari is not in Private Browsing.");
+    const quota=error?.name==='QuotaExceededError'||error?.code===22||error?.code===1014;
+    alert(quota
+      ? "This item could not be saved because Safari's on-device planner storage is full. The item has been kept open so you can remove the attachment or make space, then try again. Please create an Export backup before deleting older items."
+      : "The planner could not save. The item has been kept open. Please use Export backup and check that Safari is not in Private Browsing.");
+    return false;
   }
 }
 
@@ -1977,12 +1982,20 @@ function saveCapture(targetType=''){
    pendingInboxDraft=d;
    closeCaptureDialog();openAppointmentDialog('',d.name,d.note);return true;
  }
+ const before=JSON.stringify(data);
  const type=targetType||d.type;
  if(type==='todo')data.todos.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],attachment:d.attachment||null,createdAt:new Date().toISOString()});
  else if(type==='project')data.projects.unshift({id:uid(),name:d.name,details:d.note,timingType:'none',dueDate:'',completed:false,steps:[],attachment:d.attachment||null,createdAt:new Date().toISOString()});
  else {const list=data[type]||(data[type]=[]),existing=list.find(x=>x.id===d.id);const record={id:existing?.id||uid(),name:d.name,note:d.note,reviewDate:type==='waiting'?d.reviewDate:'',category:type==='inbox'?d.category:'',status:type==='inbox'?d.status:'new',url:type==='inbox'?d.url:'',attachment:type==='inbox'?d.attachment:null,completed:existing?.completed||false,createdAt:existing?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(existing)Object.assign(existing,record);else list.unshift(record);}
  if(targetType&&d.type==='inbox'&&sourceItem)data.inbox=data.inbox.filter(x=>x.id!==d.id);
- saveData();closeCaptureDialog();renderAll();showSaved(targetType?`Saved as ${targetType==='waiting'?'Pending note':targetType}`:'Saved');return true;
+ const saved=saveData();
+ if(saved===false){
+   try{data=normaliseData(JSON.parse(before));}catch(error){console.error('Could not roll back failed Brain Inbox save',error);}
+   window.pendingBrainAttachment=d.attachment||null;
+   renderBrainAttachmentPreview();
+   return false;
+ }
+ closeCaptureDialog();renderAll();showSaved(targetType?`Saved as ${targetType==='waiting'?'Pending note':targetType}`:'Saved');return true;
 }
 function saveCaptureAs(type){saveCapture(type);}
 function inboxStatusLabel(status){return status==='processed'?'Processed':status==='progress'?'In progress':'New';}
@@ -2015,12 +2028,12 @@ function dataUrlByteSize(dataUrl){const base64=(dataUrl.split(',')[1]||'');retur
 function formatFileSize(bytes){return bytes>=1048576?`${(bytes/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(bytes/1024))} KB`;}
 async function prepareBrainImage(file){
  const originalData=await readFileAsDataUrl(file);const image=await loadImageFromDataUrl(originalData);
- const maxDimension=1200;const scale=Math.min(1,maxDimension/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height));
+ const maxDimension=900;const scale=Math.min(1,maxDimension/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height));
  const width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale));const height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0,width,height);
- let quality=.76;let data=canvas.toDataURL('image/jpeg',quality);const target=360*1024;
- while(dataUrlByteSize(data)>target&&quality>.36){quality-=.07;data=canvas.toDataURL('image/jpeg',quality);}
- let size=dataUrlByteSize(data);if(size>650*1024)throw new Error('Compressed image remains too large');
+ let quality=.72;let data=canvas.toDataURL('image/jpeg',quality);const target=140*1024;
+ while(dataUrlByteSize(data)>target&&quality>.28){quality-=.06;data=canvas.toDataURL('image/jpeg',quality);}
+ let size=dataUrlByteSize(data);if(size>220*1024)throw new Error('Compressed image remains too large');
  const base=(file.name||'image').replace(/\.[^.]+$/,'');return{name:`${base}-planner.jpg`,type:'image/jpeg',size,data,originalSize:file.size,width,height,compressed:true};
 }
 function renderBrainAttachmentPreview(){const area=document.getElementById('brainAttachmentPreview');if(!area)return;const attachment=window.pendingBrainAttachment;if(!attachment){area.classList.add('hidden');area.innerHTML='';return;}const size=formatFileSize(attachment.size||0);const reduction=attachment.originalSize&&attachment.originalSize>attachment.size?` <small class="attachment-reduction">(reduced from ${formatFileSize(attachment.originalSize)})</small>`:'';const image=attachment.type?.startsWith('image/');const thumb=image?`<button type="button" class="attachment-thumb-button" onclick="showAttachmentViewer(window.pendingBrainAttachment)" aria-label="Open attached image"><img src="${attachment.data}" alt="Selected attachment preview"></button>`:`<button type="button" class="attachment-file-open" onclick="showAttachmentViewer(window.pendingBrainAttachment)"><span class="attachment-file-icon" aria-hidden="true">📄</span></button>`;area.innerHTML=`${thumb}<span><strong>${escapeHtml(attachment.name||'Attachment')}</strong><small>${size}${reduction}</small><small class="attachment-open-hint">${image?'Tap image to view':'Tap document to open'}</small></span><button type="button" onclick="removeBrainAttachment()" aria-label="Remove attachment">×</button>`;area.classList.remove('hidden');}
@@ -6637,3 +6650,48 @@ window.showAppView=showAppView;
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)v54bjEnforceHomeListsSeparation();});
 window.addEventListener('pageshow',v54bjEnforceHomeListsSeparation);
 setTimeout(v54bjEnforceHomeListsSeparation,250);
+
+
+/* ===== v54bm Timeline All | Schedule =====
+   Additive Timeline view only. "All" preserves the accepted Timeline renderer.
+   "Schedule" reuses the same period filters but shows only Recurring Tasks and
+   Appointments, grouped by date with recurring responsibilities first and
+   appointments beneath them in chronological order. No saved-data schema,
+   recurrence calculation, completion workflow or edit/delete action is changed. */
+var v54bmTimelineMode='all';
+const v54bmRenderTimelineAll=renderTimeline;
+function setTimelineMode(mode,button){
+  v54bmTimelineMode=mode==='schedule'?'schedule':'all';
+  document.querySelectorAll('.timeline-mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===v54bmTimelineMode));
+  if(button)button.classList.add('active');
+  renderTimeline();
+}
+function v54bmScheduleItems(){return (timelineItems()||[]).filter(item=>item.type==='recurring'||item.type==='appointment');}
+function v54bmScheduleSort(a,b){
+  if(a.date!==b.date)return String(a.date).localeCompare(String(b.date));
+  const ar=a.type==='recurring'?0:1,br=b.type==='recurring'?0:1;if(ar!==br)return ar-br;
+  if(a.type==='appointment'&&b.type==='appointment'){const at=a.time||'99:99',bt=b.time||'99:99';if(at!==bt)return at.localeCompare(bt);}
+  return String(a.name||'').localeCompare(String(b.name||''));
+}
+function v54bmRenderSchedule(){
+  const area=document.getElementById('timelineArea'),summary=document.getElementById('timelineSummary');if(!area)return;
+  const {start,end}=timelineDateBounds(timelineRange),today=dateOnly(localDateKey()),allItems=v54bmScheduleItems();
+  const includeOverdue=['today','week','month','all'].includes(timelineRange);
+  const selected=allItems.filter(item=>{const d=dateOnly(item.date);return (includeOverdue&&d<today)||(d>=start&&d<=end);}).sort(v54bmScheduleSort);
+  const seen=new Set(),items=selected.filter(x=>{const k=`${x.type}:${x.id}:${x.date}`;if(seen.has(k))return false;seen.add(k);return true;});
+  area.innerHTML='';
+  const labels={today:'today including overdue',tomorrow:'tomorrow',week:'in the next 7 days including overdue',month:'this month including overdue',all:'in the next year including overdue'};
+  if(summary)summary.textContent=`Schedule: ${items.length} ${items.length===1?'item':'items'} ${labels[timelineRange]}.`;
+  if(!items.length){area.innerHTML='<div class="empty-state">No recurring tasks or appointments for this period.</div>';return;}
+  const appendRow=item=>{const type=TIMELINE_TYPES[item.type]||{icon:'•',label:'Planner item'},row=document.createElement('button');row.type='button';row.className=`timeline-item timeline-${item.type}`;row.onclick=item.open;row.innerHTML=`<span class="timeline-icon" aria-hidden="true">${type.icon}</span><span class="timeline-copy"><strong>${escapeHtml(item.name)}</strong><span class="timeline-meta">${escapeHtml(type.label)}${item.time?' · '+escapeHtml(item.time):''}${item.detail?' · '+escapeHtml(item.detail):''}</span></span><span class="timeline-chevron" aria-hidden="true">›</span>`;area.appendChild(row);};
+  let current='',lastType='';
+  items.forEach(item=>{if(item.date!==current){current=item.date;lastType='';const h=document.createElement('h3');h.className='timeline-date-heading schedule-date-heading';h.textContent=formatDate(item.date);area.appendChild(h);}if(lastType==='recurring'&&item.type==='appointment'){const gap=document.createElement('div');gap.className='schedule-group-gap';gap.setAttribute('aria-hidden','true');area.appendChild(gap);}appendRow(item);lastType=item.type;});
+}
+renderTimeline=function(){if(v54bmTimelineMode==='schedule')return v54bmRenderSchedule();return v54bmRenderTimelineAll();};
+
+
+/* ===== v54bn Brain Inbox storage repair =====
+   New photos are reduced to a safer on-device size before being embedded.
+   Brain Inbox saves are transactional: a failed storage write is rolled back
+   and the capture dialog remains open with its attachment so nothing appears
+   saved when Safari has rejected the write. Timeline v54bm is preserved. */
