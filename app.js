@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bl";
+const APP_VERSION="54bo";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -1422,6 +1422,7 @@ function renderAll() {
 let waitingServiceWorker = null;
 let plannerServiceWorkerRegistration = null;
 let plannerReloadingForUpdate = false;
+const PLANNER_RELOAD_GUARD_KEY='myLifePlannerUpdateReloadGuard';
 const PLANNER_VERSION_URL = './version.json';
 
 function plannerWorkerUrl(version=APP_VERSION) {
@@ -1486,15 +1487,24 @@ async function ensurePlannerServiceWorker() {
 
 function plannerReloadFresh(version='') {
   if (plannerReloadingForUpdate) return;
+  const target=String(version||APP_VERSION);
+  try{
+    const current=new URL(window.location.href);
+    const alreadyUpdated=current.searchParams.get('updated')||'';
+    const guard=sessionStorage.getItem(PLANNER_RELOAD_GUARD_KEY)||'';
+    // Once this page has already reloaded for the same target, do not enter a
+    // second controller/message-triggered reload cycle.
+    if(alreadyUpdated===target && guard===target){
+      sessionStorage.removeItem('myLifePlannerPendingVersion');
+      return;
+    }
+    sessionStorage.setItem(PLANNER_RELOAD_GUARD_KEY,target);
+  }catch(_){}
   plannerReloadingForUpdate=true;
   const url=new URL('./index.html',window.location.href);
-  url.searchParams.set('updated',version||APP_VERSION);
+  url.searchParams.set('updated',target);
   url.searchParams.set('_',Date.now().toString());
   window.location.replace(url.toString());
-
-  // If navigation is interrupted by an older controller/browser cache, permit
-  // another reload attempt rather than leaving the tab permanently locked.
-  setTimeout(()=>{plannerReloadingForUpdate=false;},5000);
 }
 
 async function activatePublishedPlanner(version) {
@@ -1576,6 +1586,10 @@ if ("serviceWorker" in navigator) {
   window.addEventListener('load',async()=>{
     try{
       const registration=await ensurePlannerServiceWorker();
+      try{
+        const loadedTarget=new URL(window.location.href).searchParams.get('updated')||'';
+        if(!loadedTarget)sessionStorage.removeItem(PLANNER_RELOAD_GUARD_KEY);
+      }catch(_){}
       if(registration?.waiting){
         waitingServiceWorker=registration.waiting;
         setUpdateButtonState('Update available');
@@ -6417,28 +6431,12 @@ window.addEventListener('pageshow',()=>setTimeout(v54awAttachSearchClear,120));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54awAttachSearchClear,120);});
 
 
-/* ===== v54ax desktop updater/cache repair =====
-   Updater-only change. All v54aw planner feature code above is unchanged. */
-(function(){
-  const refreshKey=`mlp-controller-refresh-${APP_VERSION}`;
-  if(!('serviceWorker' in navigator))return;
-  function reloadOnce(){
-    try{
-      if(sessionStorage.getItem(refreshKey)==='1')return;
-      sessionStorage.setItem(refreshKey,'1');
-    }catch(_){}
-    location.reload();
-  }
-  window.addEventListener('load',async()=>{
-    try{
-      const reg=await navigator.serviceWorker.register(plannerWorkerUrl(APP_VERSION),{updateViaCache:'none'});
-      await reg.update();
-      if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});
-      navigator.serviceWorker.addEventListener('controllerchange',reloadOnce,{once:true});
-      if(!navigator.serviceWorker.controller)setTimeout(reloadOnce,500);
-    }catch(error){console.error('v54ax desktop update repair',error);}
-  },{once:true});
-})();
+/* ===== v54bo updater stabilisation =====
+   The legacy v54ax updater duplicated the authoritative updater above by
+   registering/updating the worker again and adding its own controllerchange
+   reload. On iPhone this can race with plannerReloadFresh() during an update.
+   The authoritative version-addressed updater above now owns registration,
+   activation and the single guarded reload path. */
 
 
 /* ===== v54ay Today's Progress =====
@@ -6690,7 +6688,7 @@ function v54bmRenderSchedule(){
 renderTimeline=function(){if(v54bmTimelineMode==='schedule')return v54bmRenderSchedule();return v54bmRenderTimelineAll();};
 
 
-/* ===== v54bn Brain Inbox storage repair =====
+/* ===== v54bo Brain Inbox storage repair =====
    New photos are reduced to a safer on-device size before being embedded.
    Brain Inbox saves are transactional: a failed storage write is rolled back
    and the capture dialog remains open with its attachment so nothing appears

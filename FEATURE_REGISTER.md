@@ -168,6 +168,6 @@
 ## v54u
 - Recurring tasks: one-level Undo last completion from Lists → Recurring tasks.
 
-## v54bn — Safer Brain Inbox photo capture
+## v54bo — Safer Brain Inbox photo capture
 - Newly selected Brain Inbox photos are resized/compressed to a smaller on-device storage envelope.
 - Brain Inbox capture keeps the editor open and rolls back the attempted record if browser persistence fails.
