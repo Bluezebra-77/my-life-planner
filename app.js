@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54br";
+const APP_VERSION="54bs";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5641,6 +5641,14 @@ function v54apSetBackupStatus(ok,message=''){
 
 async function v54apWriteBackup(serialised=JSON.stringify(data)){
   try{
+    /* v54bs: automatic recovery must remain self-contained after Brain Inbox
+       attachment bytes moved to their own IndexedDB store. Hydrate referenced
+       attachments before snapshotting so a recovery copy contains the actual
+       image/document bytes, not only storageId references. */
+    if(typeof v54bqHydrateAllAttachments==='function'){
+      await v54bqHydrateAllAttachments(data);
+      serialised=JSON.stringify(data);
+    }
     const snapshot=v54apSnapshot(serialised);
     const db=await v54apOpenBackupDb();
     const tx=db.transaction(V54AP_BACKUP_STORE,'readwrite');
@@ -6813,8 +6821,32 @@ importPlanner=function(event){
   reader.readAsText(file);
 };
 
-const v54bqRestoreDailyBackupBase=restoreDailyBackup;
-restoreDailyBackup=async function(dateKey){const result=await v54bqRestoreDailyBackupBase(dateKey);try{await v54bqHydrateAllAttachments(data);renderAll();}catch(error){console.error('Attachment hydration after restore failed',error);}return result;};
+restoreDailyBackup=async function(dateKey){
+  if(!v54apBackupCache.length)await v54apLoadBackupCache();
+  const copy=v54apBackupCache.find(item=>item.date===dateKey);
+  if(!copy)return alert('That automatic recovery snapshot is no longer available.');
+  const label=new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  if(!confirm(`Restore the recovery snapshot from ${label}? A verified safety snapshot of your current planner will be made first.`))return;
+  try{
+    const safetyOk=await v54apWriteBackup(JSON.stringify(data));
+    if(!safetyOk)throw new Error('Could not create the pre-restore safety snapshot');
+    const restored=normaliseData(JSON.parse(copy.data));
+    await v54bqPersistEmbeddedAttachments(restored);
+    await v54bqHydrateAllAttachments(restored);
+    data=restored;
+    Object.entries(copy.checks||{}).forEach(([key,value])=>localStorage.setItem(key,value));
+    if(copy.settings)localStorage.setItem(SETTINGS_KEY,JSON.stringify(copy.settings));
+    applySettings();
+    if(saveData()===false)throw new Error('Restored planner could not be saved');
+    renderAll();showSaved('Recovery snapshot restored');
+    await v54apWriteBackup(JSON.stringify(data));
+    return true;
+  }catch(error){
+    console.error('Recovery restore failed',error);
+    alert('That recovery snapshot could not be restored safely.');
+    return false;
+  }
+};
 
 const v54bqUpdateStorageStatusBase=updateStorageStatus;
 updateStorageStatus=function(){
