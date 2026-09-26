@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bo";
+const APP_VERSION="54bq";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6431,7 +6431,7 @@ window.addEventListener('pageshow',()=>setTimeout(v54awAttachSearchClear,120));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(v54awAttachSearchClear,120);});
 
 
-/* ===== v54bo updater stabilisation =====
+/* ===== v54bq updater stabilisation =====
    The legacy v54ax updater duplicated the authoritative updater above by
    registering/updating the worker again and adding its own controllerchange
    reload. On iPhone this can race with plannerReloadFresh() during an update.
@@ -6688,8 +6688,150 @@ function v54bmRenderSchedule(){
 renderTimeline=function(){if(v54bmTimelineMode==='schedule')return v54bmRenderSchedule();return v54bmRenderTimelineAll();};
 
 
-/* ===== v54bo Brain Inbox storage repair =====
+/* ===== v54bq Brain Inbox storage repair =====
    New photos are reduced to a safer on-device size before being embedded.
    Brain Inbox saves are transactional: a failed storage write is rolled back
    and the capture dialog remains open with its attachment so nothing appears
    saved when Safari has rejected the write. Timeline v54bm is preserved. */
+
+/* ===== v54bq Attachment Storage Architecture =====
+   Attachment bytes live in IndexedDB rather than the primary localStorage JSON.
+   Planner records retain small attachment metadata + storageId references.
+   Existing embedded attachments are migrated automatically and hydrated back
+   into memory so all accepted preview/conversion workflows continue unchanged.
+   Manual Export/Share remains self-contained by embedding attachment bytes. */
+const V54BQ_ATTACHMENT_DB='MyLifePlannerAttachmentsV54bq';
+const V54BQ_ATTACHMENT_STORE='attachments';
+let v54bqAttachmentDbPromise=null;
+let v54bqAttachmentReady=false;
+
+function v54bqOpenAttachmentDb(){
+  if(v54bqAttachmentDbPromise)return v54bqAttachmentDbPromise;
+  v54bqAttachmentDbPromise=new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window))return reject(new Error('IndexedDB is not available'));
+    const request=indexedDB.open(V54BQ_ATTACHMENT_DB,1);
+    request.onupgradeneeded=()=>{
+      const db=request.result;
+      if(!db.objectStoreNames.contains(V54BQ_ATTACHMENT_STORE))db.createObjectStore(V54BQ_ATTACHMENT_STORE,{keyPath:'id'});
+    };
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error||new Error('Could not open attachment storage'));
+  });
+  return v54bqAttachmentDbPromise;
+}
+function v54bqAttachmentRecords(root=data){
+  const records=[];
+  ['inbox','todos','projects','appointments'].forEach(group=>(root?.[group]||[]).forEach(item=>{if(item?.attachment)records.push(item);}));
+  return records;
+}
+function v54bqAttachmentId(attachment){return attachment?.storageId||`att-${uid()}-${Date.now().toString(36)}`;}
+async function v54bqPutAttachment(attachment){
+  if(!attachment?.data)return attachment;
+  const id=v54bqAttachmentId(attachment),db=await v54bqOpenAttachmentDb();
+  const tx=db.transaction(V54BQ_ATTACHMENT_STORE,'readwrite');
+  tx.objectStore(V54BQ_ATTACHMENT_STORE).put({id,name:attachment.name||'Attachment',type:attachment.type||'application/octet-stream',size:attachment.size||dataUrlByteSize(attachment.data),originalSize:attachment.originalSize||0,width:attachment.width||0,height:attachment.height||0,compressed:Boolean(attachment.compressed),data:attachment.data,savedAt:new Date().toISOString()});
+  await v54apTransactionDone(tx);
+  attachment.storageId=id;
+  return attachment;
+}
+async function v54bqGetAttachment(storageId){
+  if(!storageId)return null;const db=await v54bqOpenAttachmentDb();
+  const tx=db.transaction(V54BQ_ATTACHMENT_STORE,'readonly');
+  const value=await v54apRequest(tx.objectStore(V54BQ_ATTACHMENT_STORE).get(storageId));
+  await v54apTransactionDone(tx);return value||null;
+}
+async function v54bqPersistEmbeddedAttachments(root=data){
+  for(const item of v54bqAttachmentRecords(root)){if(item.attachment?.data)await v54bqPutAttachment(item.attachment);}
+}
+async function v54bqHydrateAllAttachments(root=data){
+  for(const item of v54bqAttachmentRecords(root)){
+    const a=item.attachment;if(a?.storageId&&!a.data){const stored=await v54bqGetAttachment(a.storageId);if(stored)item.attachment={...a,...stored,storageId:a.storageId};}
+  }
+  return root;
+}
+function v54bqStripAttachment(a){if(!a)return null;if(!a.storageId)return a;const {data:ignored,...meta}=a;return meta;}
+function v54bqDataForStorage(root=data){
+  const copy=JSON.parse(JSON.stringify(root));
+  v54bqAttachmentRecords(copy).forEach(item=>{item.attachment=v54bqStripAttachment(item.attachment);});
+  return copy;
+}
+
+/* Primary planner JSON remains synchronous for the many established callers,
+   but it now contains references rather than base64 attachment payloads. */
+saveData=function(){
+  try{
+    data=normaliseData(data);validatePlannerData(data);
+    const serialised=JSON.stringify(v54bqDataForStorage(data));
+    createRecoveryCopy(serialised);
+    localStorage.setItem(DATA_KEY,serialised);
+    localStorage.setItem('lifePlannerTodayFocus',JSON.stringify(data.todayFocus||[]));
+    updateStorageStatus();showSaved();return true;
+  }catch(error){
+    console.error('Could not save planner data',error);
+    const indicator=document.getElementById('saveIndicator');if(indicator)indicator.textContent='Save failed — export a backup';
+    const quota=error?.name==='QuotaExceededError'||error?.code===22||error?.code===1014;
+    alert(quota?"This item could not be saved because Safari's planner storage is full. The item has been kept open. Please create an Export backup before deleting older items.":'The planner could not save. The item has been kept open. Please use Export backup and check that Safari is not in Private Browsing.');
+    return false;
+  }
+};
+
+/* Store a newly selected attachment before it can be committed to planner JSON. */
+const v54bqHandleBrainAttachmentBase=handleBrainAttachment;
+handleBrainAttachment=async function(event){
+  await v54bqHandleBrainAttachmentBase(event);
+  if(window.pendingBrainAttachment?.data){
+    try{await v54bqPutAttachment(window.pendingBrainAttachment);renderBrainAttachmentPreview();}
+    catch(error){console.error('Attachment storage failed',error);window.pendingBrainAttachment=null;renderBrainAttachmentPreview();alert('The attachment could not be stored safely on this device. Please try again.');}
+  }
+};
+
+async function v54bqBackupObject(){
+  await v54bqHydrateAllAttachments(data);
+  return {app:'My Life Planner',version:APP_VERSION,exportedAt:new Date().toISOString(),data:JSON.parse(JSON.stringify(data)),checks:collectChecks(),settings:getSettings()};
+}
+exportPlanner=async function(){
+  saveData();const backup=await v54bqBackupObject();
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);link.download=`my-life-planner-backup-${new Date().toISOString().slice(0,10)}.json`;link.click();URL.revokeObjectURL(link.href);
+};
+sharePlannerBackup=async function(){
+  saveData();const backup=await v54bqBackupObject();
+  const file=new File([JSON.stringify(backup,null,2)],`my-life-planner-backup-${new Date().toISOString().slice(0,10)}.json`,{type:'application/json'});
+  if(navigator.canShare?.({files:[file]})){try{await navigator.share({title:'My Life Planner backup',text:'A backup of my planner information.',files:[file]});showSaved('Backup shared');return;}catch(error){if(error.name==='AbortError')return;}}
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=file.name;link.click();URL.revokeObjectURL(link.href);
+};
+
+importPlanner=function(event){
+  const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();
+  reader.onload=async()=>{try{
+    const raw=String(reader.result||'').replace(/^\uFEFF/,'').trim();if(!raw)throw new Error('Backup file is empty');if(raw.startsWith('PK'))throw new Error('ZIP selected instead of planner JSON backup');
+    const backup=JSON.parse(raw),imported=backup.data||backup;if(!imported||typeof imported!=='object'||Array.isArray(imported))throw new Error('Invalid backup structure');
+    data=normaliseData(imported);await v54bqPersistEmbeddedAttachments(data);await v54bqHydrateAllAttachments(data);
+    Object.entries(backup.checks||{}).forEach(([key,value])=>localStorage.setItem(key,value));if(backup.settings)localStorage.setItem(SETTINGS_KEY,JSON.stringify(backup.settings));applySettings();
+    if(saveData()===false)throw new Error('Imported planner could not be saved');renderAll();alert('Planner backup imported successfully.');
+  }catch(error){console.error('Backup import failed',error);const message=String(error?.message||'');if(message.includes('ZIP selected'))alert('That is the app ZIP, not a planner backup. Choose the .json file created by Backup / Export.');else alert('That file could not be read as a My Life Planner backup. Please choose the .json backup created by the planner.');}finally{event.target.value='';}};
+  reader.readAsText(file);
+};
+
+const v54bqRestoreDailyBackupBase=restoreDailyBackup;
+restoreDailyBackup=async function(dateKey){const result=await v54bqRestoreDailyBackupBase(dateKey);try{await v54bqHydrateAllAttachments(data);renderAll();}catch(error){console.error('Attachment hydration after restore failed',error);}return result;};
+
+const v54bqUpdateStorageStatusBase=updateStorageStatus;
+updateStorageStatus=function(){
+  v54bqUpdateStorageStatusBase();
+  const status=document.getElementById('storageStatus');if(!status)return;
+  const saved=localStorage.getItem(DATA_KEY)||'';
+  status.textContent=saved?`Planner data saved privately on this device (${Math.max(1,Math.round(new Blob([saved]).size/1024))} KB) · attachments stored separately in protected on-device storage.`:'No planner information has been saved yet.';
+};
+
+async function v54bqInitialiseAttachmentStorage(){
+  try{
+    if(navigator.storage?.persist)try{await navigator.storage.persist();}catch(_){}
+    await v54bqPersistEmbeddedAttachments(data);
+    await v54bqHydrateAllAttachments(data);
+    /* Once every embedded payload has a verified IndexedDB reference, rewrite
+       the primary JSON without those large base64 strings. */
+    saveData();v54bqAttachmentReady=true;renderAll();updateStorageStatus();
+  }catch(error){console.error('Attachment storage initialisation failed',error);}
+}
+setTimeout(()=>{void v54bqInitialiseAttachmentStorage();},300);

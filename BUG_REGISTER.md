@@ -130,6 +130,6 @@
 ## v54u
 - Adds guarded recovery for accidental recurring completion without changing the protected recurrence-advance calculation.
 
-## Corrected in v54bo
+## Corrected in v54bq
 - A Brain Inbox capture containing a photo could exceed Safari's remaining local planner storage and show a generic save failure.
 - Failed capture saves could close the dialog even though the browser had rejected persistence. Brain Inbox capture is now transactional and new photos are stored at a smaller size.

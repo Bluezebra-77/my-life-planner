@@ -8,7 +8,7 @@
 | Development v54bl | Development | v54bk | Superseded by v54bm | 2026-09-23 | First Use guide, Quick Start return navigation, Help refresh and stale current-wording cleanup. |
 | Development v54bm | Development | v54bl | Active — iPhone test | 2026-09-24 | Timeline All / Schedule addition; Schedule contains Recurring Tasks then Appointments by date. |
 
-| Development v54bo | Development | v54bm | Active / iPhone test | 2026-09-24 | Brain Inbox storage repair; preserves Timeline All / Schedule. |
+| Development v54bq | Development | v54bm | Active / iPhone test | 2026-09-24 | Brain Inbox storage repair; preserves Timeline All / Schedule. |
 
 ## Rules
 - Never develop directly on a Tester/Stable release.
@@ -16,3 +16,6 @@
 - A future Tester release is a complete package promoted from one accepted Development build; testers do not need intermediate builds.
 - Before promotion, run the protected regression checks and verify upgrade/data preservation from the previous Tester release.
 - Tester releases must not contain personal seeded planner data.
+
+## Development v54bq — active test build
+Complete standalone Development release; v54bp is not a prerequisite. Adds IndexedDB attachment storage/migration and preserves Timeline, Brain Inbox transactional saving, updater safeguards and visible version consistency. Awaiting iPhone acceptance.

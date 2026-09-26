@@ -268,7 +268,7 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 ## v54u — Recurring-task Undo
 - Added one-level Undo last completion for recurring tasks, restoring the prior occurrence and reversing its activity/statistics record.
 
-## v54bo — Brain Inbox storage repair
+## v54bq — Brain Inbox storage repair
 - Preserved the v54bm Timeline All / Schedule addition.
 - Reduced newly attached Brain Inbox photos to a safer storage envelope for Safari/iPhone.
 - Failed Brain Inbox storage writes now roll back the attempted data mutation and leave the capture dialog open for recovery/retry.
