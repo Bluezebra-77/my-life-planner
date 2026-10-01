@@ -1,5 +1,21 @@
 # My Life Planner — Release Register
 
+## Current status — 1 October 2026
+- **Development v54bt — active iPhone test build.** Built from v54bs; targeted Today’s Progress consistency repair.
+- **Development v54bs — superseded by v54bt.** Backup/attachment baseline retained unchanged except for the progress repair.
+- **Tester 1.2 — distributed external test build.** Leave untouched while iPhone and Android testers use it.
+- **v54bj — frozen confirmed baseline.**
+
+## Release rules
+- Never develop directly on Tester/Stable.
+- Development changes are tested before promotion.
+- A future Tester release is a complete package promoted from an accepted Development build.
+- Before issue, verify JavaScript syntax, JSON validity, ZIP integrity, package completeness, data/workflow preservation, protected regression areas, and version identity across Home, Settings/About, Developer information, app.js, service worker/cache, manifest, version.json, asset references and current-version guides/docs.
+- Tester releases must contain no personal seeded planner data.
+
+## Historical register from v54bs
+# My Life Planner — Release Register
+
 | Release | Channel | Built from | Status | Date | Notes |
 |---|---|---|---|---|---|
 | v54bj | Confirmed baseline | v54bi + Home/Lists repair | Frozen | 2026-09-23 | User-confirmed working baseline. Keep unchanged. |

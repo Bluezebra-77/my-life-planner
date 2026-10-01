@@ -1,3 +1,9 @@
+## v54bt — Today’s Progress consistency
+- Day-scoped progress counts eligible due/overdue ordinary To-dos, Today’s Focus, due/overdue project steps, due/overdue recurring tasks and due/overdue Cleaning tasks.
+- Completed-today eligible work remains in the denominator for the day.
+- Appointments and Daily/Evening routines remain excluded.
+- Completion/reopening refreshes the visible progress immediately for ordinary To-dos.
+
 ## v54bm — Timeline Schedule view
 - Timeline now offers All | Schedule.
 - Schedule is a date-grouped commitments view containing Recurring Tasks first and Appointments second in chronological order.

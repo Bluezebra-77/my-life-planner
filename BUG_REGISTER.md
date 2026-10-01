@@ -1,3 +1,9 @@
+## Corrected in v54bt
+- Completing an eligible ordinary To-do could temporarily shrink Today’s Progress denominator without increasing the completed count; leaving and returning rebuilt the correct count.
+- Marking the To-do incomplete could likewise show a transient inconsistent total.
+- Due/overdue Cleaning tasks appeared in Today but were excluded from Today’s Progress even after completion.
+- Quick Start still displayed an old Development v54bq label.
+
 ## v54ab
 
 - Usability gap fixed: Timeline items no longer require a detour to Lists for deletion.

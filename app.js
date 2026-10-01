@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bs";
+const APP_VERSION="54bt";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6456,6 +6456,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout
    - Today's Focus items for today
    - project steps due today/overdue and not Pending
    - recurring tasks due today/overdue
+   - cleaning tasks due today/overdue
    Completed-today records remain in the denominator so progress cannot shrink
    simply because an item was completed. */
 const V54AY_PROGRESS_VISIBLE_KEY='myLifePlannerShowTodayProgress';
@@ -6493,6 +6494,13 @@ function v54ayProgressCounts(){
     const doneToday=v54ayDateFromStamp(task.lastCompleted)===today;
     const dueNow=v54ayDueTodayOrEarlier(task.nextDue);
     if(dueNow||doneToday){total++;if(doneToday)completed++;}
+  });
+
+  (data.cleaningTasks||[]).forEach(task=>{
+    const doneToday=v54ayDateFromStamp(task.lastCompleted)===today;
+    const dueNow=v54ayDueTodayOrEarlier(task.nextDue);
+    const completedDue=doneToday&&(!task.lastProgressDue||v54ayDueTodayOrEarlier(task.lastProgressDue));
+    if(dueNow||completedDue){total++;if(completedDue)completed++;}
   });
   return {completed,total};
 }
@@ -6543,6 +6551,25 @@ const v54ayClearTodayFocusBase=clearCompletedTodayFocus;
 clearCompletedTodayFocus=function(){v54ayClearTodayFocusBase();updateProgress();};
 const v54ayCompleteRecurringBase=completeRecurringTask;
 completeRecurringTask=function(id){v54ayCompleteRecurringBase(id);updateProgress();};
+
+/* ===== v54bt Today progress consistency repair =====
+   Recalculate only after the full completion chain has written its completion
+   metadata. Cleaning tasks due today/overdue also participate in Today progress;
+   their due date is remembered because completion advances nextDue immediately. */
+const v54btToggleTodoBase=toggleTodo;
+toggleTodo=function(id){v54btToggleTodoBase(id);updateProgress();};
+
+const v54btCompleteCleaningBase=completeCleaning;
+completeCleaning=function(id){
+  const task=(data.cleaningTasks||[]).find(x=>String(x.id)===String(id));
+  const dueBefore=task?.nextDue||'';
+  v54btCompleteCleaningBase(id);
+  if(task&&v54ayDateFromStamp(task.lastCompleted)===localDateKey()){
+    task.lastProgressDue=dueBefore;
+    saveData();
+  }
+  updateProgress();
+};
 
 setTimeout(()=>{updateProgress();v54ayApplyProgressVisibility();},650);
 window.addEventListener('pageshow',()=>setTimeout(updateProgress,160));

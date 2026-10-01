@@ -1,3 +1,10 @@
+## v54bt — Today’s Progress consistency repair
+- Ordinary To-do completion and Mark incomplete now recalculate Today’s Progress after completion metadata has finished updating.
+- Due/overdue Cleaning tasks now participate in Today’s Progress; a cleaning completion remains counted for the day after its next due date advances.
+- Appointments and Daily/Evening routines remain excluded.
+- Existing project-step, Today’s Focus and recurring-task progress rules are preserved.
+- Corrected the stale current-version label in First Use & Quick Start.
+
 ## v54bm — Timeline All | Schedule
 - Added an All | Schedule view switch to Timeline.
 - All preserves the existing complete Timeline.
