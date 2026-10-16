@@ -1,3 +1,8 @@
+## v54bu — Advance-notice / days-before repair
+- Dated To-dos and active project steps now appear in Home Today — Time Sensitive when their saved days-before window opens.
+- The actual due date/deadline is unchanged; advance notice controls visibility only.
+- Pending, recurring, appointment, Cleaning, Timeline and Today’s Progress rules are preserved.
+
 ## v54bt — Today’s Progress consistency repair
 - Ordinary To-do completion and Mark incomplete now recalculate Today’s Progress after completion metadata has finished updating.
 - Due/overdue Cleaning tasks now participate in Today’s Progress; a cleaning completion remains counted for the day after its next due date advances.

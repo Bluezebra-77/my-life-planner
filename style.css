@@ -1868,3 +1868,5 @@ body.timer-minimised .quick-add-fab{
 .timeline-mode.active{background:#5f7d68;color:#fff;border-color:#5f7d68}
 .schedule-date-heading{margin-top:20px;padding:9px 10px;border-radius:10px;background:#eef3ef;border-bottom:0}
 .schedule-group-gap{height:10px}
+
+#v54bvRandomResult{margin:8px 12px;width:calc(100% - 24px)}#v54bvRandomResult button{margin:6px 6px 0 0}#v54bvStopAlarm{margin-top:8px}

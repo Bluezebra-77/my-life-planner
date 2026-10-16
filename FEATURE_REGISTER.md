@@ -1,3 +1,7 @@
+## v54bu — Advance notice visibility
+- Dated To-dos and active project steps use their saved days-before value to enter Home Today — Time Sensitive when the advance window opens.
+- Advance notice does not rewrite the deadline and does not make a future item count as due in Today’s Progress.
+
 ## v54bt — Today’s Progress consistency
 - Day-scoped progress counts eligible due/overdue ordinary To-dos, Today’s Focus, due/overdue project steps, due/overdue recurring tasks and due/overdue Cleaning tasks.
 - Completed-today eligible work remains in the denominator for the day.
@@ -177,3 +181,5 @@
 ## v54bq — Safer Brain Inbox photo capture
 - Newly selected Brain Inbox photos are resized/compressed to a smaller on-device storage envelope.
 - Brain Inbox capture keeps the editor open and rolls back the attempted record if browser persistence fails.
+
+- v54bv candidate: independent Random Task Home shortcut; timer audible alert; 365-day quote rotation.

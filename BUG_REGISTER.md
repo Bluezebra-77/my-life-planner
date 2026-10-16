@@ -1,3 +1,10 @@
+## Corrected in v54bu
+
+### Advance notice / days before not surfacing on Home
+- A future dated To-do could have a non-zero days-before value but remain absent from Home Today — Time Sensitive until the actual due date.
+- Root cause: the weekly/upcoming path calculated leadDays, while the final Today path admitted ordinary dated work only once due/overdue.
+- v54bu adds the advance-notice window to the final Today source without changing the saved deadline.
+
 ## Corrected in v54bt
 - Completing an eligible ordinary To-do could temporarily shrink Today’s Progress denominator without increasing the completed count; leaving and returning rebuilt the correct count.
 - Marking the To-do incomplete could likewise show a transient inconsistent total.
@@ -139,3 +146,5 @@
 ## Corrected in v54bq
 - A Brain Inbox capture containing a photo could exceed Safari's remaining local planner storage and show a generic save failure.
 - Failed capture saves could close the dialog even though the browser had rejected persistence. Brain Inbox capture is now transactional and new photos are stored at a smaller size.
+
+- v54bv candidate: Lists search clearing regression; verify on iPhone before closing.

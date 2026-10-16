@@ -1,7 +1,8 @@
 # My Life Planner — Release Register
 
-## Current status — 1 October 2026
-- **Development v54bt — active iPhone test build.** Built from v54bs; targeted Today’s Progress consistency repair.
+## Current status — 5 October 2026
+- **Development v54bu — active iPhone test build.** Built directly from v54bt; targeted advance-notice / days-before repair.
+- **Development v54bt — superseded by v54bu after its Today’s Progress repair was observed updating immediately on iPhone.**
 - **Development v54bs — superseded by v54bt.** Backup/attachment baseline retained unchanged except for the progress repair.
 - **Tester 1.2 — distributed external test build.** Leave untouched while iPhone and Android testers use it.
 - **v54bj — frozen confirmed baseline.**
@@ -35,3 +36,5 @@
 
 ## Development v54bq — active test build
 Complete standalone Development release; v54bp is not a prerequisite. Adds IndexedDB attachment storage/migration and preserves Timeline, Brain Inbox transactional saving, updater safeguards and visible version consistency. Awaiting iPhone acceptance.
+
+- **Development v54bv — awaiting real-world iPhone tests.** Random task, Lists clear, timer alert, expanded Daily Thought.
