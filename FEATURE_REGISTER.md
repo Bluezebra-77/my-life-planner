@@ -182,4 +182,4 @@
 - Newly selected Brain Inbox photos are resized/compressed to a smaller on-device storage envelope.
 - Brain Inbox capture keeps the editor open and rolls back the attempted record if browser persistence fails.
 
-- v54bv candidate: independent Random Task Home shortcut; timer audible alert; 365-day quote rotation.
+- v54bw candidate: independent Random Task Home shortcut; timer audible alert; 365-day quote rotation.

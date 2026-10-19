@@ -37,4 +37,4 @@
 ## Development v54bq — active test build
 Complete standalone Development release; v54bp is not a prerequisite. Adds IndexedDB attachment storage/migration and preserves Timeline, Brain Inbox transactional saving, updater safeguards and visible version consistency. Awaiting iPhone acceptance.
 
-- **Development v54bv — awaiting real-world iPhone tests.** Random task, Lists clear, timer alert, expanded Daily Thought.
+- **Development v54bw — awaiting real-world iPhone tests.** Random task, Lists clear, timer alert, expanded Daily Thought.

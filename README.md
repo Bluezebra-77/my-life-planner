@@ -1,4 +1,4 @@
-# My Life Planner - Development v54bv
+# My Life Planner - Development v54bw
 
 Private development branch built from Development v54bs.
 
@@ -14,4 +14,4 @@ Do not publish this branch to testers automatically. Changes are tested here fir
 ## Data safety
 Planner information remains in the existing browser data store. No planner schema migration is required. Use Settings -> Backup and restore for manual exports; automatic daily recovery snapshots remain retained.
 
-- v54bv: To-do/project-step advance notice now surfaces in Home Today — Time Sensitive when the saved days-before window opens; deadline remains unchanged.
+- v54bw: To-do/project-step advance notice now surfaces in Home Today — Time Sensitive when the saved days-before window opens; deadline remains unchanged.
