@@ -147,4 +147,4 @@
 - A Brain Inbox capture containing a photo could exceed Safari's remaining local planner storage and show a generic save failure.
 - Failed capture saves could close the dialog even though the browser had rejected persistence. Brain Inbox capture is now transactional and new photos are stored at a smaller size.
 
-- v54bw candidate: Lists search clearing regression; verify on iPhone before closing.
+- v54bx candidate: Lists search clearing regression; verify on iPhone before closing.
