@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54by";
+const APP_VERSION="54by1";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -6999,6 +6999,7 @@ function v54bxStopAlarm(){clearInterval(v54bxAlarmInterval);clearTimeout(v54bxAl
 function v54bxDismissTimerAlert(){
  v54bxStopAlarm();
  document.getElementById('v54bxTimerAlert')?.classList.add('hidden');
+ document.getElementById('v54by1TimerFinished')?.classList.add('hidden');
  try{localStorage.removeItem('plannerTimerFinishedAlert');}catch(e){}
 }
 function v54bxTimerFinished(){
@@ -7006,6 +7007,7 @@ function v54bxTimerFinished(){
  v54bxAlarmTriggered=true;
  try{localStorage.setItem('plannerTimerFinishedAlert','yes');}catch(e){}
  const alert=document.getElementById('v54bxTimerAlert');if(alert)alert.classList.remove('hidden');
+ document.getElementById('v54by1TimerFinished')?.classList.remove('hidden');
  const msg=document.getElementById('focusTimerMessage');if(msg)msg.textContent="Time's up! Your timer has finished.";
  const mini=document.getElementById('focusTimerMiniDisplay');if(mini)mini.textContent="TIME'S UP";
  if(document.getElementById('v54bxTimerSound')?.checked){
@@ -7072,13 +7074,9 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateFoc
    The native timer must be configured and started by the user in Clock. */
 function v54byOpenIphoneClock(){
  const help=document.getElementById('v54byClockHelp');
- if(help)help.textContent='In Clock, choose Timers, set the duration and tap Start. If Clock did not open, launch Clock from your Home Screen.';
- // This iOS URL scheme is not guaranteed to be supported by every version/browser.
- // Never imply a timer was created or started.
- if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
-  try{window.location.href='clock-timer://';}catch(e){}
- }else if(help){help.textContent='This shortcut is intended for iPhone. Open your device’s Clock app and set the timer manually.';}
+ if(help)help.textContent='On your iPhone, leave the planner and open the Clock app from your Home Screen or App Library. Select Timers, choose the duration and tap Start in Clock. Return to the planner whenever you wish. The planner cannot start a native Clock timer.';
 }
+
 (function(){
  const baseRestore=restoreStoredFocusTimer;
  restoreStoredFocusTimer=function(){
@@ -7092,6 +7090,7 @@ function v54byOpenIphoneClock(){
    v54bxAlarmTriggered=true;
    try{localStorage.setItem('plannerTimerFinishedAlert','yes');}catch(e){}
    document.getElementById('v54bxTimerAlert')?.classList.remove('hidden');
+   document.getElementById('v54by1TimerFinished')?.classList.remove('hidden');
    const msg=document.getElementById('focusTimerMessage');if(msg)msg.textContent="Time's up! Your timer finished while the planner was away.";
   }
  };
