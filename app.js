@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54bx";
+const APP_VERSION="54by";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -7066,4 +7066,33 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden){updateFoc
  window.addEventListener('pageshow',check);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
  setTimeout(check,0);
+})();
+
+/* v54by — iPhone native Clock handoff and robust resume notice.
+   The native timer must be configured and started by the user in Clock. */
+function v54byOpenIphoneClock(){
+ const help=document.getElementById('v54byClockHelp');
+ if(help)help.textContent='In Clock, choose Timers, set the duration and tap Start. If Clock did not open, launch Clock from your Home Screen.';
+ // This iOS URL scheme is not guaranteed to be supported by every version/browser.
+ // Never imply a timer was created or started.
+ if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
+  try{window.location.href='clock-timer://';}catch(e){}
+ }else if(help){help.textContent='This shortcut is intended for iPhone. Open your device’s Clock app and set the timer manually.';}
+}
+(function(){
+ const baseRestore=restoreStoredFocusTimer;
+ restoreStoredFocusTimer=function(){
+  let expired=false;
+  try{
+   const state=JSON.parse(localStorage.getItem(FOCUS_TIMER_STORAGE_KEY)||'null');
+   expired=!!(state&&state.active&&!state.paused&&Number(state.endAt)>0&&Date.now()>=Number(state.endAt));
+  }catch(e){}
+  baseRestore();
+  if(expired){
+   v54bxAlarmTriggered=true;
+   try{localStorage.setItem('plannerTimerFinishedAlert','yes');}catch(e){}
+   document.getElementById('v54bxTimerAlert')?.classList.remove('hidden');
+   const msg=document.getElementById('focusTimerMessage');if(msg)msg.textContent="Time's up! Your timer finished while the planner was away.";
+  }
+ };
 })();
