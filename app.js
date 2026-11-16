@@ -57,7 +57,7 @@ const choicePools = {
   quick: ["Clear one chair or small surface.", "File or shred five pieces of paper.", "Edit one photograph.", "Choose one item for Vinted.", "Set a 10-minute timer and tidy."]
 };
 
-const APP_VERSION="54by1";
+const APP_VERSION="54bz";
 const SCHEMA_VERSION = 51;
 const DATABASE_VERSION = "2";
 const MIGRATION_BACKUP_KEY = "lifePlannerMigrationBackups";
@@ -5159,7 +5159,18 @@ focusCandidateRows=function(){
 
 renderTodayReminders=function(){
   const area=document.getElementById('todayRemindersArea');if(!area)return;area.innerHTML='';
-  let items=[];try{items=[...(getTodayReminderItems()||[])].sort(v54vCompareTodayItems);}catch(error){console.error('v54ai Today failed',error);area.innerHTML='<div class="empty-state">Today could not refresh.</div>';return;}
+  /* v54bz: Today — Time Sensitive is strictly overdue + due today.
+     v54bu advance-notice items retain their original future due dates and
+     remain available in forward-looking views, but do not display here. */
+  let items=[];try{
+    const todayKey=localDateKey();
+    items=[...(getTodayReminderItems()||[])]
+      .filter(item=>{
+        const dueKey=String(item?.dueDate||'').slice(0,10);
+        return /^\d{4}-\d{2}-\d{2}$/.test(dueKey)&&dueKey<=todayKey;
+      })
+      .sort(v54vCompareTodayItems);
+  }catch(error){console.error('v54ai Today failed',error);area.innerHTML='<div class="empty-state">Today could not refresh.</div>';return;}
   if(!items.length){area.innerHTML='<div class="empty-state">Nothing time-sensitive needs attention today.</div>';return;}
   items.forEach(item=>{try{
     const overdue=item.itemType!=='annual'&&v54agOverdue(item.dueDate);

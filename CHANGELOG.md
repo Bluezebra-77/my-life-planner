@@ -285,3 +285,8 @@ Earlier builds progressively introduced Brain Inbox, Timeline, custom lists, res
 - Reduced newly attached Brain Inbox photos to a safer storage envelope for Safari/iPhone.
 - Failed Brain Inbox storage writes now roll back the attempted data mutation and leave the capture dialog open for recovery/retry.
 - Added clearer storage-full guidance without changing the planner data schema.
+
+## Development v54bz — 16 November 2026
+- Home Today — Time Sensitive now filters strictly by due date <= local today, excluding future advance notices; no saved data mutation.
+- Progress count reviewed: future open To-dos/steps already excluded; calculation intentionally unchanged.
+- Outstanding: Timer dialogue notice, similar Daily Thought wording, Schedule date filter, Pending conversion, Random Task Close.

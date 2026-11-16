@@ -38,3 +38,6 @@
 Complete standalone Development release; v54bp is not a prerequisite. Adds IndexedDB attachment storage/migration and preserves Timeline, Brain Inbox transactional saving, updater safeguards and visible version consistency. Awaiting iPhone acceptance.
 
 - **Development v54bx — awaiting real-world iPhone tests.** Random task, Lists clear, timer alert, expanded Daily Thought.
+
+## Development v54bz — 16 November 2026
+- Built from Development v54by1; Today — Time Sensitive future-date filter only. **Awaiting iPhone/desktop testing.** Tester 1.2 remains frozen.

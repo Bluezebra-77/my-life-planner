@@ -148,3 +148,7 @@
 - Failed capture saves could close the dialog even though the browser had rejected persistence. Brain Inbox capture is now transactional and new photos are stored at a smaller size.
 
 - v54bx candidate: Lists search clearing regression; verify on iPhone before closing.
+
+## v54bz status — 16 November 2026
+- **Ready for testing:** Home Today — Time Sensitive future-dated entries filtered out (including lead-days reminders); no saved-date changes.
+- **Still open:** Timer finished notice inside timer dialogue, near-repetitive Daily Thought language, Schedule overdue filtering, Pending-note conversion, Random Task dismissal.
